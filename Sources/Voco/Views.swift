@@ -105,14 +105,19 @@ struct SetupView: View {
                 }
                 Divider()
                 setupRow(
-                    symbol: "keyboard", title: "Keyboard access", detail: "Use your talk key in other apps and insert your words.",
-                    complete: model.keyboardAllowed, action: model.requestAccessibility, button: "Allow"
+                    symbol: "keyboard", title: "Keyboard access", detail: model.keyboardAccessState.detail,
+                    complete: model.keyboardAccessState == .ready, action: model.requestAccessibility,
+                    button: model.keyboardAccessState.button
                 )
                 if !model.accessibilityAllowed {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("In \(model.keyboardPermissionName), enable Voco. If it is missing, click + and select the Voco app shown in Finder.")
                             .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         Button("Show Voco in Finder") { model.revealApp() }.buttonStyle(.link).font(.system(size: 12))
+                        if model.keyboardAccessState == .waiting {
+                            Button("Already enabled? Restart Voco") { model.restartApp?() }
+                                .buttonStyle(.link).font(.system(size: 12))
+                        }
                     }
                     .padding(.leading, 36).padding(.bottom, 14)
                 }
@@ -176,6 +181,8 @@ struct SetupView: View {
         .padding(30)
         .frame(width: 550)
         .background(Color(nsColor: .windowBackgroundColor))
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { model.setupSizeChanged?($0) }
     }
 
     private func setupRow(

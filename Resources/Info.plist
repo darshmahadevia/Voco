@@ -3,7 +3,7 @@
 <plist version="1.0"><dict>
     <key>CFBundleName</key><string>Voco</string>
     <key>CFBundleDisplayName</key><string>Voco</string>
-    <key>CFBundleIdentifier</key><string>org.utterapp.Utter</string>
+    <key>CFBundleIdentifier</key><string>org.vocoapp.Voco</string>
     <key>CFBundleExecutable</key><string>Voco</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>0.1.0</string>

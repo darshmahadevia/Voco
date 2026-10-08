@@ -24,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         model.showPill = { [weak self] in self?.pill?.show() }
         model.hidePill = { [weak self] in self?.pill?.orderOut(nil) }
         model.returnToSettings = { [weak self] in self?.showSetup() }
+        model.restartApp = { [weak self] in self?.restart() }
+        model.setupSizeChanged = { [weak self] size in self?.setupWindow?.setContentSize(size) }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Voco")
         let menu = NSMenu()
@@ -50,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if CommandLine.arguments.contains("--check-shortcut") {
             print("Accessibility: \(model.accessibilityAllowed ? "granted" : "required")")
             print("Global shortcut: \(model.keyboardAllowed ? "available" : "unavailable")")
+            print("Keyboard access: \(model.keyboardAccessState.rawValue)")
             exit(model.keyboardAllowed ? 0 : 2)
         }
         if CommandLine.arguments.contains("--render-previews") {
@@ -100,7 +103,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             return
         }
+        if CommandLine.arguments.contains("--verify-restart") {
+            setbuf(stdout, nil)
+            print("Restarting Voco process \(getpid())")
+            restart()
+            return
+        }
         showSetup()
+        if CommandLine.arguments.contains("--request-keyboard-access") { model.requestAccessibility() }
         if model.microphoneAllowed { model.prepare() }
     }
 
@@ -147,12 +157,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return true
     }
 
+    private func restart() {
+        model.cancel()
+        let launcher = Process()
+        launcher.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        launcher.arguments = ["-n", Bundle.main.bundleURL.path]
+        do {
+            try launcher.run()
+            launcher.waitUntilExit()
+            guard launcher.terminationStatus == 0 else { throw CocoaError(.executableLoad) }
+            NSApp.terminate(nil)
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "Voco could not restart"
+            alert.informativeText = "Quit Voco and reopen it from Applications. \(error.localizedDescription)"
+            alert.runModal()
+        }
+    }
+
     private func renderPreviews() {
         let directory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
             .appendingPathComponent(".impeccable/review")
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try render(SetupView(model: model), to: directory.appendingPathComponent("setup.png"))
+            model.accessibilityAllowed = true
+            model.keyboardAllowed = false
+            try render(SetupView(model: model), to: directory.appendingPathComponent("setup-restart.png"))
+            model.keyboardAllowed = true
+            try render(SetupView(model: model), to: directory.appendingPathComponent("setup-ready.png"))
             model.phase = .listening
             model.transcript = "This is a preview of the live transcript. Your words appear here as you speak."
             try render(PillView(model: model), to: directory.appendingPathComponent("pill.png"))

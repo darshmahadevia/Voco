@@ -19,12 +19,14 @@ The build script creates a locally signed app in `~/Library/Caches/Voco/Build/Bu
 
 The install script places the app in `~/Applications/Voco.app` so you can select it in macOS permission settings. It builds the app before installing it, so you can run the install script alone.
 
-When an update changes this development build's signature, the installer closes the old installed process and resets only Voco's keyboard permission. Enable Keyboard access again after that update. An unchanged signature preserves the existing grant.
+When an update changes this development build's designated signing requirement, the installer closes the old installed process and resets Voco's keyboard and microphone permissions. Enable Keyboard access and prepare English speech again after that update. An unchanged requirement preserves the existing grant. Set `VOCO_SIGNING_IDENTITY` to a valid signing identity to use it instead of ad-hoc signing.
+
+Voco uses its own bundle identifier, `org.vocoapp.Voco`. Upgrading from a build that shared Utter's identifier requires granting access to the new Voco entry. The installer leaves Utter's permissions unchanged and copies Voco's talk key, pause, and transcript retention settings once. A first install also clears stale Voco permission records left by a previously deleted build.
 
 ## Set up dictation
 
 1. In Voco, click **Prepare**. Grant microphone access and wait for English transcription to become ready.
-2. In Voco's **Keyboard access** row, click **Allow**. Enable Voco in **System Settings > Privacy & Security > Device Control and Data Access** on macOS 27. On macOS 26, the same page is called **Accessibility**. If Voco is missing, click **+** and select `~/Applications/Voco.app`. **Show Voco in Finder** reveals that app for you.
+2. In Voco's **Keyboard access** row, click **Allow** and follow the macOS prompt. **Open Settings** reopens the permission page without prompting again. Enable Voco in **System Settings > Privacy & Security > Device Control and Data Access** on macOS 27. On macOS 26, the same page is called **Accessibility**. If Voco is missing, click **+** and select `~/Applications/Voco.app`. **Show Voco in Finder** reveals that app for you. If access is enabled but the shortcut is unavailable, click **Restart Voco**.
 3. In **System Settings > Keyboard**, set **Press Globe key to** to **Do Nothing**. Disable an Apple Dictation shortcut that uses the same key.
 4. Close the Voco setup window and click a text field in another app.
 5. Hold Fn or Globe until the small microphone pill appears, then speak. Words appear in your field while you talk. Release to stop and apply final corrections.
@@ -61,11 +63,17 @@ Run the core behavior tests and transcript recovery check:
 ./scripts/test.sh
 ./scripts/check-recovery.sh
 ./scripts/check-focus.sh
+./scripts/check-permissions.sh
+./scripts/check-install.sh
 ```
 
 The recovery check compiles the actual app model with a test extension, simulates a canceled session followed by a quick key tap, and verifies the full saved transcript. It does not start microphone capture or require Keyboard access. GitHub Actions runs these checks and builds the signed release app for pushes to `main` and pull requests.
 
 The focus check exercises the actual cursor-resolution code against simulated Accessibility responses, including Electron's initially inactive tree, delayed focus, app and field changes, password fields, and cancellation. It does not require privacy permissions or prove live insertion in T3 Code.
+
+The permission check drives the actual app model with simulated macOS permission and keyboard-monitor responses. It verifies a single prompt, the Settings retry, restart after a failed monitor start, approval, revocation, and reapproval. The real macOS grant must still be enabled by the user.
+
+The installer check runs the actual installer in a disposable directory with signing and permission-reset command fixtures. It verifies migration from the shared Utter identity, unchanged installs, stable signing requirements, changed requirements, and rejection of unrelated apps.
 
 Render the native setup, listening, and recovery views:
 
@@ -93,12 +101,14 @@ Look for `Accessibility: granted` and `Global shortcut: available`. The script l
 
 After Keyboard access is enabled, run `./scripts/verify-insertion.sh` to open a new disposable TextEdit document. It verifies five insertions, live corrections, Unicode handling, phrase continuation, and rejection of caret movement against the actual document. Leave the keyboard and mouse idle while it runs. It leaves the disposable document open.
 
+To check the actual restart action, quit Voco and run `./scripts/check-restart.sh`. It launches the installed signed app, invokes the same relaunch action as setup, verifies the original process exits, and leaves one new Voco process running.
+
 Pass a local audio fixture, such as `./scripts/verify-insertion.sh /tmp/voco-fixture.aiff`, to check live speech updates into that document as well. `--verify-pauses /absolute/path/to/audio.aiff` streams the same fixture twice with silence between phrases and verifies that finishing does not repeat inserted words.
 
 `--transcribe-stream /absolute/path/to/audio.aiff` feeds a file at roughly real-time speed through the microphone's conversion path and reports first-result and release-to-final timings. `--measure-ui` measures native pill updates and bitmap rendering. These are diagnostics, not end-to-end microphone or display latency measurements.
 
 ## Distribution
 
-Local builds and sharing the source are free. The build script uses ad-hoc signing. It does not create a notarized public download. Apple's Developer ID signing and notarization require developer-program membership. [Apple's Developer ID guide](https://developer.apple.com/developer-id/) describes that distribution path.
+Local builds and sharing the source are free. The build script defaults to ad-hoc signing. It does not create a notarized public download. Apple's Developer ID signing and notarization require developer-program membership. [Apple's Developer ID guide](https://developer.apple.com/developer-id/) describes that distribution path.
 
 See [the architecture](docs/architecture.md) for session ownership and the engine comparison.

@@ -29,7 +29,7 @@ final class SpeechSession {
     private var resultTask: Task<Void, Error>?
     private var hasTap = false
     private var transcript = Transcript()
-    private let logger = Logger(subsystem: "org.utterapp.Utter", category: "Speech")
+    private let logger = Logger(subsystem: "org.vocoapp.Voco", category: "Speech")
     private var startedAt: ContinuousClock.Instant?
     private var reportedFirstResult = false
     var currentTranscript: Transcript { transcript }

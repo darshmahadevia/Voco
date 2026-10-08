@@ -25,6 +25,10 @@ jobs:
         run: ./scripts/test.sh
       - name: Check transcript recovery lifecycle
         run: ./scripts/check-recovery.sh
+      - name: Check keyboard permission lifecycle
+        run: ./scripts/check-permissions.sh
+      - name: Check permission identity migration
+        run: ./scripts/check-install.sh
       - name: Check Electron cursor resolution
         run: ./scripts/check-focus.sh
       - name: Build and verify the signed release app

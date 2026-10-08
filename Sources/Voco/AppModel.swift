@@ -5,6 +5,28 @@ import Observation
 import VocoCore
 import OSLog
 
+enum KeyboardAccessState: String {
+    case required, waiting, ready, restartNeeded
+
+    var button: String {
+        switch self {
+        case .required: "Allow"
+        case .waiting: "Open Settings"
+        case .ready: "Allowed"
+        case .restartNeeded: "Restart Voco"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .required: "Allow Voco to use your talk key and insert your words."
+        case .waiting: "Enable Voco in macOS settings, then return here."
+        case .ready: "Your talk key and text insertion are available."
+        case .restartNeeded: "Access is granted. Restart Voco to start the keyboard shortcut."
+        }
+    }
+}
+
 enum DictationPhase: Equatable {
     case idle, starting, listening, finishing, recovery(String)
     var title: String {
@@ -20,22 +42,36 @@ enum DictationPhase: Equatable {
 
 @Observable @MainActor
 final class AppModel {
+    private static let defaults: UserDefaults = {
+        let defaults = UserDefaults.standard
+        if Bundle.main.bundleIdentifier == "org.vocoapp.Voco",
+           !defaults.bool(forKey: "migratedUtterPreferences") {
+            let legacy = UserDefaults(suiteName: "org.utterapp.Utter")
+            for key in ["talkKey", "pauseSeconds", "keepLastTranscript"] {
+                if defaults.object(forKey: key) == nil, let value = legacy?.object(forKey: key) {
+                    defaults.set(value, forKey: key)
+                }
+            }
+            defaults.set(true, forKey: "migratedUtterPreferences")
+        }
+        return defaults
+    }()
     var phase: DictationPhase = .idle
     var transcript = ""
     var lastTranscript = ""
     var continuousListening = false
     var liveTypingAvailable = true
-    var pauseSeconds = UserDefaults.standard.object(forKey: "pauseSeconds") as? Double ?? 1.5 {
-        didSet { UserDefaults.standard.set(pauseSeconds, forKey: "pauseSeconds") }
+    var pauseSeconds = AppModel.defaults.object(forKey: "pauseSeconds") as? Double ?? 1.5 {
+        didSet { AppModel.defaults.set(pauseSeconds, forKey: "pauseSeconds") }
     }
     var triggerHint: String { "Hold \(shortcut.label) or press Fn + Space." }
-    var keepLastTranscript = UserDefaults.standard.object(forKey: "keepLastTranscript") as? Bool ?? true {
+    var keepLastTranscript = AppModel.defaults.object(forKey: "keepLastTranscript") as? Bool ?? true {
         didSet {
-            UserDefaults.standard.set(keepLastTranscript, forKey: "keepLastTranscript")
+            AppModel.defaults.set(keepLastTranscript, forKey: "keepLastTranscript")
             if !keepLastTranscript { lastTranscript = "" }
         }
     }
-    private let logger = Logger(subsystem: "org.utterapp.Utter", category: "Dictation")
+    private let logger = Logger(subsystem: "org.vocoapp.Voco", category: "Dictation")
     @ObservationIgnored private var firstPreviewUpdateAt: ContinuousClock.Instant?
     var setupMessage = "Prepare English transcription to get started."
     var downloadProgress: Double?
@@ -48,14 +84,16 @@ final class AppModel {
             cancel()
             monitor.stop()
             monitor.key = shortcut
-            UserDefaults.standard.set(shortcut.rawValue, forKey: "talkKey")
+            AppModel.defaults.set(shortcut.rawValue, forKey: "talkKey")
             refreshPermissions()
         }
     }
     var showPill: (() -> Void)?
     var hidePill: (() -> Void)?
     var returnToSettings: (() -> Void)?
+    var restartApp: (() -> Void)?
     var pillSizeChanged: ((CGSize) -> Void)?
+    var setupSizeChanged: ((CGSize) -> Void)?
     private let monitor = ShortcutMonitor()
     private var prepared: SpeechSession?
     private var active: SpeechSession?
@@ -78,13 +116,17 @@ final class AppModel {
 
     var isReady: Bool { prepared != nil && keyboardAllowed && microphoneAllowed && accessibilityAllowed }
     var speechReady: Bool { prepared != nil }
+    var keyboardAccessState: KeyboardAccessState {
+        if accessibilityAllowed { return keyboardAllowed ? .ready : .restartNeeded }
+        return waitingForKeyboardPermission ? .waiting : .required
+    }
     var keyboardPermissionName: String {
         if #available(macOS 27, *) { return "Device Control and Data Access" }
         return "Accessibility"
     }
 
     init() {
-        shortcut = TalkKey(rawValue: UserDefaults.standard.string(forKey: "talkKey") ?? "") ?? .fn
+        shortcut = TalkKey(rawValue: AppModel.defaults.string(forKey: "talkKey") ?? "") ?? .fn
         monitor.key = shortcut
         monitor.onAction = { [weak self] action in
             switch action {
@@ -104,10 +146,6 @@ final class AppModel {
     func refreshPermissions() {
         microphoneAllowed = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         accessibilityAllowed = AXIsProcessTrusted()
-        if accessibilityAllowed && waitingForKeyboardPermission {
-            waitingForKeyboardPermission = false
-            returnToSettings?()
-        }
         if accessibilityAllowed {
             keyboardAllowed = monitor.start()
         } else {
@@ -117,13 +155,27 @@ final class AppModel {
                 cancel()
             }
         }
+        if accessibilityAllowed && waitingForKeyboardPermission {
+            waitingForKeyboardPermission = false
+            returnToSettings?()
+        }
     }
 
     func requestAccessibility() {
-        waitingForKeyboardPermission = true
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
-        openPrivacy("Accessibility")
+        refreshPermissions()
+        switch keyboardAccessState {
+        case .required:
+            waitingForKeyboardPermission = true
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            _ = AXIsProcessTrustedWithOptions(options)
+            refreshPermissions()
+        case .waiting:
+            openPrivacy("Accessibility")
+        case .restartNeeded:
+            restartApp?()
+        case .ready:
+            break
+        }
     }
 
     func revealApp() {
