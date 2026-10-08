@@ -179,9 +179,6 @@ final class AppModel {
         sessionID = UUID()
         let id = sessionID
         target = focus
-        committedThrough = -1
-        committedText = ""
-        pauseGate = PauseGate()
         holdTask = Task { await startCapture(id: id, continuous: true) }
     }
 
@@ -191,9 +188,6 @@ final class AppModel {
         sessionID = UUID()
         let id = sessionID
         target = FocusTarget.capture()
-        committedThrough = -1
-        committedText = ""
-        pauseGate = PauseGate()
         holdTask = Task { [self] in
             do { try await Task.sleep(for: .milliseconds(140)) } catch { return }
             guard id == sessionID else { return }
@@ -203,6 +197,9 @@ final class AppModel {
 
     private func startCapture(id: UUID, continuous: Bool) async {
         guard id == sessionID else { return }
+        committedThrough = -1
+        committedText = ""
+        pauseGate = PauseGate()
         continuousListening = continuous
         phase = .starting
         transcript = ""

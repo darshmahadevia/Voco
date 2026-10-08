@@ -23,5 +23,7 @@ jobs:
           plutil -lint Resources/Info.plist
       - name: Test dictation behavior
         run: ./scripts/test.sh
+      - name: Check transcript recovery lifecycle
+        run: ./scripts/check-recovery.sh
       - name: Build and verify the signed release app
         run: ./scripts/build.sh
