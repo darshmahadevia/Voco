@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-08T19:14:02.447423+00:00",
+  "title": "Design System: Voco",
+  "extensions": {
+    "typographyMeta": {
+      "title": {
+        "displayName": "App title",
+        "purpose": "Names the utility in the setup header."
+      },
+      "setup-description": {
+        "displayName": "Setup description",
+        "purpose": "Explains the hold-and-release interaction."
+      },
+      "setup-label": {
+        "displayName": "Setup and phase label",
+        "purpose": "Labels setup rows and the current pill state."
+      },
+      "body": {
+        "displayName": "Supporting body",
+        "purpose": "Carries setup details and recovery guidance."
+      },
+      "transcript": {
+        "displayName": "Transcript",
+        "purpose": "Shows retained words only during recovery."
+      },
+      "utility-hint": {
+        "displayName": "Utility hint",
+        "purpose": "Shows secondary cancel and release instructions."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating-pill",
+        "value": "SwiftUI .shadow(color: .black.opacity(0.16), radius: 10, x: 0, y: 4)",
+        "purpose": "Separates the regular-material pill from apps behind it."
+      }
+    ],
+    "motion": [
+      {
+        "name": "pill-phase",
+        "value": "SwiftUI .easeOut(duration: 0.16)",
+        "purpose": "Animates recovery transitions unless Reduce Motion is enabled."
+      }
+    ],
+    "breakpoints": []
+  },
+  "components": [],
+  "narrative": {
+    "northStar": "The Native macOS Utility",
+    "overview": "Voco writes live words into the active text field. A minimal microphone capsule remains at the bottom center; continuous listening adds a stop control. Recovery alone displays retained text.",
+    "keyCharacteristics": [
+      "Native system fonts, SF Symbols, semantic colors, and controls.",
+      "A 50pt microphone capsule for hold mode and an 80pt capsule for continuous mode.",
+      "Live corrections preserve surrounding text and stop after caret or document changes."
+    ],
+    "rules": [
+      {
+        "name": "Minimal microphone status",
+        "body": "Show retained transcript text only in recovery.",
+        "section": "layout"
+      },
+      {
+        "name": "Native appearance",
+        "body": "Follow system fonts, colors, controls, and Reduce Motion.",
+        "section": "appearance"
+      }
+    ],
+    "dos": [
+      "Keep the microphone capsule centered at the bottom without taking focus.",
+      "Use live writing with corrections limited to the inserted range.",
+      "Keep Settings and manual transcript recovery accessible."
+    ],
+    "donts": [
+      "Don't hard-code the dark appearance shown in the review captures; the implementation follows macOS appearance.",
+      "Don't replace system buttons, the picker, or SF Symbols with custom-drawn controls.",
+      "Don't turn the permission list into a set of decorative cards."
+    ]
+  }
+}
