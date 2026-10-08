@@ -2,6 +2,30 @@
 
 Verified on an Apple Silicon Mac running macOS 27.0.1, using the installed Swift 6.4 Command Line Tools and macOS 27 SDK. The app's deployment target is macOS 26.
 
+## Reliability pass on October 8, 2026
+
+The repository is private at [darshmahadevia/Voco](https://github.com/darshmahadevia/Voco). The baseline and each verified fix were pushed separately to `main`.
+
+Two defects were reproduced before fixing them:
+
+- Live correction treated canonically equivalent Unicode text as identical even when its UTF-16 representation changed. This caused caret drift and misplaced subsequent edits. Exact UTF-16 snapshot comparisons and scalar comparisons within grapheme boundaries now preserve Accessibility ranges. Selections that split a surrogate pair are rejected. Regression tests also reject a field changing only its Unicode representation.
+- A quick talk-key tap after canceling continuous dictation could overwrite the full saved transcript with its last uncommitted phrase. Session text now resets when capture starts. The actual app-model regression changed from `Saved transcript after quick tap: Second phrase.` to `Saved transcript after quick tap: First phrase. Second phrase.`
+
+Current checks:
+
+- `./scripts/test.sh` passes all 17 core tests.
+- `./scripts/check-recovery.sh` passes the source-level lifecycle regression. The script appends a same-file test extension to a temporary copy of the app model, compiles the actual supporting sources, and simulates key arming and release without microphone capture. Temporary compiler artifacts are removed, and the transcript-retention preference is restored.
+- `./scripts/build.sh` produces the release bundle; strict signature verification passes.
+- Shell syntax and `Resources/Info.plist` validation pass.
+- Native setup and status previews render; the setup image was inspected.
+- File and paced-stream transcription complete with the real speech analyzer. The synthetic fixture says "Hello, this is Voco. Speech recognition runs on my Mac." Recognition returns "Hello, this is Vako. speech recognition runs on my Mac." The proper name differs; this is a speech-quality limitation, not exact recognition of every word.
+- The repeated-phrase fixture passes `--verify-pauses`, with two complete batches and no repeated text on stopping.
+- GitHub Actions runs core tests, the recovery check, and the signed release build on macOS 26. The [run containing both fixes](https://github.com/darshmahadevia/Voco/actions/runs/37836485471) passed every step.
+
+The new build's LaunchServices diagnostic reports `Accessibility: required` and `Global shortcut: unavailable`. New-build TextEdit insertion, physical Fn/Fn+Space capture, microphone use, browser fields, and multiple displays remain unverified. The previously installed Utter build was left in place. Source review also confirms that destinations without a readable Accessibility value cannot provide proof of successful insertion; the fallback deliberately avoids a second insertion after an acknowledged write.
+
+Earlier entries below describe previous builds and do not establish live behavior on this build.
+
 ## Completed checks
 
 - `./scripts/build.sh` produced the release app with no external dependencies.

@@ -55,11 +55,14 @@ Automatic insertion depends on the target app's Accessibility and keyboard suppo
 
 ## Verify a build
 
-Run the core behavior tests:
+Run the core behavior tests and transcript recovery check:
 
 ```sh
 ./scripts/test.sh
+./scripts/check-recovery.sh
 ```
+
+The recovery check compiles the actual app model with a test extension, simulates a canceled session followed by a quick key tap, and verifies the full saved transcript. It does not start microphone capture or require Keyboard access. GitHub Actions runs both checks and builds the signed release app for pushes to `main` and pull requests.
 
 Render the native setup, listening, and recovery views:
 
