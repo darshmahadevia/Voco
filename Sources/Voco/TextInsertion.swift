@@ -10,6 +10,8 @@ struct FocusTarget {
         guard let app = NSWorkspace.shared.frontmostApplication,
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier
         else { return nil }
+        let application = AXUIElementCreateApplication(app.processIdentifier)
+        _ = AXUIElementSetAttributeValue(application, "AXManualAccessibility" as CFString, kCFBooleanTrue)
         return FocusTarget(processID: app.processIdentifier, element: focusedElement(in: app.processIdentifier))
     }
 
@@ -22,10 +24,37 @@ struct FocusTarget {
         return (value as! AXUIElement)
     }
 
+    func resolved() async throws -> FocusTarget {
+        guard element == nil else { return self }
+        guard AXIsProcessTrusted() else { throw InsertionError.permission }
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == processID
+        else { throw InsertionError.focusChanged }
+        guard let element = try await Self.waitForFocusedElement(in: processID)
+        else { throw InsertionError.focusUnavailable }
+        let resolved = FocusTarget(processID: processID, element: element)
+        _ = try resolved.validate()
+        return resolved
+    }
+
+    private static func waitForFocusedElement(in pid: pid_t) async throws -> AXUIElement? {
+        for _ in 0..<12 {
+            try Task.checkCancellation()
+            guard AXIsProcessTrusted() else { throw InsertionError.permission }
+            guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid
+            else { throw InsertionError.focusChanged }
+            if let element = focusedElement(in: pid) { return element }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        return nil
+    }
+
     func validate() throws -> AXUIElement {
         guard AXIsProcessTrusted() else { throw InsertionError.permission }
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == processID,
-              let element, let current = Self.focusedElement(in: processID), CFEqual(element, current)
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == processID, let element
+        else { throw InsertionError.focusChanged }
+        guard let current = Self.focusedElement(in: processID)
+        else { throw InsertionError.focusUnavailable }
+        guard CFEqual(element, current)
         else { throw InsertionError.focusChanged }
         var subrole: CFTypeRef?
         AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &subrole)
@@ -58,9 +87,7 @@ struct FocusTarget {
                 return
             }
         }
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == processID,
-              let current = Self.focusedElement(in: processID), CFEqual(element, current)
-        else { throw InsertionError.focusChanged }
+        _ = try validate()
         guard let source = CGEventSource(stateID: .privateState),
               let down = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false)
@@ -104,12 +131,13 @@ struct FocusTarget {
 }
 
 enum InsertionError: LocalizedError {
-    case permission, focusChanged, secureField, modifiers, unavailable, liveUnsupported
+    case permission, focusChanged, focusUnavailable, secureField, modifiers, unavailable, liveUnsupported
 
     var errorDescription: String? {
         switch self {
         case .permission: "Allow Accessibility access to insert text, or copy it below."
         case .focusChanged: "The text field changed. Copy your words below and paste them where you want."
+        case .focusUnavailable: "Voco could not read the focused text field. Click inside it and try again, or copy your words below."
         case .secureField: "This is a password field. Copy your words if you want to keep them."
         case .modifiers: "Another shortcut key is held. Copy your words below."
         case .unavailable: "Text could not be inserted. Copy your words below."

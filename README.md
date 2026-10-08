@@ -60,9 +60,12 @@ Run the core behavior tests and transcript recovery check:
 ```sh
 ./scripts/test.sh
 ./scripts/check-recovery.sh
+./scripts/check-focus.sh
 ```
 
-The recovery check compiles the actual app model with a test extension, simulates a canceled session followed by a quick key tap, and verifies the full saved transcript. It does not start microphone capture or require Keyboard access. GitHub Actions runs both checks and builds the signed release app for pushes to `main` and pull requests.
+The recovery check compiles the actual app model with a test extension, simulates a canceled session followed by a quick key tap, and verifies the full saved transcript. It does not start microphone capture or require Keyboard access. GitHub Actions runs these checks and builds the signed release app for pushes to `main` and pull requests.
+
+The focus check exercises the actual cursor-resolution code against simulated Accessibility responses, including Electron's initially inactive tree, delayed focus, app and field changes, password fields, and cancellation. It does not require privacy permissions or prove live insertion in T3 Code.
 
 Render the native setup, listening, and recovery views:
 

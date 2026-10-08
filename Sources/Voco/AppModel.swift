@@ -210,13 +210,16 @@ final class AppModel {
             fail(setupMessage, id: id)
             return
         }
-        holdTask = nil
-        prepared = nil
-        active = session
         do {
             guard let target else { throw InsertionError.focusChanged }
+            let resolvedTarget = try await target.resolved()
+            guard !Task.isCancelled, id == sessionID else { return }
+            self.target = resolvedTarget
+            holdTask = nil
+            prepared = nil
+            active = session
             do {
-                liveWriter = try LiveTextWriter(target: target)
+                liveWriter = try LiveTextWriter(target: resolvedTarget)
                 liveTypingAvailable = true
             } catch InsertionError.liveUnsupported {
                 liveWriter = nil

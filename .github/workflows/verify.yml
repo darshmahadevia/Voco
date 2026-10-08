@@ -25,5 +25,7 @@ jobs:
         run: ./scripts/test.sh
       - name: Check transcript recovery lifecycle
         run: ./scripts/check-recovery.sh
+      - name: Check Electron cursor resolution
+        run: ./scripts/check-focus.sh
       - name: Build and verify the signed release app
         run: ./scripts/build.sh

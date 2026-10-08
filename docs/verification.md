@@ -26,6 +26,16 @@ The new build's LaunchServices diagnostic reports `Accessibility: required` and 
 
 Earlier entries below describe previous builds and do not establish live behavior on this build.
 
+## T3 Code cursor follow-up
+
+The user reported a visible cursor that Voco sometimes could not detect in T3 Code. The original target capture made a single focused-element query without requesting Electron's Accessibility tree. Missing focus was retained as a nil element until startup, then reported as a changed field.
+
+`FocusTarget` now requests `AXManualAccessibility` once during capture, as described in [Electron's accessibility guide](https://github.com/electron/electron/blob/main/docs/tutorial/accessibility.md). A missing field gets a bounded retry on the captured process before microphone startup. After a field resolves, validation continues to require the same app and exact field identity. App switching, changed fields, secure fields, and canceled startup still stop writing. An exhausted lookup now reports that the focused field could not be read.
+
+`./scripts/check-focus.sh` compiles the actual target implementation with simulated Accessibility and workspace boundaries. `./scripts/check-focus.sh 34ee4ed` runs the minimal inactive-tree fixture against the original implementation and prints `Electron cursor with initially inactive accessibility: MISSING`. The current check prints `FOUND`. It also verifies delayed publication, one accessibility request per capture, read-only validation, the retry bound, app and field switching, secure fields, native apps that reject the Electron attribute, missing permissions, invalid responses, and cancellation. An unreadable field is reported as unavailable rather than incorrectly claiming the field changed.
+
+This verifies the documented Electron compatibility path and its safety checks. The corrected app is installed at `~/Applications/Voco.app`, and its strict signature check passes. Its shortcut diagnostic reports `Accessibility: required` and `Global shortcut: unavailable`. Live detection and insertion in the user's T3 Code editor remain unverified until Keyboard access is enabled for this development signature. The older Utter process was left running; quit it before using the new app so both do not handle the same shortcut.
+
 ## Completed checks
 
 - `./scripts/build.sh` produced the release app with no external dependencies.
