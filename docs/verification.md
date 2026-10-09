@@ -1,5 +1,17 @@
 # Electron migration verification
 
+## UI refinement, October 9, 2026
+
+The refined interface is installed in `~/Applications/Voco.app`. Home retains the centered waveform and two equal headline lines. Settings groups its controls into Speech model, Access, and Dictation. Supporting text and copy controls are larger. Setup uses a compact introduction above a full-width workspace at the native minimum. Practice explains missing requirements and links to the relevant setup step.
+
+Live browser checks at 820 by 640px measured the Settings footer at 618px, the welcome action at 519 to 558px, the model download action at 453 to 492px, and both permission actions inside the first viewport. Expanded help remains reachable by scrolling. Browser preview recovery reserves space for its notice. The normal installed desktop shows the updated Home and Settings, the model ready, microphone and keyboard access Allowed, and Ready to dictate.
+
+Type checking, the production build, and `npm run verify:renderer` pass. Targeted additions verify recovery status, full Home recovery scrolling, a direct practice setup action, and recovery copy failure/retry at the actual 400 by 220px pill size. Copy includes all recovery words. Existing checks still cover responsive centering, fonts, transcript privacy, copy feedback, focus and scroll preservation, startup races, waveform activity, silence, and reduced motion.
+
+The updated packaged Electron runtime passes its preload, two-window, transparent pill, bundled helper, cached Moonshine model, and permission-return checks. Its direct terminal invocation reports microphone required; the normal LaunchServices app reports Allowed. Source reviews found no remaining actionable regressions. Native capture and insertion code did not change in this UI pass. Physical Fn delivery remains the limitation recorded below.
+
+The manual design detector reports font and design-token advisories. Instrument Serif is an intentional setup font. Canonical design documents describe the new layout; generated `.impeccable/design.json` remains stale and can be refreshed separately from `DESIGN.md`.
+
 ## Current verification, October 9, 2026
 
 The installed `~/Applications/Voco.app` and bundled helper are both version 0.2.1 and use the persistent Voco Local Development certificate. Production builds, strict deep signature validation, installed-content comparison, repeated installation, and the generated `Voco-0.2.1-arm64.dmg` checksum pass. Node 22.20.0, Swift 6.4, the Xcode Command Line Tools, and macOS 27.0.1 on Apple Silicon are available. Public Developer ID signing and notarization remain unconfigured.

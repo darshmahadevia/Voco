@@ -17,13 +17,13 @@ colors:
 typography:
   display:
     fontFamily: '"Manrope", -apple-system, sans-serif'
-    fontSize: "clamp(52px, 5vw, 62px)"
+    fontSize: "56px"
     fontWeight: 500
     lineHeight: 1.04
     letterSpacing: "-0.04em"
   display-accent:
     fontFamily: '"Pixelify Sans", sans-serif'
-    fontSize: "clamp(52px, 5vw, 62px)"
+    fontSize: "56px"
     fontWeight: 400
     letterSpacing: "-0.02em"
   setup-accent:
@@ -58,7 +58,7 @@ typography:
     fontFamily: '"Manrope", -apple-system, sans-serif'
     fontSize: "15px"
     fontWeight: 400
-    lineHeight: 1.85
+    lineHeight: 1.6
 rounded:
   preview: "6px"
   control: "7px"
@@ -76,7 +76,7 @@ spacing:
   content-gutter-wide: "72px"
   content-gutter-compact: "30px"
   content-gutter-mobile: "20px"
-  setup-panel: "30px"
+  setup-panel: "24px"
 components:
   button-primary:
     backgroundColor: "{colors.accent}"
@@ -97,8 +97,8 @@ components:
     textColor: "{colors.accent-strong}"
     typography: "{typography.utility}"
     rounded: "{rounded.control}"
-    padding: "0 5px"
-    height: "26px"
+    padding: "0 7px"
+    height: "32px"
   sidebar-active:
     backgroundColor: "#202020"
     textColor: "{colors.text-primary}"
@@ -106,10 +106,10 @@ components:
     padding: "0 14px"
     height: "43px"
   transcript-switch:
-    backgroundColor: "#454545"
+    backgroundColor: "transparent"
     rounded: "12px"
-    width: "34px"
-    height: "20px"
+    width: "44px"
+    height: "34px"
   practice-field:
     backgroundColor: "#090909"
     textColor: "{colors.text-primary}"
@@ -119,7 +119,7 @@ components:
   home-voice-core:
     backgroundColor: "#121212"
     rounded: "{rounded.circle}"
-    size: "170px"
+    size: "140px"
   status-pill:
     backgroundColor: "#151515"
     textColor: "{colors.text-primary}"
@@ -131,7 +131,7 @@ components:
     backgroundColor: "#151515"
     textColor: "{colors.text-primary}"
     rounded: "{rounded.recovery}"
-    padding: "16px"
+    padding: "14px"
     width: "min(100%, 352px)"
 ---
 
@@ -189,7 +189,7 @@ The main palette stays black and gray. Orange marks actions and voice activity; 
 - **Supporting** (400, 12px, 1.4): Descriptions and setup copy.
 - **Label** (650, 12px): Section labels.
 - **Utility** (600, 12px): Buttons and short status labels.
-- **Transcript** (400, 15px, 1.85): The optional latest transcript on Home.
+- **Transcript** (400, 15px, 1.6): The optional latest transcript on Home.
 
 **The Bundled Font Rule.** Use the bundled Manrope, Pixelify Sans, and Instrument Serif files with their declared fallbacks. Pixelify Sans comes from the official Google Fonts repository (commit 8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5) and includes its OFL license in the packaged licenses.
 
@@ -197,7 +197,7 @@ The main palette stays black and gray. Orange marks actions and voice activity; 
 
 The native window opens at 1120 by 780px and has an 820 by 640px minimum. Desktop uses a permanent 194px left sidebar and a centered content column with 48px gutters. The content area grows to 1200px; windows at 1500px and wider use 72px gutters. Below 1050px, content gutters shrink to 30px.
 
-The dashboard centers a vertical hero with the waveform above a large two-line heading. The latest transcript stays visible below the hero with a copy button. Settings is available in the sidebar. Setup uses a two-column copy and workspace layout, then stacks below 800px. At 600px and below, the sidebar becomes a 72px icon rail, the centered hero scales down, and content gutters shrink to 14px.
+The dashboard centers a vertical hero with the waveform above two equally sized headline lines. The orbit is 140px and the headline is 56px, reducing to 112px and 46px below 960px. The latest transcript stays visible below the hero with a copy button. Settings uses a column up to 760px wide with compact divided sections. Setup uses a two-column copy and workspace layout, then stacks below 960px. Its compact introduction places a 28px headline beside the explanation above a full-width workspace. At 600px and below, the introduction becomes one column, the sidebar becomes a 72px icon rail, the centered hero scales down, and content gutters shrink to 14px.
 
 **The Wide Workspace Rule.** Keep the dashboard and setup content open on desktop. Stack their columns only at the implemented responsive breakpoints.
 
@@ -221,16 +221,16 @@ The left sidebar holds the wordmark, Home, Settings, and setup when setup remain
 The hero centers a circular voice mark above a two-line headline and shortcut or setup action. Manrope carries the first line, and the equally sized Pixelify Sans line carries the second. The bars animate visibly inside the circle while ready and stop with reduced motion. During listening, eleven bars scale with the square root of microphone volume and settle through a spring (stiffness 500, damping 32, mass 0.35). While listening above 0.015, each nested fill pulses independently at a staggered interval. At silence, the bars rest at 3px. Reduced motion removes the pulse and makes spring transitions immediate. The lower panel keeps the optional latest transcript visible. Its copy button animates the icon and label after a successful clipboard write, then returns to its idle state. Copy errors retain the words and allow retry. Empty and disabled-retention states keep the panel visible and disable copying. The transcript remains in memory until quit and can be turned off in Settings.
 
 ### First-time setup
-The four steps are Welcome, Speech model, App permissions, and Your first words. Setup explains the offline model, tracks download progress, requests microphone and keyboard access, and keeps an Explore the app link available. The practice step accepts dictation in a text field and has an expandable Fn / Globe guide for macOS keyboard conflicts. Keep a neutral startup view until the first native state arrives, then choose the initial page once. Route to Home when setup has been seen, or when the model is loading or ready and microphone, accessibility, and shortcut permissions are present. When those permissions are present but the model is still loading, Home says "Loading speech model" and shows no setup prompt. Native actions stay disabled in browser preview.
+The four steps are Welcome, Speech model, App permissions, and Your first words. Setup explains the offline model, tracks download progress, requests microphone and keyboard access, and keeps an Explore the app link available. Practice explains unavailable dictation and links to the model or permission step. Its text field has an expandable Fn / Globe guide for macOS keyboard conflicts. Keep a neutral startup view until the first native state arrives, then choose the initial page once. Route to Home when setup has been seen, or when the model is loading or ready and microphone, accessibility, and shortcut permissions are present. When those permissions are present but the model is still loading, Home says "Loading speech model" and shows no setup prompt. Native actions stay disabled in browser preview.
 
 ### Settings
-Model, access, shortcut, and transcript preferences appear as flat sections with divider lines. The optional transcript switch controls whether Home keeps the latest transcript in memory.
+Speech model, Access, and Dictation appear as flat sections with divider lines. Dictation groups the shortcut and transcript preference. The optional transcript switch controls whether Home keeps the latest transcript in memory. Its 44px by 34px hit area surrounds the 34px by 20px track.
 
 ### Dictation pill
 The 46px capsule shows the waveform and a short status. It does not show partial transcript text during capture.
 
 ### Recovery
-Recovery expands to a maximum width of 352px. It shows an explanation, up to three lines of transcript text, and Copy transcript and dismiss actions.
+The 400px by 220px pill shows recovery in a panel up to 352px wide. The heading, dismiss control, and Copy transcript action stay outside a scrolling explanation, transcript excerpt, and error region. Home shows the full recovery text in a scrollable area and gives recovery precedence over readiness. Copy includes all retained words.
 
 ## Do's and Don'ts
 
