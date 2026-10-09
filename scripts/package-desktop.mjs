@@ -14,7 +14,7 @@ if (!identity) {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 await build({ targets: Platform.MAC.createTarget(target, Arch.arm64), config: {
-  directories: { output }, mac: { identity: identity || '-' }, forceCodeSigning: Boolean(identity && identity !== '-'),
+  directories: { output }, mac: { identity: identity || '-', ...(identity === 'Voco Local Development' ? { timestamp: 'none' } : {}) }, forceCodeSigning: Boolean(identity && identity !== '-'),
 } });
 const appBundle = join(output, 'mac-arm64/Voco.app');
 execFileSync('xattr', ['-cr', appBundle]);
