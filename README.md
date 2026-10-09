@@ -20,7 +20,7 @@ To build a local app bundle:
 open ~/Applications/Voco.app
 ```
 
-To create the disk image installer, run `npm run dist`. Build artifacts live in `~/Library/Caches/Voco/Electron`; `release` links to that directory to avoid synced-folder metadata affecting signing. The install script keeps one installed app in `~/Applications/Voco.app`; build links point to that copy after installation. Local bundles use ad-hoc signing. Public distribution requires a Developer ID signature and notarization.
+To create the disk image installer, run `npm run dist`. Build artifacts live in `~/Library/Caches/Voco/Electron`; `release` links to that directory to avoid synced-folder metadata affecting signing. The install script keeps one installed app in `~/Applications/Voco.app`; build links point to that copy after installation. Local bundles use the configured development certificate, with ad-hoc signing as the fallback. Public distribution requires a Developer ID signature and notarization.
 
 ## Set up dictation
 
@@ -55,6 +55,7 @@ node scripts/verify-desktop.mjs
 ./scripts/test.sh
 ./scripts/check-focus.sh
 ./scripts/check-insertion.sh
+./scripts/verify-microphone.sh
 ```
 
 The packaged desktop can also be verified directly:
@@ -87,7 +88,7 @@ macOS ships first. Windows support follows after macOS dictation is stable. The 
 
 Moonshine code and English streaming models are MIT licensed. See [Moonshine's model catalog](https://moonshine-voice.readthedocs.io/en/stable/models/available-models/).
 
-For real native, WebKit browser, and Electron live insertion checks, build once, enable the helper in macOS **Privacy & Security > Device Control and Data Access**, then run `./scripts/verify-live-editors.sh`. The fixtures exercise selections, Unicode revisions, deletion, clipboard preservation, and caret-change refusal. See [the verification record](docs/verification.md#live-dictation-updates) for speech fixture options.
+For real native, WebKit browser, and Electron live insertion checks, install the app and run `VOCO_VERIFY_DESKTOP_APP="$HOME/Applications/Voco.app" ./scripts/verify-live-editors.sh`. This uses the desktop app’s existing keyboard permission. Standalone helper checks need their own grant. The fixtures exercise selections, Unicode revisions, deletion, clipboard preservation, and caret-change refusal. See [the verification record](docs/verification.md#live-dictation-updates) for speech fixture options.
 
 ### Keep permissions across local updates
 

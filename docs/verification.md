@@ -1,5 +1,23 @@
 # Electron migration verification
 
+## Current verification, October 9, 2026
+
+The installed `~/Applications/Voco.app` and bundled helper are both version 0.2.1 and use the persistent Voco Local Development certificate. Production builds, strict deep signature validation, installed-content comparison, repeated installation, and the generated `Voco-0.2.1-arm64.dmg` checksum pass. Node 22.20.0, Swift 6.4, the Xcode Command Line Tools, and macOS 27.0.1 on Apple Silicon are available. Public Developer ID signing and notarization remain unconfigured.
+
+Actual microphone capture passed under the installed desktop identity. A five-second run delivered 52 audio callbacks, 31 speech notifications, and 10 provisional recognition updates. The repeatable `scripts/verify-microphone.sh` also passed with 50 audio callbacks. This check uses the production microphone converter and Moonshine engine, performs no insertion, and removes its temporary transcript report on exit. Capture during silence can pass without a transcript.
+
+All 16 real AppKit, WebKit, and Electron insertion cases passed with `VOCO_VERIFY_DESKTOP_APP="$HOME/Applications/Voco.app" ./scripts/verify-live-editors.sh`. With the speech fixture environment variables from the section below, the matrix also verified actual Moonshine streaming revisions and the literal final sentence. Selection preservation, Unicode revisions, deletion, rich-text placeholders, clipboard preservation, application input events, and changed-caret refusal passed. The standalone helper was denied Accessibility access; running checks through the packaged desktop uses the already approved desktop identity without granting more permissions.
+
+Model checks used actual native processes. Missing models reported missing, damaged models reported a repairable error, and two real downloads received bytes before cancellation. Cancellation and immediate retry removed staging and never installed an incomplete model. The cached architecture-5 English Medium Streaming model passed integrity checks and loaded. Its audio fixture produced seven partial updates and the exact expected final sentence.
+
+The packaged Electron runtime passed the window, preload, helper, model, transparent pill, and permission-return checks. Direct terminal launches reported microphone required while LaunchServices launches had the approved microphone identity. Type checking, seven targeted TypeScript process/protocol tests, the existing Swift core checks, insertion/focus checks, audio callback check, and production renderer regression check passed.
+
+Fixed in this pass: invalid helper output now terminates the failed service and cannot replace recovery with later state; broken pipes cannot crash Electron; recovery keeps current listening text; helper versions follow package metadata; changing build caches cannot silently package an old helper; onboarding practice is an allowed insertion target; obsolete SwiftUI app-entry verification scripts are removed. Local development signatures skip network timestamp requests.
+
+macOS Keyboard settings now show **Press Globe key to: Do Nothing**. Apple Dictation uses the separate microphone key. The installed helper reports Accessibility and shortcut monitoring available, and the normal desktop shows **Ready to dictate** after the update. Physical Fn / Globe press and release remain unverified: the computer automation API rejects `fn` with `keyNotFound`, so this session cannot prove physical key delivery. No system privacy grants were changed.
+
+## Earlier migration record
+
 The migration is verified on an Apple Silicon Mac running macOS 27.0.1 with Node 22.20 and Swift 6.4. The bundled native Moonshine runtime requires macOS 26 or newer.
 
 ## Verified behavior
