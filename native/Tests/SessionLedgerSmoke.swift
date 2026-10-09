@@ -9,9 +9,6 @@ private struct FakeTextTarget {
 @main
 enum SessionLedgerSmoke {
     static func main() {
-        check(FocusTargetPolicy.isParentProcess(42, parentProcessID: 42), "Electron parent is excluded as an insertion target")
-        check(!FocusTargetPolicy.isParentProcess(43, parentProcessID: 42), "unrelated foreground target remains allowed")
-
         let originalSession = UUID()
         var gate = SessionIDGate()
         gate.begin(originalSession)

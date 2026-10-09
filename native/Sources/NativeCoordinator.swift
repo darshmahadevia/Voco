@@ -282,9 +282,7 @@ final class NativeCoordinator {
     }
 
     private func captureTarget() -> FocusTarget? {
-        guard let target = FocusTarget.capture(),
-              !FocusTargetPolicy.isParentProcess(target.processID, parentProcessID: getppid()) else { return nil }
-        return target
+        FocusTarget.capture()
     }
 
     private func startDictation(id: UUID, target: FocusTarget) {
