@@ -164,9 +164,20 @@ else {
       ? join(process.resourcesPath, 'native/VocoNative.app/Contents/MacOS/VocoNative')
       : join(app.getAppPath(), 'native/build/VocoNative.app/Contents/MacOS/VocoNative');
     const modelDirectory = verificationModelDirectory ?? join(app.getPath('userData'), 'models/moonshine-medium-streaming-en');
-    if (verificationDirectory && process.argv.includes('--verify-microphone')) {
-      const child = spawn(helperExecutable, ['--verify-microphone', '5', '--model-directory', modelDirectory,
-        '--verification-output', join(verificationDirectory, 'microphone.json')], { stdio: 'inherit' });
+    const liveInsertionIndex = process.argv.indexOf('--verify-live-insertion');
+    const expectedEditorText = liveInsertionIndex >= 0 ? process.argv[liveInsertionIndex + 1] : undefined;
+    const nativeVerificationArguments = process.argv.includes('--verify-microphone')
+      ? ['--verify-microphone', '5', '--verification-output', join(verificationDirectory ?? '', 'microphone.json')]
+      : expectedEditorText !== undefined
+        ? ['--verify-live-insertion', expectedEditorText]
+        : process.argv.includes('--verify-empty-rich-editor') ? ['--verify-empty-rich-editor'] : null;
+    if (verificationDirectory && nativeVerificationArguments) {
+      const fixtureIndex = process.argv.indexOf('--audio-fixture');
+      const audioFixture = fixtureIndex >= 0 ? process.argv[fixtureIndex + 1] : undefined;
+      if (audioFixture) {
+        nativeVerificationArguments.push('--audio-fixture', audioFixture);
+      }
+      const child = spawn(helperExecutable, [...nativeVerificationArguments, '--model-directory', modelDirectory], { stdio: 'inherit' });
       child.once('error', (error) => { process.stderr.write(`${error.message}\n`); app.exit(1); });
       child.once('exit', (code) => app.exit(code ?? 1));
       return;

@@ -53,6 +53,12 @@ final class WebEditorFixture {
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
                 process.arguments = ["-W", "-g", "-n", helper, "--stdout", output.path, "--stderr", errors.path, "--args", "--verify-live-insertion", "Before selected after"]
                 let environment = ProcessInfo.processInfo.environment
+                if environment["VOCO_VERIFY_DESKTOP_APP"] != nil {
+                    process.arguments! += ["--verify-desktop", "--verification-directory=\(directory.path)"]
+                    if let model = environment["VOCO_VERIFY_MODEL_DIRECTORY"] {
+                        process.arguments! += ["--verification-model-directory=\(model)"]
+                    }
+                }
                 let speech = field == "textarea" && selected && environment["VOCO_VERIFY_AUDIO_FIXTURE"] != nil
                 if speech, let audio = environment["VOCO_VERIFY_AUDIO_FIXTURE"], let model = environment["VOCO_VERIFY_MODEL_DIRECTORY"] {
                     process.arguments! += ["--audio-fixture", audio, "--model-directory", model]
@@ -92,7 +98,7 @@ struct WebEditorCheck {
         app.setActivationPolicy(.regular)
         let fixture = WebEditorFixture()
         Task {
-            do { try await fixture.run(helper: CommandLine.arguments[1], fixture: CommandLine.arguments[2]); exit(0) }
+            do { try await fixture.run(helper: ProcessInfo.processInfo.environment["VOCO_VERIFY_DESKTOP_APP"] ?? CommandLine.arguments[1], fixture: CommandLine.arguments[2]); exit(0) }
             catch { FileHandle.standardError.write(Data("\(error)\n".utf8)); exit(1) }
         }
         withExtendedLifetime(fixture) { app.run() }

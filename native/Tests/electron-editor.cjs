@@ -6,6 +6,10 @@ const { join, resolve } = require('node:path');
 const { tmpdir } = require('node:os');
 const assert = require('node:assert/strict');
 const run = promisify(execFile);
+const desktopArguments = directory => process.env.VOCO_VERIFY_DESKTOP_APP
+  ? ['--verify-desktop', `--verification-directory=${directory}`,
+    ...(process.env.VOCO_VERIFY_MODEL_DIRECTORY ? [`--verification-model-directory=${process.env.VOCO_VERIFY_MODEL_DIRECTORY}`] : [])]
+  : [];
 
 app.whenReady().then(async () => {
   const logs = await mkdtemp(join(tmpdir(), 'voco-electron-editor-'));
@@ -36,8 +40,8 @@ app.whenReady().then(async () => {
         const errors = join(logs, 'error.log');
         const speechArguments = field === 'textarea' && selected && process.env.VOCO_VERIFY_AUDIO_FIXTURE
           ? ['--audio-fixture', process.env.VOCO_VERIFY_AUDIO_FIXTURE, '--model-directory', process.env.VOCO_VERIFY_MODEL_DIRECTORY] : [];
-        await run('open', ['-W', '-g', '-n', resolve(__dirname, '../build/VocoNative.app'), '--stdout', output, '--stderr', errors,
-          '--args', '--verify-live-insertion', 'Before selected after', ...speechArguments], { timeout: 20000 });
+        await run('open', ['-W', '-g', '-n', process.env.VOCO_VERIFY_DESKTOP_APP || resolve(__dirname, '../build/VocoNative.app'), '--stdout', output, '--stderr', errors,
+          '--args', ...desktopArguments(logs), '--verify-live-insertion', 'Before selected after', ...speechArguments], { timeout: 20000 });
         const transcript = await readFile(output, 'utf8');
         if (!transcript.includes('Live insertion checks: PASS')) {
           const diagnostic = await window.webContents.executeJavaScript(`JSON.stringify({fields:[...document.querySelectorAll('input,textarea,[contenteditable]')].map(field=>({value:field.value??field.textContent,start:field.selectionStart,end:field.selectionEnd})),events:window.vocoEditorEvents,keys:window.vocoKeys})`);
@@ -70,8 +74,8 @@ app.whenReady().then(async () => {
       app.focus({ steal: true }); window.focus();
       const output = join(logs, emptyRich ? 'empty-rich.log' : 'literal-newline.log');
       const errors = join(logs, 'error.log');
-      await run('open', ['-W', '-g', '-n', resolve(__dirname, '../build/VocoNative.app'), '--stdout', output, '--stderr', errors,
-        '--args', ...(emptyRich ? ['--verify-empty-rich-editor'] : ['--verify-live-insertion', '\n'])], { timeout: 20000 });
+      await run('open', ['-W', '-g', '-n', process.env.VOCO_VERIFY_DESKTOP_APP || resolve(__dirname, '../build/VocoNative.app'), '--stdout', output, '--stderr', errors,
+        '--args', ...desktopArguments(logs), ...(emptyRich ? ['--verify-empty-rich-editor'] : ['--verify-live-insertion', '\n'])], { timeout: 20000 });
       const transcript = await readFile(output, 'utf8');
       assert.ok(transcript.includes(emptyRich ? 'Empty rich editor checks: PASS' : 'Live insertion checks: PASS'),
         transcript + await readFile(errors, 'utf8'));
