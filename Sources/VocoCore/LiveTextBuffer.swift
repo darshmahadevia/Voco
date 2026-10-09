@@ -13,8 +13,8 @@ public struct LiveTextPlan: Sendable {
 public struct LiveTextBuffer: Sendable {
     private var document: String
     private var selection: NSRange
-    private let start: Int
-    private var originalSelectionLength: Int
+    private var start: Int
+    private let preservedSelection: NSRange?
     private var transcript = ""
 
     public init(document: String, selection: NSRange) throws {
@@ -27,8 +27,8 @@ public struct LiveTextBuffer: Sendable {
         else { throw LiveTextError.invalidRange }
         self.document = document
         self.selection = selection
-        self.start = selection.location
-        self.originalSelectionLength = selection.length
+        self.start = selection.location + selection.length
+        self.preservedSelection = selection.length > 0 ? selection : nil
     }
 
     public func plan(text: String, document current: String, selection caret: NSRange) throws -> LiveTextPlan? {
@@ -43,11 +43,11 @@ public struct LiveTextBuffer: Sendable {
         let prefixLength = String(old.prefix(prefix)).utf16.count
         let suffixLength = String(old.suffix(suffix)).utf16.count
         let range = NSRange(location: start + prefixLength,
-                            length: originalSelectionLength + transcript.utf16.count - prefixLength - suffixLength)
+                            length: transcript.utf16.count - prefixLength - suffixLength)
         let replacement = String(new[prefix..<(new.count - suffix)])
         let updated = (document as NSString).replacingCharacters(in: range, with: replacement)
         return LiveTextPlan(range: range, replacement: replacement, document: updated,
-                            selection: NSRange(location: start + text.utf16.count, length: 0), transcript: text)
+                            selection: preservedSelection ?? NSRange(location: start + text.utf16.count, length: 0), transcript: text)
     }
 
     public mutating func accept(_ plan: LiveTextPlan, document: String, selection: NSRange) throws {
@@ -55,7 +55,12 @@ public struct LiveTextBuffer: Sendable {
         self.document = document
         self.selection = selection
         transcript = plan.transcript
-        originalSelectionLength = 0
+    }
+
+    public mutating func commit(document: String, selection: NSRange) throws {
+        _ = try plan(text: transcript, document: document, selection: selection)
+        start += transcript.utf16.count
+        transcript = ""
     }
 
     private static func hasSameUTF16(_ lhs: String, _ rhs: String) -> Bool {

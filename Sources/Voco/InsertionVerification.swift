@@ -2,6 +2,47 @@ import AppKit
 import ApplicationServices
 
 @MainActor
+func verifyFocusedInsertion(expectedText: String) async throws {
+    guard AXIsProcessTrusted(), let captured = FocusTarget.capture() else { throw InsertionError.permission }
+    let target = try await captured.resolved()
+    let element = try target.validate()
+    func value() throws -> String {
+        var result: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &result) == .success,
+              let text = result as? String else { throw InsertionError.unavailable }
+        return text
+    }
+    guard try value().utf16.elementsEqual(expectedText.utf16) else { throw InsertionError.focusChanged }
+    // The caller supplies a disposable sentinel and places the caret at its end.
+    var rangeValue: CFTypeRef?
+    guard AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &rangeValue) == .success,
+          let rangeValue, CFGetTypeID(rangeValue) == AXValueGetTypeID() else { throw InsertionError.focusUnavailable }
+    var range = CFRange()
+    guard AXValueGetValue(rangeValue as! AXValue, .cfRange, &range),
+          range.location == expectedText.utf16.count, range.length == 0 else { throw InsertionError.focusChanged }
+    var writer: LiveTextWriter?
+    do { writer = try LiveTextWriter(target: target) }
+    catch InsertionError.liveUnsupported {}
+    var expected = expectedText
+    for words in ["Inserted by Voco.", " Unicode 🍦.", " Second phrase."] {
+        if let liveWriter = writer {
+            do {
+                try liveWriter.update(words)
+                try liveWriter.commit()
+            } catch InsertionError.liveUnsupported {
+                writer = nil
+                try await target.insert(words)
+            }
+        } else { try await target.insert(words) }
+        expected += words
+        guard try value().utf16.elementsEqual(expected.utf16) else { throw InsertionError.unavailable }
+        print("Focused insertion: exact text verified")
+    }
+    print("Focused editor: \(writer == nil ? "buffered paste" : "live Accessibility")")
+    print("Focused insertion checks: PASS")
+}
+
+@MainActor
 func verifyInsertion(audioFixture: URL? = nil) async throws {
     guard AXIsProcessTrusted() else { throw InsertionError.permission }
     let file = FileManager.default.temporaryDirectory.appendingPathComponent("Voco-insertion-test-\(UUID().uuidString).txt")

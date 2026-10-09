@@ -1,6 +1,8 @@
 import AppKit
 import ApplicationServices
 
+let vocoInsertionEventMarker: Int64 = 0x564F434F
+
 @MainActor
 struct FocusTarget {
     let processID: pid_t
@@ -59,12 +61,33 @@ struct FocusTarget {
         var subrole: CFTypeRef?
         AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &subrole)
         if let subrole, CFEqual(subrole, kAXSecureTextFieldSubrole as CFString) { throw InsertionError.secureField }
+        var role: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role) == .success,
+              let role, ["AXTextField", "AXTextArea", "AXComboBox"].contains(where: { CFEqual(role, $0 as CFString) })
+        else { throw InsertionError.unavailable }
         return element
     }
 
+    static func isWebEditor(_ element: AXUIElement) -> Bool {
+        var current = element
+        for _ in 0..<64 {
+            var role: CFTypeRef?
+            if AXUIElementCopyAttributeValue(current, kAXRoleAttribute as CFString, &role) == .success,
+               let role, CFEqual(role, "AXWebArea" as CFString) { return true }
+            var parent: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(current, kAXParentAttribute as CFString, &parent) == .success,
+                  let parent, CFGetTypeID(parent) == AXUIElementGetTypeID(), !CFEqual(current, parent)
+            else { return false }
+            current = parent as! AXUIElement
+        }
+        return false
+    }
+
     func insert(_ text: String) async throws {
+        guard !text.isEmpty else { return }
+        try Task.checkCancellation()
         guard AXIsProcessTrusted() else { throw InsertionError.permission }
-        // Fn + Space can stop capture before the user has released the chord.
+        // A buffered insertion waits for the hold key to be released.
         for _ in 0..<20 {
             if !CGEventSource.flagsState(.combinedSessionState).contains(.maskSecondaryFn) { break }
             try await Task.sleep(for: .milliseconds(25))
@@ -74,19 +97,25 @@ struct FocusTarget {
         guard CGEventSource.flagsState(.combinedSessionState).intersection(modifiers).isEmpty
         else { throw InsertionError.modifiers }
         let before = Self.textValue(of: element)
+        let selectionBefore = Self.selectedRange(of: element)
         var writable = DarwinBoolean(false)
-        if AXUIElementIsAttributeSettable(element, kAXSelectedTextAttribute as CFString, &writable) == .success,
+        // Web editors need input/paste events to update their application state.
+        if !Self.isWebEditor(element),
+           AXUIElementIsAttributeSettable(element, kAXSelectedTextAttribute as CFString, &writable) == .success,
            writable.boolValue,
            AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success {
             if let before {
                 let after = Self.textValue(of: element)
-                if let after, after != before { return }
+                if let after, after != before || Self.didReplaceIdenticalText(
+                    text, before: before, after: after, selection: selectionBefore, element: element
+                ) { return }
                 // Some apps acknowledge an AX write without changing their text.
             } else {
                 // Without readable text, avoid a second insertion that could duplicate words.
                 return
             }
         }
+        try Task.checkCancellation()
         _ = try validate()
         guard let source = CGEventSource(stateID: .privateState),
               let down = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
@@ -97,8 +126,7 @@ struct FocusTarget {
             item.types.compactMap { type in item.data(forType: type).map { (type, $0) } }
         }
         pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-        let ourChange = pasteboard.changeCount
+        var ourChange = pasteboard.changeCount
         defer {
             if pasteboard.changeCount == ourChange {
                 pasteboard.clearContents()
@@ -110,14 +138,24 @@ struct FocusTarget {
                 pasteboard.writeObjects(items)
             }
         }
+        guard pasteboard.setString(text, forType: .string) else { throw InsertionError.unavailable }
+        ourChange = pasteboard.changeCount
+        try Task.checkCancellation()
+        _ = try validate()
+        down.setIntegerValueField(.eventSourceUserData, value: vocoInsertionEventMarker)
+        up.setIntegerValueField(.eventSourceUserData, value: vocoInsertionEventMarker)
         down.flags = .maskCommand
-        up.flags = .maskCommand
+        // Release the synthetic chord so the next phrase does not see Command held.
+        up.flags = []
         down.post(tap: .cghidEventTap)
         up.post(tap: .cghidEventTap)
         // Let the destination consume the paste before restoring the clipboard.
-        for _ in 0..<20 {
+        for _ in 0..<40 {
             try await Task.sleep(for: .milliseconds(25))
-            if let before, let after = Self.textValue(of: element), after != before { return }
+            if let before, let after = Self.textValue(of: element),
+               after != before || Self.didReplaceIdenticalText(
+                   text, before: before, after: after, selection: selectionBefore, element: element
+               ) { return }
         }
         if let before, Self.textValue(of: element) == before { throw InsertionError.unavailable }
     }
@@ -127,6 +165,27 @@ struct FocusTarget {
         guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &value) == .success
         else { return nil }
         return value as? String
+    }
+
+    private static func selectedRange(of element: AXUIElement) -> CFRange? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &value) == .success,
+              let value, CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
+        var range = CFRange()
+        guard AXValueGetValue(value as! AXValue, .cfRange, &range) else { return nil }
+        return range
+    }
+
+    private static func didReplaceIdenticalText(
+        _ text: String, before: String, after: String, selection: CFRange?, element: AXUIElement
+    ) -> Bool {
+        guard before.utf16.elementsEqual(after.utf16), let selection, selection.location >= 0,
+              selection.length > 0, selection.location <= before.utf16.count,
+              selection.length <= before.utf16.count - selection.location,
+              (before as NSString).substring(with: NSRange(location: selection.location, length: selection.length))
+                  .utf16.elementsEqual(text.utf16),
+              let current = selectedRange(of: element) else { return false }
+        return current.location == selection.location + text.utf16.count && current.length == 0
     }
 }
 

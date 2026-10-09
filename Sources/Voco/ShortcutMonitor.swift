@@ -19,31 +19,15 @@ final class ShortcutMonitor {
     var key: TalkKey = .fn
     var onAction: ((HoldAction) -> Void)?
     var onEscape: (() -> Void)?
-    var onContinuousToggle: (() -> Void)?
     private var globalMonitor: Any?
     private var localMonitor: Any?
     private var gesture = HoldGesture()
-    private var shortcutTap: CFMachPort?
-    private var shortcutSource: CFRunLoopSource?
-    private var spaceGesture = ContinuousShortcut()
-
-    var isRunning: Bool { globalMonitor != nil && localMonitor != nil && shortcutTap != nil }
+    var isRunning: Bool { globalMonitor != nil && localMonitor != nil }
 
     func start() -> Bool {
         guard AXIsProcessTrusted() else { return false }
         guard !isRunning else { return true }
         stop()
-        let eventMask = (CGEventMask(1) << CGEventType.keyDown.rawValue) | (CGEventMask(1) << CGEventType.keyUp.rawValue)
-        guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap,
-            eventsOfInterest: eventMask, callback: Self.filterShortcut,
-            userInfo: Unmanaged.passUnretained(self).toOpaque()
-        ), let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        else { return false }
-        shortcutTap = tap
-        shortcutSource = source
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-        CGEvent.tapEnable(tap: tap, enable: true)
         let mask: NSEvent.EventTypeMask = [.flagsChanged, .keyDown]
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
             guard let self else { return }
@@ -62,42 +46,11 @@ final class ShortcutMonitor {
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         globalMonitor = nil
         localMonitor = nil
-        if let shortcutSource { CFRunLoopRemoveSource(CFRunLoopGetMain(), shortcutSource, .commonModes) }
-        if let shortcutTap { CFMachPortInvalidate(shortcutTap) }
-        shortcutTap = nil
-        shortcutSource = nil
-        spaceGesture = ContinuousShortcut()
         gesture = HoldGesture()
     }
 
-    nonisolated private static let filterShortcut: CGEventTapCallBack = { _, type, event, context in
-        guard let context else { return Unmanaged.passUnretained(event) }
-        let monitor = Unmanaged<ShortcutMonitor>.fromOpaque(context).takeUnretainedValue()
-        let code = event.getIntegerValueField(.keyboardEventKeycode)
-        let flags = event.flags
-        let repeated = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
-        let suppress = MainActor.assumeIsolated {
-            if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-                if let tap = monitor.shortcutTap { CGEvent.tapEnable(tap: tap, enable: true) }
-                monitor.spaceGesture = ContinuousShortcut()
-                return false
-            }
-            guard code == 49 else {
-                return false
-            }
-            let other: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
-            let action = type == .keyUp ? monitor.spaceGesture.spaceUp()
-                : monitor.spaceGesture.spaceDown(fnDown: flags.contains(.maskSecondaryFn),
-                                                  otherModifier: !flags.intersection(other).isEmpty, repeated: repeated)
-            if action == .toggle {
-                Task { @MainActor [weak monitor] in monitor?.onContinuousToggle?() }
-            }
-            return action != .pass
-        }
-        return suppress ? nil : Unmanaged.passUnretained(event)
-    }
-
     nonisolated private static func receive(_ event: NSEvent, for monitor: ShortcutMonitor) {
+        guard event.cgEvent?.getIntegerValueField(.eventSourceUserData) != vocoInsertionEventMarker else { return }
         let type = event.type
         let flags = event.modifierFlags
         let code = event.keyCode

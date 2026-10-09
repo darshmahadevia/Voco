@@ -135,7 +135,6 @@ final class AppModel {
             case .cancelled: self?.cancel()
             }
         }
-        monitor.onContinuousToggle = { [weak self] in self?.toggleContinuous() }
         monitor.onEscape = { [weak self] in self?.cancel() }
         permissionTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshPermissions() }
@@ -326,11 +325,10 @@ final class AppModel {
             do {
                 let snapshot = try await session.finalizePause()
                 guard id == sessionID else { return }
-                if let liveWriter {
+                let current = session.currentTranscript
+                if try updateLiveText(liveText(current.text(after: committedThrough))), let liveWriter {
                     liveUpdateTask?.cancel()
                     liveUpdateTask = nil
-                    let current = session.currentTranscript
-                    try liveWriter.update(liveText(current.text(after: committedThrough)))
                     if !current.hasProvisionalText {
                         let batch = current.finalized(after: committedThrough)
                         if !batch.text.isEmpty {
@@ -365,8 +363,7 @@ final class AppModel {
         }
         guard let target else { throw InsertionError.focusChanged }
         let separator = !committedText.isEmpty && !".,!?;:)".contains(batch.text.first!) ? " " : ""
-        if let liveWriter { try liveWriter.update(separator + batch.text) }
-        else { try await target.insert(separator + batch.text) }
+        if try !updateLiveText(separator + batch.text) { try await target.insert(separator + batch.text) }
         guard id == sessionID else { return }
         committedThrough = batch.end
         committedText += separator + batch.text
@@ -506,13 +503,25 @@ final class AppModel {
             do {
                 try await Task.sleep(for: .milliseconds(25))
                 guard id == sessionID, phase == .listening else { return }
-                try liveWriter?.update(liveText(transcript))
-                noteLiveUpdate()
+                if try updateLiveText(liveText(transcript)) { noteLiveUpdate() }
                 liveUpdateTask = nil
             } catch {
                 guard !Task.isCancelled, id == sessionID else { return }
                 fail(error.localizedDescription, id: id)
             }
+        }
+    }
+
+    @discardableResult
+    private func updateLiveText(_ text: String) throws -> Bool {
+        guard let liveWriter else { return false }
+        do {
+            try liveWriter.update(text)
+            return true
+        } catch InsertionError.liveUnsupported {
+            self.liveWriter = nil
+            liveTypingAvailable = false
+            return false
         }
     }
 

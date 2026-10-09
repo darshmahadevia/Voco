@@ -62,6 +62,8 @@ func AXUIElementCopyAttributeValue(
         value.pointee = FocusFixture.invalidElement ? "Invalid AX element" as CFString : FocusFixture.focused
     case kAXSubroleAttribute:
         value.pointee = (FocusFixture.secure ? kAXSecureTextFieldSubrole : "AXStandard") as CFString
+    case kAXRoleAttribute:
+        value.pointee = kAXTextAreaRole as CFString
     default:
         return .attributeUnsupported
     }

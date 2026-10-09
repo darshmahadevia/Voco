@@ -157,10 +157,11 @@ import Foundation
     }
 }
 
-@Test func liveDictationReplacesTheInitialSelectionAndRejectsUnverifiedWrites() throws {
+@Test func liveDictationPreservesTheInitialSelectionAndRejectsUnverifiedWrites() throws {
     var buffer = try LiveTextBuffer(document: "Replace old text", selection: NSRange(location: 8, length: 3))
     let plan = try #require(try buffer.plan(text: "new", document: "Replace old text", selection: NSRange(location: 8, length: 3)))
-    #expect(plan.document == "Replace new text")
+    #expect(plan.document == "Replace oldnew text")
+    #expect(plan.selection == NSRange(location: 8, length: 3))
     #expect(throws: LiveTextError.changed) {
         try buffer.accept(plan, document: "Replace old text", selection: NSRange(location: 11, length: 0))
     }
@@ -186,4 +187,18 @@ import Foundation
     #expect(shortcut.spaceUp() == .pass)
     #expect(shortcut.spaceDown(fnDown: true, otherModifier: false, repeated: true) == .consume)
     #expect(shortcut.spaceUp() == .consume)
+}
+
+@Test func selectedTextSurvivesCorrectionsAndPauseContinuation() throws {
+    var buffer = try LiveTextBuffer(document: "Before selected after", selection: NSRange(location: 7, length: 8))
+    let selection = NSRange(location: 7, length: 8)
+    let first = try #require(try buffer.plan(text: " I scream", document: "Before selected after", selection: selection))
+    try buffer.accept(first, document: first.document, selection: selection)
+    let revised = try #require(try buffer.plan(text: " Ice cream. 🍦", document: first.document, selection: selection))
+    #expect(revised.document == "Before selected Ice cream. 🍦 after")
+    try buffer.accept(revised, document: revised.document, selection: selection)
+    try buffer.commit(document: revised.document, selection: selection)
+    let next = try #require(try buffer.plan(text: " Next.", document: revised.document, selection: selection))
+    #expect(next.document == "Before selected Ice cream. 🍦 Next. after")
+    #expect(next.selection == selection)
 }

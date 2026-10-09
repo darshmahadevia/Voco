@@ -33,6 +33,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.menu = menu
         statusItem = item
         menuNeedsUpdate(menu)
+        if let index = CommandLine.arguments.firstIndex(of: "--verify-focused-insertion") {
+            guard index + 1 < CommandLine.arguments.count else {
+                print("Focused insertion requires the exact disposable draft text")
+                exit(1)
+            }
+            let expected = CommandLine.arguments[index + 1]
+            setbuf(stdout, nil)
+            Task {
+                do {
+                    try await verifyFocusedInsertion(expectedText: expected)
+                    NSApp.terminate(nil)
+                } catch {
+                    print("Focused insertion verification failed: \(error.localizedDescription)")
+                    exit(1)
+                }
+            }
+            return
+        }
         if CommandLine.arguments.contains("--verify-insertion") {
             var fixture: URL?
             if let index = CommandLine.arguments.firstIndex(of: "--audio-fixture"), index + 1 < CommandLine.arguments.count {
