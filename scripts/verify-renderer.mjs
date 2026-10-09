@@ -43,6 +43,10 @@ ipcMain.handle('fixture:command', (_event, command) => {
     if (rejectCopy) throw new Error('Clipboard is temporarily unavailable.');
     copiedText = state.lastTranscript;
   }
+  if (command.kind === 'copyRecovery') {
+    if (rejectCopy) throw new Error('Clipboard is temporarily unavailable.');
+    copiedText = state.session.text;
+  }
 });
 ipcMain.handle('fixture:get-state', () => {readStarted = true; return delayedRead ? new Promise(resolve => {finishRead = resolve;}) : state;});
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -142,10 +146,21 @@ app.whenReady().then(async () => {
     publish({...ready, permissions: {...ready.permissions, shortcut: false}});
     await wait("document.body.innerText.includes('Setup needed')");
     assert.equal(await read("document.querySelector('#home-heading') !== null"), true, 'runtime permission change must not restart onboarding');
+    publish({...ready, session: {kind: 'recovery', message: 'Choose an editable field, or copy your words.', text: 'Keep these words safe. '.repeat(60)}});
+    await wait("document.querySelector('.home-recovery') !== null");
+    assert.equal(await read("document.querySelector('.voice-caption').textContent.includes('Ready to dictate')"), false, 'recovery must not claim readiness');
+    assert.equal(await read("document.querySelector('.home-recovery .recovery-transcript').textContent.includes('Keep these words safe.')"), true, 'Home retains recovery words');
+    assert.equal(await read("(() => { const text = document.querySelector('.home-recovery .recovery-transcript'); text.scrollTop = text.scrollHeight; return text.scrollTop > 0; })()"), true, 'long Home recovery can be read by scrolling');
 
     state = missing;
     await load();
     await wait("document.body.innerText.includes('A little setup.')");
+    await read("document.querySelectorAll('.setup-steps button')[3].click()");
+    await wait("document.querySelector('.practice-blocker button') !== null");
+    assert.equal(await read("document.querySelector('#practice-text').disabled"), true, 'practice waits for a usable model and permissions');
+    await read("document.querySelector('.practice-blocker button').click()");
+    await wait("document.querySelector('.setup-steps button[aria-current=step]').textContent.includes('Speech model')");
+    await read("document.querySelectorAll('.setup-steps button')[0].click()");
     publish(ready);
     await pause(100);
     assert.equal(await read("document.body.innerText.includes('A little setup.')"), true, 'first-time setup stays open until the user finishes');
@@ -183,6 +198,21 @@ app.whenReady().then(async () => {
     await window.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', {features: [{name: 'prefers-reduced-motion', value: 'reduce'}]});
     assert.equal(await read("[...document.querySelectorAll('.waveform-energy')].every(bar => getComputedStyle(bar).animationName === 'none')"), true, 'reduced motion must stop the equalizer loop');
     window.webContents.debugger.detach();
+    window.setSize(400, 220);
+    const recoveryText = 'Bring the meeting notes tomorrow. '.repeat(30);
+    publish({...ready, session: {kind: 'recovery', message: 'The target field is unavailable. Choose an editable field, or copy your words. '.repeat(5), text: recoveryText}});
+    await wait("document.querySelector('.recovery-actions button') !== null");
+    await pause(250);
+    const actionsFit = () => read("(() => { const copy = document.querySelector('.recovery-actions button').getBoundingClientRect(); const dismiss = document.querySelector('.recovery-heading .button').getBoundingClientRect(); return copy.top >= 0 && copy.bottom <= innerHeight && dismiss.top >= 0 && dismiss.bottom <= innerHeight && document.documentElement.scrollWidth <= innerWidth; })()");
+    assert.equal(await actionsFit(), true, 'recovery actions fit the native pill with a long message');
+    rejectCopy = true;
+    await read("document.querySelector('.recovery-actions button').click()");
+    await wait("document.querySelector('.recovery-content [role=alert]') !== null");
+    assert.equal(await actionsFit(), true, 'failed recovery copy keeps its actions reachable');
+    rejectCopy = false;
+    await read("document.querySelector('.recovery-actions button').click()");
+    await wait("document.querySelector('.recovery-actions button').disabled === false");
+    assert.equal(copiedText, recoveryText, 'recovery retry copies all words, including outside the excerpt');
     console.log('Renderer regression: PASS centered responsive layout, sidebar navigation, visible transcript, copy success/retry/reset/privacy, streaming focus/scroll, idle waveform, startup, model warmup, first-run routing, state race, live waveform, silence, pill, reduced motion');
     app.quit();
   } catch (error) {console.error(error); app.exit(1);}
