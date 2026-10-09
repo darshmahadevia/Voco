@@ -12,11 +12,21 @@ permissions:
 jobs:
   verify:
     runs-on: macos-26
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install desktop dependencies
+        run: npm ci
+      - name: Check desktop types and process protocol
+        run: |
+          npm run typecheck
+          npm test
       - name: Check scripts and app metadata
         run: |
           bash -n scripts/*.sh
@@ -31,5 +41,15 @@ jobs:
         run: ./scripts/check-install.sh
       - name: Check Electron cursor resolution
         run: ./scripts/check-focus.sh
+      - name: Check editor insertion and buffered fallback
+        run: ./scripts/check-insertion.sh
       - name: Build and verify the signed release app
         run: ./scripts/build.sh
+      - name: Check native model catalog and process protocol
+        run: ./scripts/verify-native.sh
+      - name: Check microphone callback isolation
+        run: ./scripts/check-audio-callback.sh
+      - name: Check Electron runtime and preload
+        run: node scripts/verify-desktop.mjs --permission-return
+      - name: Check startup routing and waveform feedback
+        run: npm run verify:renderer

@@ -3,3 +3,9 @@ build/
 .swiftpm/
 .DS_Store
 .impeccable/review/
+node_modules/
+out/
+release
+native/build
+native/.cache/
+.audit/
