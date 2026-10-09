@@ -1,140 +1,107 @@
-# Verification record
+# Electron migration verification
 
-Verified on an Apple Silicon Mac running macOS 27.0.1, using the installed Swift 6.4 Command Line Tools and macOS 27 SDK. The app's deployment target is macOS 26.
+The migration is verified on an Apple Silicon Mac running macOS 27.0.1 with Node 22.20 and Swift 6.4. The bundled native Moonshine runtime requires macOS 26 or newer.
 
-## Reliability pass on October 8, 2026
+## Verified behavior
 
-The repository is private at [darshmahadevia/Voco](https://github.com/darshmahadevia/Voco). The baseline and each verified fix were pushed separately to `main`.
+- TypeScript type checking and six process-contract tests pass. The tests exercise real child-process JSON communication, command replies, exit failure, microphone levels, and invalid model/preferences boundaries.
+- The production Electron renderer builds with React and Motion. Its preload exposes only the typed Voco API; the actual Electron runtime check loads both windows, communicates with the native helper, and confirms the pill background is transparent.
+- The packaged ad-hoc-signed app passed the same Electron runtime check with its bundled helper and a cached model, reporting `model: ready`. Offline native CLI readiness took about 1.9 seconds on this Mac.
+- The packaged native helper returned exactly: “The quick brown fox jumps over the lazy dog. This is a local speech recognition test.” from the AIFF fixture.
+- A real download test observed byte progress, canceled, immediately retried, then canceled again in an isolated model directory. It returned to missing state and left no installed partial model.
+- The official English Medium Streaming architecture-5 model downloaded successfully. Every downloaded file passed size and CRC32C validation, and the native runtime loaded the resulting model.
+- All 17 portable Swift core tests and the existing focus, insertion, permission, recovery, and installer checks pass. The focus fixture now supplies its text-area role to reflect the stricter target validation. The insertion checks cover Unicode, clipboard ownership, rejected live writes, safe buffered fallback, caret changes, non-text-control rejection, and nonduplicating completion.
 
-Two defects were reproduced before fixing them:
+The original SwiftUI coordinator remains only in regression fixtures. Its lifecycle checks protect predecessor behavior but do not by themselves verify the new native coordinator. New native integration checks and fixture transcription provide the migration-specific evidence.
 
-- Live correction treated canonically equivalent Unicode text as identical even when its UTF-16 representation changed. This caused caret drift and misplaced subsequent edits. Exact UTF-16 snapshot comparisons and scalar comparisons within grapheme boundaries now preserve Accessibility ranges. Selections that split a surrogate pair are rejected. Regression tests also reject a field changing only its Unicode representation.
-- A quick talk-key tap after canceling continuous dictation could overwrite the full saved transcript with its last uncommitted phrase. Session text now resets when capture starts. The actual app-model regression changed from `Saved transcript after quick tap: Second phrase.` to `Saved transcript after quick tap: First phrase. Second phrase.`
+## Repeat the checks
 
-Current checks:
+Run the commands in [README](../README.md#verify-changes). `scripts/verify-desktop.mjs` launches actual Electron with an isolated temporary profile, exercises preload/helper communication, captures settings, and exits. `scripts/verify-native.sh` checks the native catalog, mode policy, transcript ledger, and actual process protocol. The native checks cover provisional revisions, completed-line identity, phrase spacing, empty finals, and stale sessions. They do not drive physical microphone or key events. Pass an explicit cached model directory and audio fixture to the native CLI for real recognition.
 
-- `./scripts/test.sh` passes all 17 core tests.
-- `./scripts/check-recovery.sh` passes the source-level lifecycle regression. The script appends a same-file test extension to a temporary copy of the app model, compiles the actual supporting sources, and simulates key arming and release without microphone capture. Temporary compiler artifacts are removed, and the transcript-retention preference is restored.
-- `./scripts/build.sh` produces the release bundle; strict signature verification passes.
-- Shell syntax and `Resources/Info.plist` validation pass.
-- Native setup and status previews render; the setup image was inspected.
-- File and paced-stream transcription complete with the real speech analyzer. The synthetic fixture says "Hello, this is Voco. Speech recognition runs on my Mac." Recognition returns "Hello, this is Vako. speech recognition runs on my Mac." The proper name differs; this is a speech-quality limitation, not exact recognition of every word.
-- The repeated-phrase fixture passes `--verify-pauses`, with two complete batches and no repeated text on stopping.
-- GitHub Actions runs core tests, the recovery check, and the signed release build on macOS 26. The [run containing both fixes](https://github.com/darshmahadevia/Voco/actions/runs/37836485471) passed every step.
+The independent correctness review identified hold-to-continuous transcript loss, recovery dismissal, and recovery actions after a helper exit. The implementation now promotes the same session in place, permits explicit dismissal, and handles copying/dismissal in Electron when the helper is unavailable. Setup offers Restart Voco for a service failure.
 
-The new build's LaunchServices diagnostic reports `Accessibility: required` and `Global shortcut: unavailable`. New-build TextEdit insertion, physical Fn/Fn+Space capture, microphone use, browser fields, and multiple displays remain unverified. The previously installed Utter build was left in place. Source review also confirms that destinations without a readable Accessibility value cannot provide proof of successful insertion; the fallback deliberately avoids a second insertion after an acknowledged write.
+Build artifacts live in `~/Library/Caches/Voco/Electron`; `release` links there. Packaging clears macOS extended metadata before and after signing to avoid Finder metadata breaking the build.
 
-Earlier entries below describe previous builds and do not establish live behavior on this build.
+## Manual checks
 
-## T3 Code cursor follow-up
+Grant microphone and keyboard access to the packaged **Voco** app, then check physical Fn hold/release, real microphone audio, and insertion into the apps you use. Automated audio fixtures do not prove physical key delivery, microphone permission, or compatibility with every editor.
 
-The user reported a visible cursor that Voco sometimes could not detect in T3 Code. The original target capture made a single focused-element query without requesting Electron's Accessibility tree. Missing focus was retained as a nil element until startup, then reported as a changed field.
+Local app bundles use the configured signing identity, with ad-hoc signing as the fallback. Developer ID signing and notarization are required before public distribution.
 
-`FocusTarget` now requests `AXManualAccessibility` once during capture, as described in [Electron's accessibility guide](https://github.com/electron/electron/blob/main/docs/tutorial/accessibility.md). A missing field gets a bounded retry on the captured process before microphone startup. After a field resolves, validation continues to require the same app and exact field identity. App switching, changed fields, secure fields, and canceled startup still stop writing. An exhausted lookup now reports that the focused field could not be read.
+Historical SwiftUI verification is retained in [the pre-migration record](migration/pre-electron-verification.md); its installed-app results do not describe the Electron bundle.
 
-`./scripts/check-focus.sh` compiles the actual target implementation with simulated Accessibility and workspace boundaries. `./scripts/check-focus.sh 34ee4ed` runs the minimal inactive-tree fixture against the original implementation and prints `Electron cursor with initially inactive accessibility: MISSING`. The current check prints `FOUND`. It also verifies delayed publication, one accessibility request per capture, read-only validation, the retry bound, app and field switching, secure fields, native apps that reject the Electron attribute, missing permissions, invalid responses, and cancellation. An unreadable field is reported as unavailable rather than incorrectly claiming the field changed.
+The signed helper inherits the Audio Input entitlement required by the hardened runtime ([Apple documentation](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.device.audio-input)). This packaging check complements, rather than replaces, a permission-granted microphone test.
 
-This verifies the documented Electron compatibility path and its safety checks. The corrected app is installed at `~/Applications/Voco.app`, and its strict signature check passes. Its shortcut diagnostic reports `Accessibility: required` and `Global shortcut: unavailable`. Live detection and insertion in the user's T3 Code editor remain unverified until Keyboard access is enabled for this development signature. The older Utter process was left running; quit it before using the new app so both do not handle the same shortcut.
+For a packaged permission check, launch the app through Finder or `open`. A helper launched directly from a terminal can inherit the terminal app’s permission identity. The desktop verification report includes the permissions observed by the running helper. If an enabled Accessibility entry belongs to an earlier ad hoc signed build, remove that entry and add the current Voco.app again. macOS can retain the old code requirement even while its switch remains enabled.
 
-## Completed checks
+`node scripts/verify-desktop.mjs --permission-return` checks that a requested permission brings setup forward once, closing setup cancels that return, ordinary updates leave it closed, and a native-service failure reveals setup. It uses real Electron windows and IPC with synthetic permission snapshots. It does not automate macOS consent dialogs.
 
-- `./scripts/build.sh` produced the release app with no external dependencies.
-- `codesign --verify --deep --strict build/Voco.app` passed for the local ad-hoc signature.
-- `./scripts/test.sh` passed six Swift Testing checks covering modifier holds, repeated events, shortcut cancellation, provisional revisions, overlapping results, and time ordering.
-- `plutil -lint Resources/Info.plist` passed.
-- `bash -n scripts/build.sh scripts/test.sh scripts/install.sh` passed.
-- `--render-previews` rendered the actual SwiftUI setup, listening, and recovery views. The images were inspected. They contain illustrative text and do not prove live dictation.
-- The app launched through `open build/Voco.app`, and its process was confirmed running.
+`./scripts/check-audio-callback.sh` invokes the production audio tap block on a background queue with an AVAudioConverter. It checks conversion and delivery of speech notifications to the main actor. It does not record the physical microphone.
 
-## Speech engine check
+## Live dictation updates
 
-The system `say` command generated a local fixture:
+The live revision checks cover preserving an initial selection, inserting after its end, revising only session text, shortening and deleting hypotheses, Unicode offsets, pause continuation, changed-document and changed-caret rejection, safe first-write fallback, and cancellation between keyboard input batches. The 18 Swift core tests, insertion/focus fixtures, five TypeScript tests, native protocol/ledger checks, audio callback check, and actual Electron window/preload/helper check pass. The listening pill displays the partial transcript at a 400-pixel viewport without horizontal overflow.
+
+The real native Moonshine engine produced seven distinct provisional updates from `/tmp/voco-moonshine-fixture.aiff`, including "The quickness" before correcting it to "The quick brown fox jumps over the lazy dog. This is a local speech recognition test." The final transcript matched that expected sentence. This verifies streaming recognition from an audio fixture, not the physical microphone.
+
+All 14 real editor cases passed after enabling the helper: two native AppKit NSTextView cases, six WebKit browser cases, and six Electron cases. The browser and Electron cases cover input, textarea, and contenteditable, with and without initial selections. Each receives live input events and keeps its application state equal to the visible value. The audio fixture also passed with real Moonshine provisional revisions in both native cases and the selected textarea case in each web engine, with the literal expected final sentence checked. Clipboard formats, data, and change count remained unchanged during live updates.
+
+The real Electron tests exposed asynchronous selection propagation: AX can acknowledge a range change before the browser renderer and accessibility tree settle. Live keyboard writes now require the requested range to remain correct across two reads before typing or restoring a preserved selection. The caret-movement test waits for its own simulated user action too. The same real editor matrix passed again after this correction.
+
+Real editor insertion checks initially stopped because macOS denied Accessibility access to the rebuilt helper. On this macOS version the permission page is **Privacy & Security > Device Control and Data Access**. Enable `native/build/VocoNative.app` there after building. Ad hoc signatures change on rebuild. If toggling the existing entry does not refresh the grant, remove and re-add this same helper. Build artifacts now live in `~/Library/Caches/Voco/Native`, with `native/build` linking there, to avoid synced-folder metadata breaking signatures.
+
+The full repeatable matrix builds only editor fixtures and keeps the helper signature intact:
 
 ```sh
-say -o /tmp/voco-fixture.aiff 'Hello, this is Voco. Speech recognition runs on my Mac.'
-build/Voco.app/Contents/MacOS/Voco --transcribe-file /tmp/voco-fixture.aiff
+./scripts/verify-live-editors.sh
 ```
 
-The engine returned:
+To repeat the speech checks, set `VOCO_VERIFY_AUDIO_FIXTURE`, `VOCO_VERIFY_MODEL_DIRECTORY`, and `VOCO_VERIFY_EXPECTED_TRANSCRIPT` before running that command. The recorded expected transcript is `The quick brown fox jumps over the lazy dog. This is a local speech recognition test.`
 
-```text
-Hello, this is Voco, speech recognition runs on my Mac.
+Run the focused check below without rebuilding the helper between the permission grant and verification.
+
+For a disposable native or browser editor, focus a field containing exactly `Before selected after`. Place the caret in the middle or select `selected`, then run:
+
+```sh
+./scripts/verify-live-insertion.sh 'Before selected after'
 ```
 
-All spoken words matched the fixture. Sentence punctuation differed. Two measured file runs took about 0.41 and 0.56 seconds, including preparation. These numbers are smoke-test observations, not live dictation latency benchmarks.
+The command verifies actual editor text and selection after each correction, clipboard data and change count, long Unicode batches, deletion, committed phrase continuation, and refusal after moving the caret. To feed real Moonshine provisional results into the same field, add `--audio-fixture PATH --model-directory PATH`. The check modifies only the explicitly supplied disposable document and leaves the caret at its start after the refusal test.
 
-## Live checks still required
+For a repeatable Electron editor matrix, run:
 
-macOS permissions must be granted by the user. These behaviors have not yet been verified end to end:
-
-- Physical Fn or Globe hold and release on the user's keyboard.
-- Microphone capture, partial results, and finalization during a live hold.
-- Insertion and caret behavior in TextEdit and browser text fields.
-- Escape cancellation, keyboard-combination cancellation, and a changed text field during live dictation.
-- Positioning on multiple displays and over a full-screen app.
-
-Use a disposable TextEdit document for the first live test. Confirm that the app inserts once and does not steal focus. Move to another text field during capture and confirm that Voco offers Copy instead of inserting.
-
-## Toolchain notes
-
-The installed Command Line Tools include Swift Testing, but their build driver did not automatically load the macro plugin. `scripts/test.sh` supplies the installed plugin when that toolchain layout is present and disables XCTest, which this installation does not include.
-
-This workspace is in a synced Documents folder. The file provider adds Finder metadata to copied app bundles and breaks strict signature verification. The build script assembles and signs the app in the local cache, then creates a workspace link to that bundle.
-
-## Setup correction after the first live attempt
-
-The user reported that Voco was missing from Input Monitoring and could not be added. The initial implementation used a passive CGEvent tap and gated setup on that separate permission. That path has been removed.
-
-The current shortcut monitor uses AppKit's global and local event monitors under Accessibility access, which the app also needs for text insertion. Setup has one Keyboard access row and a Finder reveal action for manual selection of the app. The install script copies the signed bundle to `~/Applications/Voco.app`, outside the build cache and synced workspace.
-
-The physical key and live transcription checks remain pending until the corrected Keyboard access grant is enabled. No automated test can grant macOS privacy permissions on the user's behalf. `--check-shortcut` provides a command that checks actual trust and monitor installation without claiming to test physical key delivery.
-
-The corrected release was installed and opened from `~/Applications/Voco.app`. Its signature verification and shell syntax checks passed, and the six core tests passed again. The updated native setup render was inspected and passed an independent visual review. A file transcription check returned the same spoken words in about 0.31 seconds.
-
-Before the corrected privacy grant, the installed app's shortcut diagnostic exited with status 2 and printed:
-
-```text
-Accessibility: required
-Global shortcut: unavailable
+```sh
+node scripts/verify-electron-insertion.mjs
 ```
 
-The user subsequently enabled Keyboard access. The LaunchServices diagnostic printed `Accessibility: granted` and `Global shortcut: available`. The user confirmed physical Fn capture and live microphone transcription. Insertion succeeded once but then failed intermittently without a recovery message.
+This opens a disposable Electron window, tests input, textarea, and contenteditable fields with and without selections through the real native helper, and verifies that the editor's input events update its application state. `native/Tests/editors.html` provides the same fields for browser checks, with an input-event log. Neither command changes system permission settings.
 
-## Follow-up for disappearing text and missing menu
+To verify recognition without editor permission:
 
-The app now populates its menu at launch instead of leaving it empty until a menu delegate callback. Settings can also be reopened by opening the running app. Transcript retention is enabled by default, can be disabled in settings, and keeps one transcript in memory. Empty final results preserve a nonempty preview in recovery instead of dismissing it. Cancellation also preserves the last preview for manual copying when retention is enabled.
+```sh
+native/build/VocoNative.app/Contents/MacOS/VocoNative \
+  --stream-transcribe-file /tmp/voco-moonshine-fixture.aiff \
+  --model-directory "$HOME/Library/Application Support/Voco/models/moonshine-medium-streaming-en"
+```
 
-The insertion fallback uses a normal paste, restores prior clipboard representations unless they changed externally, and checks for an actual text change when the focused element exposes its value. It no longer treats posting Unicode keyboard events as evidence of insertion. Targets without a readable value still cannot be verified this way.
+The final development Electron runtime check loaded the cached model and passed its window/preload/helper contract. Its permission snapshot reported microphone required, Accessibility false, and shortcut false under the development Electron parent. The real editor matrix launches the granted helper through LaunchServices, which passed the native and web insertion checks. These results do not establish physical microphone capture or physical talk-key delivery in the packaged app; those remain the manual checks described above.
 
-Finalization now uses the ending time returned by `analyzeSequence` with `finalizeAndFinish(through:)`. This follows Apple's documented structured-analysis path. It is not proof that this caused the reported intermittent failure.
+Fn / Globe hold-to-talk is now the only desktop dictation mode. The continuous shortcut, pause setting, and alternate talk-key settings have been removed; older shortcut preferences are ignored. Live transcript polling continues until Fn is released.
 
-The release build, six core tests, signature verification, and updated native setup render passed. The setup image was visually inspected, including the retention option and macOS 27 permission wording.
+The single-mode change passed `npm run build`, all five TypeScript tests (including rejection of continuous listening state), native session-ledger and JSONL protocol checks, and both AppKit insertion cases. Renderer previews confirm a fixed Fn / Globe shortcut and release-to-finish guidance, with no continuous Stop button. The rebuilt helper’s existing Accessibility entry was refreshed and the AppKit checks confirmed access. Physical Fn delivery still requires the manual check above.
 
-A paced stream of the existing audio fixture produced the expected transcript. Its first nonempty result arrived about 1.13 seconds after streaming started; release-to-final took about 0.098 seconds. A native pill benchmark across 20 updates measured about 46.6 ms median and 48.7 ms p95, including bitmap capture. It does not measure display presentation. These tests distinguish engine work from UI work but do not establish the cause of the user's perceived live delay. The app logs first-result and first-SwiftUI-update timings without logging dictated words.
+The installed-app mismatch was reproduced by `node scripts/verify-installed-version.cjs`: the installed `out/main/index.js` differed from the current build. The old bundle also contained Fn + Space instructions and lacked the partial-transcript display. Installing the current signed bundle fixed the check. Only `~/Applications/Voco.app` remains as a standalone desktop app; `build/Voco.app` and `release/mac-arm64/Voco.app` resolve to that installed bundle. Older Voco/Utter bundles and installers were moved to Trash, preserving model and preference data. The install script now checks bundle contents, moves the bundle into Applications, and leaves build links instead of additional copies. Repeating `scripts/install.sh --built` passed without replacing it.
 
-The update was installed at `~/Applications/Voco.app` and reopened. After the user enabled Keyboard access, the LaunchServices shortcut diagnostic passed. `scripts/verify-insertion.sh` opened a new disposable TextEdit document and verified five consecutive insertions against its exact text. All five passed. Three additional paced speech runs returned the expected transcript; first-result timings were 1.12–1.15 seconds and release-to-final timings were 0.097–0.149 seconds. Physical microphone holds and the user's perceived delay still need confirmation on this update.
+The installed app's live interface shows only Fn / Globe and reports Ready to dictate after refreshing the existing permissions. The listening renderer preview shows partial words and Release Fn / Globe to finish with no continuous-mode controls. The installed Electron runtime verification passed with its real helper and cached model. Its separate verification invocation reported keyboard/shortcut access granted and microphone permission required; the normal LaunchServices app shows microphone access allowed. Physical Fn and microphone testing remains a user check.
 
-The user confirmed that permission grants and the menu worked, but reported the setup window being left behind after each permission. The app now brings the setup window to the front after its microphone permission request returns or a keyboard permission requested from Voco becomes granted. An unrelated external permission change does not trigger activation. The setup window explicitly stays visible on deactivation. This permission-return behavior requires a live check after enabling the updated development signature.
+T3 Code first-word failure: reproduced in the real T3 composer, where an empty rich paragraph exposes AXValue `"\n"` and then removes that placeholder on first keyboard input. The trace reported expected length 10 and actual length 9 with identical caret 9. The writer now learns that exact empty-placeholder transition while keeping ordinary text/range/focus checks. Empty placeholder normalization is session-local; a literal textarea newline was separately verified to remain intact. The real T3 composer passed five partial revisions, including deletion to empty and a later committed phrase, plus rejection of a changed caret and unchanged clipboard count. No test message was sent; the draft was cleared afterward. All 16 AppKit/WebKit/Electron editor checks and the insertion lifecycle regression fixtures passed. Temporary debug probes were removed.
 
-## Minimal status and live writing
+Both native and desktop builds now accept `VOCO_CODESIGN_IDENTITY`, falling back to the persistent identity name in `~/Library/Application Support/Voco/signing-identity`. This Mac now has the trusted `Voco Local Development` code-signing certificate and private key in the login Keychain. The signing stability check passed: different binaries retained the same designated requirement. The installed desktop bundle and native helper use that certificate, and deep signature validation passed. The installation script does not reset TCC grants.
 
-The user changed the interaction to hold Fn for capture and Fn + Space for continuous listening, with words written directly into the field. A quick Fn tap does not enable continuous capture. The normal microphone capsule is now 50pt wide, or 80pt with a continuous-mode stop button, plus 12pt of outer padding on each side. It shows no transcript text. Native hold and continuous renders were inspected; recovery alone retains its text surface. Layout changes recenter the panel on the selected display.
+After installing the certificate-signed build, the existing desktop Accessibility entry was refreshed once for the new identity. The normal installed app now shows the model downloaded, microphone Allowed, keyboard access Allowed, and Ready to dictate. Physical speech and Fn delivery remain the user test.
 
-The release build and 13 core tests passed. New tests cover whole-key consumption and repeat suppression for Fn + Space, pause timing, nonduplicating batches, minimal text corrections, Unicode range calculations, replacing a selected range, caret movement, document changes, and rejecting an unverified write. The installed bundle passed strict signature verification; shell syntax checks passed.
+## Startup and waveform regression
 
-A real-engine paced fixture test initially exposed two pause-finalization problems: forcing a boundary after already final results could drop words in the following repeated phrase, and using a speculative result range could wait for future audio. The final implementation accepts already final results and allows 200 ms for natural finalization before requesting finalization through consumed input. The repeated-phrase fixture then passed, with both complete phrases returned and no extra batch when stopping.
+After building, run `npm run verify:renderer`. This check loads the production renderer in Electron with a controlled native API. It verifies that unknown startup state does not show onboarding, model warmup opens Home without setup prompts, and a late initial read cannot overwrite a newer state. Genuine first-run setup stays open until the user finishes it.
 
-Live edits are coalesced over 25 ms and use direct Accessibility text replacement. Each edit verifies exact document contents and caret position. Settled phrases relinquish their correction range. Clipboard-preserving insertion remains for fields without live correction support and is indicated by Buffered status. The 1.5-second pause gate also observes microphone-buffer energy, so unchanged text alone does not end a phrase during continuing audible activity.
-
-The installed update was reopened. Its changed development signature required a new Keyboard access grant; the current diagnostic returned `Accessibility: required` and `Global shortcut: unavailable`. `scripts/verify-insertion.sh /tmp/voco-fixture.aiff` is ready to verify actual TextEdit corrections, phrase continuation, caret protection, and provisional speech writes once that grant is enabled. The earlier five-insertion check passed on the previous build; it does not prove this update's live-writing path. Physical Fn + Space behavior, ambient-noise pause detection, and live writing in browser fields remain live checks.
-
-
-## Enabled permission with unavailable shortcut
-
-On October 8, the user enabled Keyboard access but setup still displayed Allow. The installed Utter diagnostic, launched through LaunchServices with `--check-shortcut`, returned `Accessibility: granted` and `Global shortcut: unavailable`. macOS TCC logs showed a failed code requirement match for `kTCCServiceListenEvent`: the stored Input Monitoring record belonged to an older development signature. The Accessibility grant itself was valid.
-
-Running `tccutil reset ListenEvent org.utterapp.Utter` and restarting the same installed bundle changed the diagnostic to `Accessibility: granted` and `Global shortcut: available`. No rebuild or Accessibility reset was needed. The installer now clears stale ListenEvent records when a development signature changes or an app is first installed at its destination. Its shell syntax check passed. The updated installer has not been run, to preserve the working installed signature.
-
-The installed bundle then ran `--verify-insertion --audio-fixture /tmp/utter-fixture.aiff` through LaunchServices. All five exact TextEdit insertions passed. Live corrections took roughly 1.3–4.6 ms, phrase continuation passed, and moving the caret was rejected without changing the document. Paced real-engine audio produced 17 provisional writes with exact final text verified. First speech output arrived in about 1.14 seconds and release-to-final took about 0.24 seconds. This verifies actual Accessibility writes from speech results, but does not replace a physical Fn/Fn+Space microphone check or verify browser fields.
-
-The source verification helper additionally checks the disposable document's initial sentinel before writing. That safety guard is source-only pending the next build; the installed bundle was intentionally left unchanged.
+The same check verifies independently animated waveform bars during steady input, a three-pixel baseline in silence, the floating pill, and reduced-motion behavior. It uses synthetic microphone levels; it does not verify physical microphone capture. CI runs this check after building the app.

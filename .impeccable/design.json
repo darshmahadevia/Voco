@@ -1,80 +1,295 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-08T19:14:02.447423+00:00",
+  "generatedAt": "2026-10-09T14:46:19Z",
   "title": "Design System: Voco",
   "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Warm orange",
+        "canonical": "#ff742f",
+        "tonalRamp": ["#190400", "#3d1200", "#642300", "#8e3500", "#ba4900", "#e75e0b", "#ffa37c", "#ffe9e0"]
+      },
+      "accent-strong": {
+        "role": "primary",
+        "displayName": "Light orange",
+        "canonical": "#ff965f",
+        "tonalRamp": ["#180500", "#3b1500", "#612700", "#8a3a00", "#b35110", "#d46f37", "#ffa476", "#ffe9df"]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Dark orange-brown tint",
+        "canonical": "#24160f",
+        "tonalRamp": ["#140803", "#2c1e17", "#46372f", "#625149", "#7f6d65", "#9e8b82", "#cdb9af", "#feeae0"]
+      },
+      "button-text": {
+        "role": "neutral",
+        "displayName": "Dark action label",
+        "canonical": "#15100b",
+        "tonalRamp": ["#0f0a06", "#26211b", "#3f3933", "#5a544e", "#77706a", "#958e87", "#c4bcb5", "#f5ede6"]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Off-white text",
+        "canonical": "#f1f1ef",
+        "tonalRamp": ["#0b0b0a", "#222220", "#3b3b39", "#555554", "#727270", "#8f8f8d", "#bebebc", "#eeeeec"]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Supporting gray text",
+        "canonical": "#a5a5a5",
+        "tonalRamp": ["#0b0b0b", "#222222", "#3a3a3a", "#555555", "#717171", "#8f8f8f", "#bebebe", "#eeeeee"]
+      },
+      "text-tertiary": {
+        "role": "neutral",
+        "displayName": "Quiet gray text",
+        "canonical": "#969696",
+        "tonalRamp": ["#0b0b0b", "#222222", "#3a3a3a", "#555555", "#717171", "#8f8f8f", "#bebebe", "#eeeeee"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Divider gray",
+        "canonical": "#292929",
+        "tonalRamp": ["#0b0b0b", "#222222", "#3a3a3a", "#555555", "#717171", "#8f8f8f", "#bebebe", "#eeeeee"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Black canvas",
+        "canonical": "#080808",
+        "tonalRamp": ["#0b0b0b", "#222222", "#3a3a3a", "#555555", "#717171", "#8f8f8f", "#bebebe", "#eeeeee"]
+      },
+      "surface-muted": {
+        "role": "neutral",
+        "displayName": "Dark gray control surface",
+        "canonical": "#1b1b1b",
+        "tonalRamp": ["#0b0b0b", "#222222", "#3a3a3a", "#555555", "#717171", "#8f8f8f", "#bebebe", "#eeeeee"]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Ready blue",
+        "canonical": "#88a9ff",
+        "tonalRamp": ["#020034", "#09145e", "#1d327d", "#354f9d", "#506cbd", "#6c8bde", "#a1bcff", "#e7eeff"]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Error red",
+        "canonical": "#ff737b",
+        "tonalRamp": ["#1e0003", "#46000d", "#72001b", "#9e112d", "#c13a48", "#e45b65", "#ff9fa1", "#ffe8e8"]
+      }
+    },
     "typographyMeta": {
-      "title": {
-        "displayName": "App title",
-        "purpose": "Names the utility in the setup header."
+      "display": {
+        "displayName": "Home headline",
+        "purpose": "Names the product promise."
       },
-      "setup-description": {
-        "displayName": "Setup description",
-        "purpose": "Explains the hold-and-release interaction."
+      "display-accent": {
+        "displayName": "Headline emphasis",
+        "purpose": "Emphasizes one selected headline line."
       },
-      "setup-label": {
-        "displayName": "Setup and phase label",
-        "purpose": "Labels setup rows and the current pill state."
+      "brand": {
+        "displayName": "Wordmark",
+        "purpose": "Brands the sidebar."
       },
       "body": {
-        "displayName": "Supporting body",
-        "purpose": "Carries setup details and recovery guidance."
+        "displayName": "Interface copy",
+        "purpose": "Carries primary interface text."
+      },
+      "supporting": {
+        "displayName": "Supporting copy",
+        "purpose": "Explains a setting or setup step."
+      },
+      "label": {
+        "displayName": "Section label",
+        "purpose": "Names a settings group."
+      },
+      "utility": {
+        "displayName": "Button and status text",
+        "purpose": "Labels actions and short status."
       },
       "transcript": {
-        "displayName": "Transcript",
-        "purpose": "Shows retained words only during recovery."
-      },
-      "utility-hint": {
-        "displayName": "Utility hint",
-        "purpose": "Shows secondary cancel and release instructions."
+        "displayName": "Latest transcript",
+        "purpose": "Shows the optional last dictation on Home."
       }
     },
     "shadows": [
       {
         "name": "floating-pill",
-        "value": "SwiftUI .shadow(color: .black.opacity(0.16), radius: 10, x: 0, y: 4)",
-        "purpose": "Separates the regular-material pill from apps behind it."
+        "value": "0 8px 24px rgba(0, 0, 0, 0.35)",
+        "purpose": "Separates the dictation pill from its transparent window."
+      },
+      {
+        "name": "switch-thumb",
+        "value": "0 1px 3px rgba(0, 0, 0, 0.24)",
+        "purpose": "Defines the transcript switch thumb."
       }
     ],
     "motion": [
       {
-        "name": "pill-phase",
-        "value": "SwiftUI .easeOut(duration: 0.16)",
-        "purpose": "Animates recovery transitions unless Reduce Motion is enabled."
+        "name": "button-hover",
+        "value": "120ms ease",
+        "purpose": "Transitions button color."
+      },
+      {
+        "name": "transcript-switch",
+        "value": "150ms ease",
+        "purpose": "Moves the switch thumb and track."
+      },
+      {
+        "name": "waveform",
+        "value": "Spring: stiffness 500, damping 32, mass 0.35",
+        "purpose": "Smooths scale changes for bars that use the square root of microphone volume while listening."
+      },
+      {
+        "name": "waveform-pulse",
+        "value": "680ms, 795ms, 910ms, or 1025ms ease-in-out; staggered by 83ms",
+        "purpose": "Pulses each nested fill only while listening above the 0.015 activity threshold; reduced motion disables the pulse."
+      },
+      {
+        "name": "setup-enter",
+        "value": "300ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Brings the current setup step into view."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0ms Motion; 0.01ms CSS transitions and animations",
+        "purpose": "Honors reduced-motion preferences."
       }
     ],
-    "breakpoints": []
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "1500px"
+      },
+      {
+        "name": "compact-sidebar",
+        "value": "1050px"
+      },
+      {
+        "name": "single-column-setup",
+        "value": "800px"
+      },
+      {
+        "name": "mobile",
+        "value": "600px"
+      },
+      {
+        "name": "compact-settings",
+        "value": "520px"
+      },
+      {
+        "name": "small-mobile",
+        "value": "390px"
+      }
+    ]
   },
-  "components": [],
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Starts setup or confirms a ready action.",
+      "html": "<button class=\"ds-primary\" type=\"button\">Get started</button>",
+      "css": ".ds-primary{display:inline-flex;min-height:34px;align-items:center;justify-content:center;padding:0 11px;border:1px solid transparent;border-radius:7px;background:var(--accent);color:var(--button-text);font:600 12px/1 Manrope,-apple-system,sans-serif;transition:background-color 120ms ease}.ds-primary:hover:not(:disabled){background:var(--accent-strong)}.ds-primary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-primary:disabled{opacity:.58}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Runs a secondary action beside the primary action.",
+      "html": "<button class=\"ds-secondary\" type=\"button\">Cancel</button>",
+      "css": ".ds-secondary{display:inline-flex;min-height:34px;align-items:center;justify-content:center;padding:0 11px;border:1px solid var(--line);border-radius:7px;background:var(--surface-muted);color:var(--text-primary);font:600 12px/1 Manrope,-apple-system,sans-serif;transition:background-color 120ms ease}.ds-secondary:hover:not(:disabled){background:color-mix(in srgb,var(--surface-muted) 78%,var(--text-primary) 22%)}.ds-secondary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-secondary:disabled{opacity:.58}"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Provides a low-emphasis text action.",
+      "html": "<button class=\"ds-quiet\" type=\"button\">Back to Home</button>",
+      "css": ".ds-quiet{display:inline-flex;min-height:26px;align-items:center;padding:0 5px;border:0;border-radius:7px;background:transparent;color:var(--accent-strong);font:600 12px/1 Manrope,-apple-system,sans-serif;transition:background-color 120ms ease,color 120ms ease}.ds-quiet:hover:not(:disabled){background:var(--accent-soft)}.ds-quiet:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-quiet:disabled{opacity:.58}"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "sidebar-active",
+      "description": "Shows the active area with a gray fill and orange icon.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main navigation\"><button type=\"button\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-6h-4v6H4a1 1 0 0 1-1-1V10Z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"/></svg>Home</button><button type=\"button\">Settings</button></nav>",
+      "css": ".ds-nav{display:grid;gap:6px}.ds-nav button{display:flex;min-height:43px;align-items:center;gap:12px;padding:0 14px;border:0;border-radius:8px;background:transparent;color:var(--text-secondary);font:550 12px Manrope,-apple-system,sans-serif;text-align:left;transition:background-color 150ms ease,color 150ms ease}.ds-nav button:hover{background:#181818;color:var(--text-primary)}.ds-nav button[aria-current=page]{background:#202020;color:var(--text-primary)}.ds-nav button[aria-current=page] svg{color:var(--accent)}.ds-nav svg{width:18px;height:18px}.ds-nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Transcript Switch",
+      "kind": "custom",
+      "refersTo": "transcript-switch",
+      "description": "Toggles the optional latest transcript kept in memory.",
+      "html": "<button class=\"ds-switch\" type=\"button\" role=\"switch\" aria-checked=\"true\" aria-label=\"Keep last transcript\"><span></span></button>",
+      "css": ".ds-switch{position:relative;width:34px;height:20px;padding:0;border:0;border-radius:12px;background:#454545;transition:background-color 150ms ease}.ds-switch[aria-checked=true]{background:var(--accent)}.ds-switch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-switch span{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.24);transition:transform 150ms ease}.ds-switch[aria-checked=true] span{transform:translateX(14px)}"
+    },
+    {
+      "name": "Practice Field and Globe Help",
+      "kind": "input",
+      "refersTo": "practice-field",
+      "description": "Lets a new user try dictation and expand shortcut troubleshooting.",
+      "html": "<div class=\"ds-practice\"><kbd>fn <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/><path d=\"M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg></kbd><textarea aria-label=\"Try your first dictation\" placeholder=\"Click here and say something...\"></textarea><details><summary>Set up your Fn / Globe key</summary><p>In macOS System Settings > Keyboard, set Press Globe key to Do Nothing. Turn off any Apple Dictation shortcut that uses the same key.</p></details></div>",
+      "css": ".ds-practice{display:grid;gap:16px;color:var(--text-primary);font:400 13px/1.8 Manrope,-apple-system,sans-serif}.ds-practice kbd{display:inline-flex;width:max-content;align-items:center;gap:9px;padding:9px 14px;border:1px solid #424242;border-bottom-width:3px;border-radius:9px;background:var(--surface-muted);font:600 13px Manrope,-apple-system,sans-serif}.ds-practice svg{width:16px;height:16px}.ds-practice textarea{width:100%;min-height:170px;resize:vertical;padding:18px;border:1px solid #353535;border-radius:8px;background:#090909;color:var(--text-primary);font:inherit;line-height:1.8;caret-color:var(--accent)}.ds-practice textarea::placeholder{color:var(--text-tertiary)}.ds-practice textarea:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.ds-practice details{padding-top:15px;border-top:1px solid var(--line)}.ds-practice summary{color:var(--text-secondary);font-size:11px;cursor:pointer}.ds-practice summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-practice details p{margin:12px 0 0;color:var(--text-secondary);font-size:11px;line-height:1.8}"
+    },
+    {
+      "name": "Dashboard Voice Mark",
+      "kind": "custom",
+      "refersTo": "home-voice-core",
+      "description": "During listening, eleven bars scale with the square root of microphone volume and settle through a spring. Nested fills pulse independently while volume is above 0.015.",
+      "html": "<div class=\"ds-orbit ds-orbit-active\" aria-hidden=\"true\"><div class=\"ds-core\"><span class=\"ds-wave ds-wave-active\"><i class=\"ds-bar\" style=\"--scale:0.265;--delay:0ms;--duration:680ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.466;--delay:-83ms;--duration:795ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.666;--delay:-166ms;--duration:910ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.399;--delay:-249ms;--duration:1025ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.800;--delay:-332ms;--duration:680ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.577;--delay:-415ms;--duration:795ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.740;--delay:-498ms;--duration:910ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.429;--delay:-581ms;--duration:1025ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.622;--delay:-664ms;--duration:680ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.340;--delay:-747ms;--duration:795ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.503;--delay:-830ms;--duration:910ms\"><span class=\"ds-fill\"></span></i></span></div></div>",
+      "css": ".ds-orbit{display:grid;width:230px;height:230px;place-items:center;border:1px solid #242424;border-radius:50%}.ds-core{display:grid;width:170px;height:170px;place-items:center;border-radius:50%;background:#121212}.ds-orbit-active .ds-core{background:var(--accent-soft)}.ds-wave{display:flex;align-items:center;justify-content:center;gap:5px}.ds-wave>.ds-bar{display:block;width:4px;height:52px;border-radius:3px;transform:scaleY(var(--scale));transform-origin:center}.ds-wave>.ds-bar>.ds-fill{display:block;width:100%;height:100%;border-radius:inherit;background:var(--accent);transform-origin:center}.ds-wave-active>.ds-bar>.ds-fill{animation:ds-voice-energy var(--duration) ease-in-out var(--delay) infinite}@keyframes ds-voice-energy{0%,100%{transform:scaleY(.48)}35%{transform:scaleY(1)}65%{transform:scaleY(.68)}}@media(prefers-reduced-motion:reduce){.ds-wave-active>.ds-bar>.ds-fill{animation:none}}"
+    },
+    {
+      "name": "Listening Status Pill",
+      "kind": "custom",
+      "refersTo": "status-pill",
+      "description": "Shows capture status beside eleven volume-driven bars with an independent pulse during active listening.",
+      "html": "<section class=\"ds-pill\" role=\"status\" aria-live=\"polite\"><span class=\"ds-wave ds-wave-active\" aria-hidden=\"true\"><i class=\"ds-bar\" style=\"--scale:0.314;--delay:0ms;--duration:680ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.501;--delay:-83ms;--duration:795ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.688;--delay:-166ms;--duration:910ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.439;--delay:-249ms;--duration:1025ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.813;--delay:-332ms;--duration:680ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.605;--delay:-415ms;--duration:795ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.757;--delay:-498ms;--duration:910ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.466;--delay:-581ms;--duration:1025ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.647;--delay:-664ms;--duration:680ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.383;--delay:-747ms;--duration:795ms\"><span class=\"ds-fill\"></span></i><i class=\"ds-bar\" style=\"--scale:0.536;--delay:-830ms;--duration:910ms\"><span class=\"ds-fill\"></span></i></span><p>Listening...</p></section>",
+      "css": ".ds-pill{display:flex;width:max-content;max-width:100%;min-height:46px;align-items:center;gap:13px;padding:0 19px;border-radius:999px;background:#151515;box-shadow:0 8px 24px rgba(0,0,0,.35);color:var(--text-primary)}.ds-pill p{margin:0;font:600 12px/1.4 Manrope,-apple-system,sans-serif;white-space:nowrap}.ds-wave{display:inline-flex;align-items:center;justify-content:center;gap:3px}.ds-wave>.ds-bar{display:block;width:3px;height:25px;border-radius:3px;transform:scaleY(var(--scale));transform-origin:center}.ds-wave>.ds-bar>.ds-fill{display:block;width:100%;height:100%;border-radius:inherit;background:var(--accent);transform-origin:center}.ds-wave-active>.ds-bar>.ds-fill{animation:ds-voice-energy var(--duration) ease-in-out var(--delay) infinite}@keyframes ds-voice-energy{0%,100%{transform:scaleY(.48)}35%{transform:scaleY(1)}65%{transform:scaleY(.68)}}@media(prefers-reduced-motion:reduce){.ds-wave-active>.ds-bar>.ds-fill{animation:none}}"
+    },
+    {
+      "name": "Transcript Recovery",
+      "kind": "custom",
+      "refersTo": "recovery-pill",
+      "description": "Reveals retained words with copy and dismiss actions.",
+      "html": "<section class=\"ds-recovery\" aria-label=\"Transcript recovery\"><div class=\"ds-heading\"><span class=\"ds-mark\" aria-hidden=\"true\">!</span><div><p class=\"ds-title\">Transcript needs attention</p><p class=\"ds-message\">Voco could not finish writing this transcript.</p></div><button class=\"ds-dismiss\" type=\"button\" aria-label=\"Dismiss transcript recovery\">x</button></div><div class=\"ds-excerpt\"><p>Could you send me the notes from our meeting?</p></div><div class=\"ds-actions\"><button class=\"ds-copy\" type=\"button\">Copy transcript</button></div></section>",
+      "css": ".ds-recovery{display:flex;width:min(100%,352px);max-height:calc(100vh - 40px);flex-direction:column;gap:10px;overflow-y:auto;padding:16px;border-radius:16px;background:#151515;box-shadow:var(--shadow);color:var(--text-primary)}.ds-heading{display:flex;align-items:flex-start;gap:9px}.ds-mark{display:grid;width:26px;height:26px;flex:0 0 auto;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent-strong);font-weight:700}.ds-heading>div{min-width:0;flex:1}.ds-title{margin:0;font:600 12px/1.4 Manrope,-apple-system,sans-serif}.ds-message{margin:3px 0 0;color:var(--text-secondary);font:400 10px/1.35 Manrope,-apple-system,sans-serif}.ds-dismiss{width:28px;height:28px;padding:0;border:0;border-radius:7px;background:transparent;color:var(--accent-strong)}.ds-dismiss:hover{background:var(--accent-soft)}.ds-dismiss:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-excerpt{max-height:4.2em;overflow:hidden;padding:8px 9px;border:1px solid var(--line);border-radius:8px;background:color-mix(in srgb,var(--surface) 65%,transparent)}.ds-excerpt p{display:-webkit-box;margin:0;overflow:hidden;font:400 11px/1.4 Manrope,-apple-system,sans-serif;-webkit-box-orient:vertical;-webkit-line-clamp:3}.ds-actions{display:flex;justify-content:flex-end}.ds-copy{min-height:34px;padding:0 11px;border:1px solid var(--line);border-radius:7px;background:var(--surface-muted);color:var(--text-primary);font:600 12px/1 Manrope,-apple-system,sans-serif}.ds-copy:hover{background:color-mix(in srgb,var(--surface-muted) 78%,var(--text-primary) 22%)}.ds-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    }
+  ],
   "narrative": {
-    "northStar": "The Native macOS Utility",
-    "overview": "Voco writes live words into the active text field. A minimal microphone capsule remains at the bottom center; continuous listening adds a stop control. Recovery alone displays retained text.",
+    "northStar": "Focused Voice Workspace",
+    "overview": "Voco pairs a wide desktop dashboard with a guided first run. Home shows readiness, the Fn / Globe shortcut, and the optional latest transcript. Settings hold model, access, shortcut, and transcript controls. A separate four-step setup takes a new user from welcome to a first dictation.\n\nBlack surfaces and fine gray borders carry the interface. Orange marks actions, the wordmark, and voice activity. Manrope handles interface text, with Instrument Serif on selected headline lines. The black app tile and orange waveform repeat the same mark. The floating pill stays compact while dictation runs and shows transcript text only when recovery needs attention.",
     "keyCharacteristics": [
-      "Native system fonts, SF Symbols, semantic colors, and controls.",
-      "A 50pt microphone capsule for hold mode and an 80pt capsule for continuous mode.",
-      "Live corrections preserve surrounding text and stop after caret or document changes."
+      "Black and gray surfaces with a restrained orange accent.",
+      "Wide dashboard and guided first-run setup.",
+      "Manrope interface text with selective Instrument Serif headlines.",
+      "Optional latest transcript held in memory until quit."
     ],
     "rules": [
       {
-        "name": "Minimal microphone status",
-        "body": "Show retained transcript text only in recovery.",
-        "section": "layout"
+        "name": "The Restrained Accent Rule",
+        "body": "Keep orange on actions, the wordmark, focus, and voice activity. Large surfaces stay black or neutral gray.",
+        "section": "colors"
       },
       {
-        "name": "Native appearance",
-        "body": "Follow system fonts, colors, controls, and Reduce Motion.",
-        "section": "appearance"
+        "name": "The Wide Workspace Rule",
+        "body": "Keep the dashboard and setup content open on desktop. Stack their columns only at the implemented responsive breakpoints.",
+        "section": "layout"
       }
     ],
     "dos": [
-      "Keep the microphone capsule centered at the bottom without taking focus.",
-      "Use live writing with corrections limited to the inserted range.",
-      "Keep Settings and manual transcript recovery accessible."
+      "Do use black surfaces, fine gray borders, and orange for actions and voice activity.",
+      "Do keep blue and red for readiness and error feedback.",
+      "Do keep the dashboard, setup flow, and flat settings groups distinct.",
+      "Do retain keyboard focus and reduced-motion behavior.",
+      "Do show latest transcript text only when the optional in-memory setting is on, or when recovery needs a copy action."
     ],
     "donts": [
-      "Don't hard-code the dark appearance shown in the review captures; the implementation follows macOS appearance.",
-      "Don't replace system buttons, the picker, or SF Symbols with custom-drawn controls.",
-      "Don't turn the permission list into a set of decorative cards."
+      "Don't add neon grids, glow effects, or Tron-style panels.",
+      "Don't add persistent transcript history or save audio and transcript text to disk.",
+      "Don't show partial transcript text or a Buffered badge during capture.",
+      "Don't add cards or shadows to settings groups.",
+      "Don't make browser preview imply that native actions are active."
     ]
   }
 }
