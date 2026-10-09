@@ -1,4 +1,5 @@
 import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeImage, screen, session, shell, Tray } from 'electron';
+import { spawn } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { NativeBridge } from './native-bridge';
@@ -159,6 +160,17 @@ else {
   app.on('window-all-closed', () => {});
   app.on('before-quit', () => { quitting = true; bridge?.stop(); });
   void app.whenReady().then(() => {
+    const helperExecutable = app.isPackaged
+      ? join(process.resourcesPath, 'native/VocoNative.app/Contents/MacOS/VocoNative')
+      : join(app.getAppPath(), 'native/build/VocoNative.app/Contents/MacOS/VocoNative');
+    const modelDirectory = verificationModelDirectory ?? join(app.getPath('userData'), 'models/moonshine-medium-streaming-en');
+    if (verificationDirectory && process.argv.includes('--verify-microphone')) {
+      const child = spawn(helperExecutable, ['--verify-microphone', '5', '--model-directory', modelDirectory,
+        '--verification-output', join(verificationDirectory, 'microphone.json')], { stdio: 'inherit' });
+      child.once('error', (error) => { process.stderr.write(`${error.message}\n`); app.exit(1); });
+      child.once('exit', (code) => app.exit(code ?? 1));
+      return;
+    }
     app.dock?.hide();
     session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
     session.defaultSession.setPermissionCheckHandler(() => false);
@@ -172,10 +184,8 @@ else {
     createPill();
     showSettings();
     bridge = new NativeBridge({
-      executable: app.isPackaged
-        ? join(process.resourcesPath, 'native/VocoNative.app/Contents/MacOS/VocoNative')
-        : join(app.getAppPath(), 'native/build/VocoNative.app/Contents/MacOS/VocoNative'),
-      modelDirectory: verificationModelDirectory ?? join(app.getPath('userData'), 'models/moonshine-medium-streaming-en'),
+      executable: helperExecutable,
+      modelDirectory,
       onState: publish,
       onShowSettings: showSettings,
       onFailure: handleNativeFailure,
