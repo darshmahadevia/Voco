@@ -23,6 +23,7 @@ final class NativeEditorFixture {
             let errors = directory.appendingPathComponent("error.log")
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+            process.environment = ProcessInfo.processInfo.environment.filter { $0.key != "ELECTRON_RUN_AS_NODE" }
             process.arguments = ["-W", "-g", "-n", helper, "--stdout", output.path, "--stderr", errors.path, "--args", "--verify-live-insertion", "Before selected after"]
             let environment = ProcessInfo.processInfo.environment
             if environment["VOCO_VERIFY_DESKTOP_APP"] != nil {
