@@ -4,7 +4,7 @@ Voco's desktop interface moves to Electron, React, TypeScript, and Motion. A bun
 
 ## Caller experience
 
-Run `npm install` and `npm run dev` to open setup. Install the model with **Download speech model**, then grant microphone and keyboard access. Close settings and hold Fn or Globe in another app's text field. Fn + Space toggles continuous listening.
+Run `npm install` and `npm run dev` to open setup. Install the model with **Download speech model**, then grant microphone and keyboard access. Close settings and hold Fn or Globe in another app's text field. Fn / Globe hold-to-talk is the only mode.
 
 React reads `window.voco.getState()`, subscribes through `window.voco.subscribe()`, and submits a typed command through `window.voco.command()`. The preload exposes no filesystem, process, arbitrary IPC channel, or network API.
 
@@ -23,9 +23,9 @@ The native library is an early build gate. Moonshine's Swift package documents a
 ## Accepted tradeoffs
 
 - macOS and Apple Silicon ship first. Windows needs a new native adapter, while Electron can reuse the interface and state contract.
-- The native helper has its own permission identity. Setup reveals that exact app for manual keyboard access.
+- The bundled helper runs under the desktop app’s permission identity. Standalone helper checks require a separate grant.
 - A model download follows explicit user consent during setup. The model lives outside the app bundle and survives updates.
-- Local packaging uses ad-hoc signing. Public Developer ID signing and notarization remain separate distribution work.
+- Local packaging uses a persistent development certificate when configured, otherwise ad-hoc signing. Public Developer ID signing and notarization remain separate distribution work.
 
 ## Verification gates
 
