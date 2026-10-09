@@ -77,8 +77,10 @@ function permissionGranted(next: AppState, target: PermissionTarget): boolean {
 
 function handleNativeFailure(message: string): void {
   permissionReturn = null;
+  const transcript = state.session.kind === 'listening' || state.session.kind === 'recovery'
+    ? state.session.text : state.lastTranscript;
   focusSettings();
-  publish({ ...state, model: { kind: 'error', message, recovery: 'restart' }, session: { kind: 'recovery', message, text: state.lastTranscript } });
+  publish({ ...state, model: { kind: 'error', message, recovery: 'restart' }, session: { kind: 'recovery', message, text: transcript } });
 }
 
 async function verifyPermissionReturnFlow(window: BrowserWindow): Promise<Record<string, boolean>> {

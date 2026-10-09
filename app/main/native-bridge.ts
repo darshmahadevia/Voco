@@ -25,6 +25,7 @@ export class NativeBridge {
     this.process = child;
     const lines = createInterface({ input: child.stdout });
     lines.on('line', (line) => {
+      if (this.process !== child) return;
       try {
         const message = nativeMessageSchema.parse(JSON.parse(line));
         switch (message.type) {
@@ -48,7 +49,8 @@ export class NativeBridge {
     child.on('error', (error) => this.fail(`The native service could not start. ${error.message}`));
     child.on('exit', (code, signal) => {
       lines.close();
-      if (this.process === child) this.process = null;
+      if (this.process !== child) return;
+      this.process = null;
       this.rejectPending(new Error('The native service stopped.'));
       if (!this.stopping) this.options.onFailure(`The native service stopped ${signal ?? `with code ${code}`}. Restart Voco.`);
     });
@@ -81,8 +83,12 @@ export class NativeBridge {
   }
 
   private fail(message: string): void {
-    this.options.onFailure(message);
+    const child = this.process;
+    if (!child) return;
+    this.process = null;
+    child.kill('SIGTERM');
     this.rejectPending(new Error(message));
+    this.options.onFailure(message);
   }
 
   private rejectPending(error: Error): void {

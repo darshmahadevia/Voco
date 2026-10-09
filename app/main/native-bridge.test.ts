@@ -51,3 +51,22 @@ require('node:readline').createInterface({input:process.stdin}).on('line', () =>
   expect(await failure).toBe('The native service stopped with code 7. Restart Voco.');
   expect(bridge.isRunning).toBe(false);
 });
+
+it('stops a helper after invalid output and ignores later state', async () => {
+  const executable = await fixture(`
+require('node:readline').createInterface({input:process.stdin}).on('line', () => {
+  process.stdout.write('invalid JSON\\n');
+  process.stdout.write(JSON.stringify({type:'state',state:${JSON.stringify(initialState)}})+'\\n');
+});
+`);
+  const states: AppState[] = [];
+  const failures: string[] = [];
+  const bridge = new NativeBridge({ executable, modelDirectory: '/tmp/models', onState: (state) => states.push(state), onShowSettings: () => {}, onFailure: (message) => failures.push(message) });
+  cleanups.push(async () => bridge.stop());
+  bridge.start();
+  await expect(bridge.command({ kind: 'refresh' })).rejects.toThrow('invalid response');
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(bridge.isRunning).toBe(false);
+  expect(states).toEqual([]);
+  expect(failures).toEqual(['The native service sent an invalid response. Restart Voco.']);
+});
