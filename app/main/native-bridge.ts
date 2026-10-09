@@ -45,6 +45,9 @@ export class NativeBridge {
         this.fail('The native service sent an invalid response. Restart Voco.');
       }
     });
+    child.stdin.on('error', (error) => {
+      if (this.process === child && !this.stopping) this.fail(`The native service connection failed. ${error.message}`);
+    });
     child.stderr.on('data', (data: Buffer) => process.stderr.write(data));
     child.on('error', (error) => this.fail(`The native service could not start. ${error.message}`));
     child.on('exit', (code, signal) => {
