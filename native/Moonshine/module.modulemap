@@ -1,0 +1,5 @@
+module Moonshine [system] {
+  header "moonshine-c-api.h"
+  link "moonshine"
+  export *
+}

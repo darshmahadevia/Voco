@@ -3,11 +3,10 @@ import PackageDescription
 
 let package = Package(
     name: "Voco",
-    platforms: [.macOS("26.0")],
-    products: [.executable(name: "Voco", targets: ["Voco"])],
+    platforms: [.macOS("13.0")],
+    products: [.library(name: "VocoCore", targets: ["VocoCore"])],
     targets: [
         .target(name: "VocoCore"),
-        .executableTarget(name: "Voco", dependencies: ["VocoCore"]),
         .testTarget(name: "VocoCoreTests", dependencies: ["VocoCore"])
     ]
 )

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Voco disposable editor checks</title>
+<style>body { font: 18px system-ui; margin: 40px; } input, textarea, [contenteditable] { display: block; width: 90%; padding: 16px; margin: 16px 0; border: 1px solid #888; font: inherit; } output { display: block; white-space: pre-wrap; }</style>
+<h1>Voco disposable editor checks</h1>
+<p>Click a field, optionally select "selected", then run the native live insertion check with the exact baseline text.</p>
+<input aria-label="Plain input" value="Before selected after">
+<textarea aria-label="Textarea">Before selected after</textarea>
+<div contenteditable="true" role="textbox" aria-label="Contenteditable">Before selected after</div>
+<div contenteditable="true" role="textbox" aria-label="Empty rich editor"><p><br></p></div>
+<output id="events">No input events yet.</output>
+<script>
+const events = [];
+window.vocoEditorEvents = events;
+window.vocoKeys = [];
+document.addEventListener('keydown', event => window.vocoKeys.push({key:event.key,code:event.code,keyCode:event.keyCode}));
+for (const editor of document.querySelectorAll('input, textarea, [contenteditable]')) {
+  editor.addEventListener('input', event => {
+    events.push({ field: editor.getAttribute('aria-label'), type: event.inputType, value: editor.value ?? editor.textContent });
+    document.querySelector('output').textContent = JSON.stringify(events.slice(-3), null, 2);
+    window.vocoEditorEvents = events;
+  });
+}
+</script>
+</html>
