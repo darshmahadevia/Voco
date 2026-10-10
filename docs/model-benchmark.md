@@ -63,6 +63,8 @@ The six human clips cover six speakers and 406 reference words. They are read au
 
 The Whisper weights are unquantized FP16. In this benchmark build, the native `modelVersion` label says “full precision”; that means FP16 here, not FP32.
 
+These results describe the earlier live-insertion benchmark. Current `--benchmark-file` output omits `firstStableMs` and `deliveredTranscript` because production inserts once after finalization.
+
 The reference text for the human clips has no punctuation and uses uppercase letters, so punctuation quality is not part of human WER. The synthetic cases report exact formatted-text matches separately. `firstPartialMs` measures the first nonempty live result. `firstStableMs` measures when Voco's live-text buffer first makes text eligible for insertion, falling back to final commit if no partial text stabilizes during streaming; it does not include editor-write acknowledgement. `deliveredTranscript` records the stable-buffer text after finalization, while `transcript` records the final retained recognition text, including the app's ledger recovery if the final response is empty. `releaseToFinalMs` measures finalization after audio input ends. The `peakMemoryBytes` field is the process's peak resident set size; it does not measure the full GPU, ANE, or system-memory footprint. The native JSON records all timing values in milliseconds and memory in bytes.
 
 The silence case checks whether a model emits text with no speech. A blank transcript is expected. Any nonempty transcript counts as false text.

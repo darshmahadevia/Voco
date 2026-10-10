@@ -1,107 +1,106 @@
 # Voco
 
-Local English dictation for macOS. Hold Fn or Globe to speak. Release to transcribe and paste the completed text at the cursor. For continuous dictation, press Fn + Space to start and press it again to stop and paste.
+Local English dictation for Apple Silicon Macs running macOS 26 or newer. Hold Fn or Globe to speak, then release to transcribe and insert the complete text into the focused app. Press Fn + Space to start continuous capture and press it again to stop. Escape cancels capture or pending transcription.
 
-The interface uses Electron, React, TypeScript, and Motion. A bundled native helper runs your selected Moonshine, Parakeet, or Whisper model and handles macOS microphone capture, shortcuts, and safe text insertion. The app needs no account or transcription API key.
+Electron, React, TypeScript, and Vite provide the interface. A bundled Swift helper handles microphone capture, global shortcuts, local recognition, and text insertion. Moonshine, Parakeet, and Whisper run on this Mac without an account or transcription API key.
 
-## Run the app
+## Build and install
 
-The first release targets Apple Silicon Macs running macOS 26 or newer. Development requires Node.js 22 or newer, the Xcode Command Line Tools, and CMake. The native build downloads pinned Moonshine, FluidAudio, and whisper.cpp runtimes, but never downloads a speech model. It uses Swift Package Manager and CMake.
+Development requires Node.js 22 or newer, Swift 6.2 or newer from Xcode Command Line Tools, and CMake. The build also uses Apple's `codesign`, `iconutil`, `plutil`, and `xcrun` CLIs. Set `VOCO_CMAKE` to a CMake executable if it is outside `PATH`. The build also recognizes the existing `~/Library/Caches/Voco/BuildTools/cmake/bin/cmake` installation.
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
-To build a local app bundle:
+The dev command clears `ELECTRON_RUN_AS_NODE` so shells used by coding tools cannot accidentally launch Electron as Node. `npm run dev:ui` opens a renderer preview with example state; use the Electron app for native actions.
+
+To build and install the desktop app:
 
 ```sh
 ./scripts/install.sh
 open ~/Applications/Voco.app
 ```
 
-To create the disk image installer, run `npm run dist`. Build artifacts live in `~/Library/Caches/Voco/Electron`; `release` links to that directory to avoid synced-folder metadata affecting signing. The install script keeps one installed app in `~/Applications/Voco.app`; build links point to that copy after installation. Local bundles use the configured development certificate, with ad-hoc signing as the fallback. Public distribution requires a Developer ID signature and notarization.
+`npm run build` builds the Swift helper and production interface. `npm run pack` creates the signed app bundle, and `npm run dist` creates a disk image. `npm run build:icons` regenerates the icon from the committed brand PNG when needed.
+
+Native dependencies are pinned to Moonshine 0.1.5, FluidAudio 0.9.1, and whisper.cpp 1.9.5. The build verifies the Moonshine archive checksum and Whisper source revision. It does not download speech models. Native artifacts live in `~/Library/Caches/Voco/Native`, with `native/build` linking there. Set `VOCO_NATIVE_BUILD_DIR` to choose another cache. Desktop artifacts live in `~/Library/Caches/Voco/Electron`, with `release` linking there. Installation keeps one app at `~/Applications/Voco.app` and moves the previous bundle to Trash.
 
 ## Set up dictation
 
-1. Open Voco, then click its menu bar icon and choose **Open Dashboard**. Voco starts in the menu bar on every launch. On first use, click **Set up Voco** in the sidebar, then **Get started**. Choose Moonshine, Parakeet, or Whisper and click **Download**. Setup shows progress and supports cancellation or retry. Models download into Voco's Application Support directory, outside the app bundle. At least one model must finish downloading and load successfully before setup can finish.
-2. Click **Allow** next to Microphone. Grant microphone access to Voco.
-3. Click **Allow** next to Keyboard access. Enable Voco in macOS **Privacy & Security**. The page is called **Accessibility** on macOS 26 and **Device Control and Data Access** on macOS 27. If approval for an earlier Voco build is still listed, remove it, then add the current app shown in Finder and enable it. If access is granted but the shortcut is unavailable, use **Restart Voco**.
-4. In macOS Keyboard settings, set **Press Globe key to** to **Do Nothing**. Disable any Apple Dictation shortcut that uses the same key.
-5. Continue to **Your first words** and try dictation in the practice field. Click **Open Voco** to reach Home. To dictate elsewhere, focus a text field in another app, hold Fn or Globe, and speak.
+1. Open Voco's menu bar menu and choose **Open Dashboard**. The dashboard stays hidden at startup and closing it keeps dictation running.
+2. Choose **Set up Voco**, then download a speech model. Setup requires an installed model that loads successfully. Settings lets you download another model or choose **Use model** for one already installed. Switch models while dictation is idle.
+3. Allow Microphone and Keyboard access. Keyboard access uses macOS Accessibility, named **Device Control and Data Access** on this Mac running macOS 27. If access is granted but the shortcut monitor is unavailable, use **Restart Voco**.
+4. In macOS Keyboard settings, set **Press Globe key to** to **Do Nothing** and keep Apple Dictation on a separate shortcut.
+5. Try the practice field, then focus a text field in another app and hold Fn or Globe to speak.
 
-In Settings, use **Speech model** to download another model or choose **Use model** for an installed one. The active choice persists across restarts. Switch models while dictation is idle.
+Models live under `~/Library/Application Support/Voco/models`, outside the app bundle. The active choice persists across restarts. Downloads show progress and support cancellation and retry. A missing or damaged model reports a repairable error; recognition never starts a hidden download. Once installed, recognition works offline.
 
-The menu bar icon opens a menu with **Open Dashboard**, **Transcripts**, and **Settings**. While Voco is focused, use **⌘1**, **⌘2**, and **⌘,** to open those pages. The dashboard defaults to 960 × 720px. Closing the window keeps Voco running in the menu bar.
+The current models are Moonshine Medium Streaming, Parakeet TDT 0.6B v2, and Whisper Large v3 Turbo. All use English dictation. Whisper's multilingual weights run in English mode.
 
-Parakeet is recommended based on the [benchmark on this laptop](benchmarks/README.md). All three choices currently use English dictation. Whisper uses multilingual weights in English mode.
+## Insertion and privacy
 
-Once the model is downloaded, recognition runs offline. App updates preserve the model. A missing or damaged model returns setup to a repairable state instead of starting a hidden download.
+Voco records while listening and inserts once after transcription finishes. The pill shows the microphone waveform during capture and **Transcribing** afterward. No provisional words are written into the destination.
 
-Hold Fn / Globe to speak, then release to transcribe and paste. Press Fn + Space for continuous listening without holding Fn, then press it again to transcribe and paste. The waveform shows microphone input while you speak. After you stop, the pill shows Transcribing until the selected model finishes, then Voco inserts the complete transcript once. Escape cancels capture or pending transcription. If the focused field changes before insertion, Voco keeps the transcript for copying.
+The insertion uses the current caret or selection in the original field. Selected text is replaced, as with ordinary typing. Switching apps or fields prevents insertion and retains the completed transcript for copying. Password fields are rejected. Native text controls use Accessibility writes; browser and Electron controls receive a paste event so their application state updates too. For fields that expose readable text and selection, Voco verifies the complete write. Incomplete writes report failure and retain the full transcript without retrying and duplicating the partial text. Paste restores the previous clipboard unless another app changes it. Voco never presses Return or submits a form.
 
-## Text insertion and recovery
-
-Voco leaves inserted words unchanged. A changed caret, document, app, or field stops automatic writing. Password fields are rejected.
-
-Live dictation checks recognition updates every 120 milliseconds. Words with following context become eligible after 180 milliseconds without a change. A standalone word can appear after 360 milliseconds without waiting for release. The last word of a longer phrase waits for following context or completion. Completed phrases bypass the wait. Text arrives in rapid bursts of four, eight, or sixteen characters, with larger bursts when more text is waiting. Emoji and combined characters stay intact. Final punctuation can append after a word without replacing it.
-
-Recognition corrections affect the buffer, while words already queued for insertion stay fixed, including after release. The shorter wait favors responsiveness and can preserve an earlier recognition error if a correction arrives late. The retained transcript contains the recognizer's latest wording.
-
-Native fields receive Accessibility insertion. Readable web and Electron fields with writable selection ranges receive keyboard input events so their application state updates too. Live insertion leaves the clipboard untouched. Existing selections remain selected, with dictation inserted after them.
-
-Fields that reject live insertion use buffered insertion on release. During capture, the pill shows a waveform and status only. It does not show a Buffered badge or partial transcript. Buffered insertion checks the original document and selection and preserves selected text. Paste restores the previous clipboard if another app has not changed it. Voco never presses Return or submits a form.
-
-If insertion fails, the pill offers the retained transcript for copying. **Keep last transcript** holds one transcript in memory until you quit. Turning it off clears that saved transcript. Audio and transcript history are not written to disk.
+Transcripts stay in memory until you quit. Turning off **Keep last transcript** clears retained text. Audio and transcript history are not written to disk. Usage totals and preferences persist locally. If the helper crashes before transcription completes, Voco reports the failure without presenting a previous dictation as recovered text.
 
 ## Verify changes
 
+Run only the checks relevant to your change:
+
 ```sh
 npm run typecheck
-npm test
-npm run build
-./scripts/verify-native.sh
-node scripts/verify-desktop.mjs
+npm test -- app/main/native-bridge.test.ts app/shared/state.test.ts
 ./scripts/test.sh
+./scripts/check-deferred-dictation.sh
 ./scripts/check-focus.sh
 ./scripts/check-insertion.sh
+./scripts/verify-native.sh
+npm run verify:compact-ui
+npm run verify:menu-bar
+```
+
+After installing, verify the current bundle and physical microphone:
+
+```sh
+node scripts/verify-installed-version.cjs
 ./scripts/verify-microphone.sh
+npm run verify:insertion
 ```
 
-The packaged desktop can also be verified directly:
+`verify:insertion` drives disposable AppKit and Electron editors through the installed desktop and its bundled helper. It checks complete insertion, selection replacement, Unicode, rich-text placeholders, application input events, clipboard restoration, and refusal to report a truncated paste as successful.
+
+To include local recognition in those editor checks:
 
 ```sh
-VOCO_VERIFY_MODEL_DIRECTORY="/absolute/path/to/model-directory" \
-  node scripts/verify-desktop.mjs release/mac-arm64/Voco.app/Contents/MacOS/Voco
+VOCO_VERIFY_AUDIO_FIXTURE=/absolute/path/to/speech.wav \
+VOCO_VERIFY_EXPECTED_TRANSCRIPT='The literal expected sentence.' \
+npm run verify:insertion
 ```
 
-Native inference can be checked with a local audio fixture:
+For the packaged frontend and helper check:
+
+```sh
+VOCO_VERIFY_MODEL_DIRECTORY="$HOME/Library/Application Support/Voco/models/moonshine-medium-streaming-en" \
+node scripts/verify-desktop.mjs "$HOME/Applications/Voco.app/Contents/MacOS/Voco" --permission-return
+```
+
+Direct native inference uses a cached model without microphone or keyboard permissions:
 
 ```sh
 native/build/VocoNative.app/Contents/MacOS/VocoNative \
-  --model-directory /absolute/path/to/model-directory \
-  --model moonshine --download-model
-native/build/VocoNative.app/Contents/MacOS/VocoNative \
-  --model-directory /absolute/path/to/model-directory \
-  --model moonshine --transcribe-file /absolute/path/to/audio.aiff
+  --model moonshine --model-directory /absolute/path/to/model-directory \
+  --transcribe-file /absolute/path/to/speech.wav
 ```
 
-Use `--model parakeet` or `--model whisper` with the corresponding model directory to check the other models. The first command is an explicit download. The second uses the cached model without microphone or keyboard permission. This does not prove physical microphone capture or shortcut delivery.
+Use `--model parakeet` or `--model whisper` with the corresponding directory. `--download-model` explicitly downloads and verifies that model. `--stream-transcribe-file` checks recognizer updates from a fixture. These checks do not prove a physical Fn key press. See [the verification record](docs/verification.md) and [architecture](docs/architecture.md).
 
-`npm run dev:ui` opens a renderer-only preview. Its named example states are labeled **Interface preview**. Native actions are inactive, while Home, Settings, and onboarding navigation remain active. Use the Electron app for model downloads, permissions, and dictation.
+## Local signing
 
-The native helper and its focus and insertion fixtures live in `native`. `Sources/VocoCore` contains the hold gesture and text-range logic used by the helper. See [the architecture](docs/architecture.md) and [verification](docs/verification.md).
+Both app bundles use `VOCO_CODESIGN_IDENTITY`, or the identity stored in `~/Library/Application Support/Voco/signing-identity`. Without either, local builds use ad-hoc signing. A persistent certificate keeps the signing requirement stable across updates so existing macOS grants can survive binary changes.
 
-## Scope
+`scripts/setup-local-signing.sh` creates the local code-signing certificate when needed. Keychain may require authentication or approval for `codesign`. `scripts/verify-signing-identity.sh` checks that different binaries retain the same signing requirement. The installer does not reset permissions. Changing from ad-hoc signing to a certificate requires approving the new identity once. Public distribution requires Developer ID signing and notarization; the current local development certificate is for this Mac.
 
-macOS ships first. Windows support follows after macOS dictation is stable. The Electron interface and typed helper contract can be reused with a Windows adapter.
-
-Moonshine Medium Streaming and Whisper Large v3 Turbo models are MIT licensed. Parakeet TDT 0.6B v2 model weights use CC BY 4.0. FluidAudio uses Apache 2.0, and whisper.cpp uses MIT. Bundled license notices live in `Resources/licenses`. The model comparison protocol and local results are in [the benchmark record](docs/model-benchmark.md).
-
-For real native, WebKit browser, and Electron live insertion checks, install the app and run `VOCO_VERIFY_DESKTOP_APP="$HOME/Applications/Voco.app" ./scripts/verify-live-editors.sh`. This uses the desktop app's existing keyboard permission. Standalone helper checks need their own grant. The fixtures exercise buffered revisions, smooth append-only input, Unicode, selections, clipboard preservation, and caret-change refusal. See [the verification record](docs/verification.md#live-dictation-updates) for speech fixture options.
-
-### Keep permissions across local updates
-
-Ad-hoc builds have a different code-signing requirement after native code changes. For permissions to survive updates, sign both the desktop app and helper with the same persistent certificate and keep their bundle identifiers unchanged. Run `scripts/setup-local-signing.sh` once to create a code-signing-only local certificate in your login Keychain, then `scripts/install.sh` to build and install with it. macOS may ask you to authenticate certificate trust and allow `codesign` to use the key. `scripts/verify-signing-identity.sh` checks that changed binaries retain the same signing requirement. For an existing certificate, set `VOCO_CODESIGN_IDENTITY` to an installed signing identity, or store that identity in `~/Library/Application Support/Voco/signing-identity`. Both build steps use it and fail if it cannot sign the app. A Developer ID Application certificate is the distribution option; a persistent local signing certificate can be used for development on this Mac. Changing from ad-hoc signing to certificate signing requires approving permissions once for the new identity. Voco does not reset permissions during installation.
-
-Apple explains the identity requirements in [TN3127](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements).
+Moonshine and Whisper model weights use MIT, Parakeet weights use CC BY 4.0, FluidAudio uses Apache 2.0, and whisper.cpp uses MIT. Bundled notices live in `Resources/licenses`.

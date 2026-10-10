@@ -34,7 +34,7 @@ That means the useful hybrid is sequential: Moonshine produces live text, then P
 
 Voco currently sends the whole Parakeet audio buffer to `AsrManager.transcribe` after each two seconds of new audio and once more on finish. The engine has no incremental Parakeet decoder state. Moonshine receives audio through its streaming API. See [ParakeetEngine.swift](../native/Sources/ParakeetEngine.swift) and [MoonshineEngine.swift](../native/Sources/MoonshineEngine.swift).
 
-The hybrid also has an insertion problem. Voco's `StableText` commits a stable prefix, and `NativeCoordinator` appends that text into the focused application. It does not replace a committed Moonshine prefix when Parakeet returns a different sentence. A production hybrid needs to track the exact inserted range and safely replace it after checking focus and document contents, or keep the preview out of the editor until finalization. See [StableText.swift](../Sources/VocoCore/StableText.swift) and [NativeCoordinator.swift](../native/Sources/NativeCoordinator.swift).
+Voco now keeps recognition out of the editor until finalization. `NativeCoordinator` inserts one completed transcript, so a future preview engine could update an in-app preview without rewriting text in the destination. The obsolete stable-prefix insertion implementation has been removed. See [NativeCoordinator.swift](../native/Sources/NativeCoordinator.swift).
 
 ## How the Whisper option compares
 
