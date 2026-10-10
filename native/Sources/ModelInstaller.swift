@@ -279,7 +279,7 @@ private final class ModelFileDownload: NSObject, URLSessionDataDelegate, @unchec
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        let finalError = error ?? responseError
+        let finalError = responseError ?? error
         do { try output?.close() } catch {}
         output = nil
         if finalError == nil, received == 0 {
