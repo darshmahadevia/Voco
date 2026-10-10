@@ -67,9 +67,6 @@ export const commandSchema = z.discriminatedUnion('kind', [
 ]);
 export type Command = z.infer<typeof commandSchema>;
 
-export const windowModeSchema = z.enum(['onboarding', 'workspace']);
-export type WindowMode = z.infer<typeof windowModeSchema>;
-
 export const navigationPageSchema = z.enum(['home', 'transcripts', 'stats', 'settings', 'onboarding']);
 export type NavigationPage = z.infer<typeof navigationPageSchema>;
 
@@ -87,6 +84,5 @@ export interface VocoApi {
   subscribe(listener: (state: AppState) => void): () => void;
   subscribeNavigation(listener: (page: NavigationPage) => void): () => void;
   closeSettings(): Promise<void>;
-  setWindowMode(mode: WindowMode): Promise<void>;
 }
 

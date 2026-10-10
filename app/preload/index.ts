@@ -6,7 +6,6 @@ const api: VocoApi = {
   command: (command: Command) => ipcRenderer.invoke('voco:command', command),
   copyTranscript: (text) => ipcRenderer.invoke('voco:copy-transcript', text),
   closeSettings: () => ipcRenderer.invoke('voco:close-settings'),
-  setWindowMode: (mode) => ipcRenderer.invoke('voco:set-window-mode', mode),
   subscribeNavigation: (listener) => {
     let active = true;
     let received = false;

@@ -42,7 +42,7 @@ assert.deepEqual(report.menuBar.shortcuts, [
 for (const check of ['retainedBackgroundTranscript', 'closeHidesDashboard', 'relaunchStaysHidden', 'navigationDuringLoad', 'idleFailureStaysHidden']) {
   assert.equal(report.menuBar[check], true, check);
 }
-assert.deepEqual(report.layoutSizes, [[960, 720], [960, 720], [960, 720]]);
+assert.deepEqual(report.windowSize, [960, 720]);
 assert.deepEqual(report.windowConstraints, { minimum: [720, 520], maximum: [960, 720], maximizable: false, fullscreenable: false });
 for (const [check, passed] of Object.entries(report.permissionReturn)) assert.equal(passed, true, check);
 process.stdout.write(`Verified menu bar startup, navigation, shortcut registration, and permission recovery. Report: ${join(output, 'report.json')}\n`);

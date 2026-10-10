@@ -1064,13 +1064,6 @@ function App(): React.JSX.Element {
     document.querySelector('.workspace-main')?.scrollTo({ top: 0, behavior: 'instant' });
     document.querySelector<HTMLElement>('main h1')?.focus({ preventScroll: true });
   }, [page]);
-  const windowMode = page === 'auto' ? null : page === 'onboarding' ? 'onboarding' : 'workspace';
-  useEffect(() => {
-    if (view === 'pill' || !windowMode) return;
-    void window.voco?.setWindowMode(windowMode).catch(() => {
-      // The renderer remains usable at the current window size.
-    });
-  }, [windowMode]);
   if (!state) return view === 'pill' ? <main className="pill-shell" /> : <StartupView error={error} />;
   if (view === 'pill') return <PillView state={state} loadError={error} />;
   const currentPage: NavigationPage = page === 'auto' ? canResumeHome(state, setupSeen) ? 'home' : 'onboarding' : page;

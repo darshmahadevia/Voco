@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { NativeBridge } from './native-bridge';
 import { z } from 'zod';
-import { commandSchema, windowModeSchema, type AppState, type Command, type NavigationPage, type WindowMode } from '../shared/protocol';
+import { commandSchema, type AppState, type Command, type NavigationPage } from '../shared/protocol';
 import { initialState, isReady, nativeFailureState } from '../shared/state';
 
 let settings: BrowserWindow | null = null;
@@ -24,7 +24,6 @@ const verificationModelDirectory = verificationDirectory && verificationModelArg
 const verifyPermissionReturn = verificationDirectory !== null && process.argv.includes('--verify-permission-return');
 type PermissionTarget = 'microphone' | 'accessibility';
 let permissionReturn: PermissionTarget | null = null;
-let windowMode: WindowMode = 'onboarding';
 let navigationPage: NavigationPage | null = null;
 app.setName('Voco');
 app.setPath('userData', verificationDirectory
@@ -251,13 +250,6 @@ else {
       if (!state.preferences.keepLastTranscript) throw new Error('Transcript retention is off.');
       return clipboard.writeText(z.string().min(1).parse(value));
     });
-    ipcMain.handle('voco:set-window-mode', (event, value: unknown) => {
-      trusted(event);
-      if (event.sender !== settings?.webContents || !settings) throw new Error('Only the workspace can change its window layout.');
-      const mode = windowModeSchema.parse(value);
-      if (mode === windowMode) return;
-      windowMode = mode;
-    });
     ipcMain.handle('voco:command', async (event, value: unknown) => {
       trusted(event);
       const command = commandSchema.parse(value);
@@ -359,17 +351,12 @@ else {
         const permissionReturnReport = verifyPermissionReturn ? await verifyPermissionReturnFlow(settings) : undefined;
         if (verifyPermissionReturn) await bridge?.command({ kind: 'refresh' });
         const renderer = await settings.webContents.executeJavaScript(`({title:document.title,preload:typeof window.voco?.command==='function',preview:document.body.innerText.includes('Interface preview')})`);
-        const layoutSizes: number[][] = [];
-        for (const mode of ['workspace', 'onboarding', 'workspace']) {
-          await settings.webContents.executeJavaScript(`window.voco.setWindowMode(${JSON.stringify(mode)})`);
-          await new Promise((resolve) => setTimeout(resolve, 400));
-          layoutSizes.push(settings.getSize());
-        }
+        const windowSize = settings.getSize();
         const background = await pill.webContents.executeJavaScript('getComputedStyle(document.body).backgroundColor');
         const windowConstraints = { minimum: settings.getMinimumSize(), maximum: settings.getMaximumSize(), maximizable: settings.isMaximizable(), fullscreenable: settings.isFullScreenable() };
         const capture = await settings.webContents.capturePage();
         await writeFile(join(directory, 'settings.png'), capture.toPNG());
-        await writeFile(join(directory, 'report.json'), JSON.stringify({ ...renderer, menuBar, layoutSizes, windowConstraints, background, helper: nativeSeen, model: state.model.kind, permissions: state.permissions, windowCount: BrowserWindow.getAllWindows().length, permissionReturn: permissionReturnReport }));
+        await writeFile(join(directory, 'report.json'), JSON.stringify({ ...renderer, menuBar, windowSize, windowConstraints, background, helper: nativeSeen, model: state.model.kind, permissions: state.permissions, windowCount: BrowserWindow.getAllWindows().length, permissionReturn: permissionReturnReport }));
       };
       void verify().then(() => app.quit()).catch((error: unknown) => { process.stderr.write(`${error instanceof Error ? error.message : 'Desktop verification failed'}\n`); app.exit(1); });
     }
