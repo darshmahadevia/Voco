@@ -7,8 +7,7 @@ enum NativeCLI {
     static func handles(_ arguments: [String]) -> Bool {
         arguments.contains("--download-model") || arguments.contains("--transcribe-file")
             || arguments.contains("--model-status") || arguments.contains("--smoke-status")
-            || arguments.contains("--model-manifest") || arguments.contains("--verify-live-insertion") || arguments.contains("--stream-transcribe-file")
-            || arguments.contains("--verify-empty-rich-editor")
+            || arguments.contains("--model-manifest") || arguments.contains("--stream-transcribe-file")
             || arguments.contains("--verify-buffered-insertion")
             || arguments.contains("--verify-microphone") || arguments.contains("--benchmark-file")
     }
@@ -22,23 +21,6 @@ enum NativeCLI {
             }
             if arguments.contains("--verify-microphone") {
                 try await verifyMicrophone(arguments)
-                return 0
-            }
-            if arguments.contains("--verify-empty-rich-editor") {
-                try await verifyEmptyRichEditor()
-                return 0
-            }
-            if let expected = value(after: "--verify-live-insertion", in: arguments) {
-                var engine: (any SpeechEngine)?
-                defer { engine?.unload() }
-                let fixture = value(after: "--audio-fixture", in: arguments).map { URL(fileURLWithPath: $0) }
-                if fixture != nil {
-                    guard let model = value(after: "--model-directory", in: arguments) else { throw NativeError.invalidCommand("Pass --model-directory PATH with --audio-fixture.") }
-                    let speechEngine = try chosenEngine(arguments)
-                    try speechEngine.loadIfNeeded(modelDirectory: URL(fileURLWithPath: model))
-                    engine = speechEngine
-                }
-                try await verifyLiveInsertion(expected: expected, audioFixture: fixture, engine: engine)
                 return 0
             }
             guard let modelPath = value(after: "--model-directory", in: arguments) else {
@@ -287,10 +269,8 @@ enum NativeCLI {
                 "audioDurationMs": Double(samples.count) / 16,
                 "loadMs": index == warmups ? loadMs : 0,
                 "firstPartialMs": measurement.firstPartialMs.map { $0 as Any } ?? NSNull(),
-                "firstStableMs": measurement.firstStableMs.map { $0 as Any } ?? NSNull(),
                 "releaseToFinalMs": measurement.releaseToFinalMs,
                 "transcript": measurement.ledger.text,
-                "deliveredTranscript": measurement.stableText.text,
                 "peakMemoryBytes": usage.ru_maxrss,
                 "coldStart": index == 0,
                 "engineVersion": engine.descriptor.engineVersion,
@@ -345,12 +325,6 @@ enum NativeCLI {
             measurement.releaseToFinalMs = (ProcessInfo.processInfo.systemUptime - release) * 1_000
             measurement.finished = true
             measurement.ledger.update(final)
-            let complete = !measurement.ledger.pendingLines.isEmpty && measurement.ledger.pendingLines.allSatisfy(\.complete)
-            let finalTime = ProcessInfo.processInfo.systemUptime
-            measurement.stableText.update(measurement.ledger.text, final: complete, now: finalTime)
-            if measurement.firstStableMs == nil, !measurement.stableText.text.isEmpty {
-                measurement.firstStableMs = (finalTime - start) * 1_000
-            }
             return measurement
         } catch {
             measurement.finished = true
@@ -368,9 +342,7 @@ enum NativeCLI {
 @MainActor
 private final class BenchmarkMeasurement {
     var ledger = TranscriptLedger()
-    var stableText = StableText()
     var firstPartialMs: Double?
-    var firstStableMs: Double?
     var releaseToFinalMs: Double = 0
     var failure: String?
     var polling = false
@@ -382,9 +354,5 @@ private final class BenchmarkMeasurement {
         let now = ProcessInfo.processInfo.systemUptime
         let elapsed = (now - start) * 1_000
         if firstPartialMs == nil, !ledger.text.isEmpty { firstPartialMs = elapsed }
-        let confirmed = TranscriptLedger.join(ledger.committablePrefix.map(\.text))
-            .split(whereSeparator: \.isWhitespace).count
-        stableText.update(ledger.text, confirmedWordCount: confirmed, now: now)
-        if firstStableMs == nil, !stableText.text.isEmpty { firstStableMs = elapsed }
     }
 }

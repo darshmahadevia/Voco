@@ -223,7 +223,7 @@ struct FocusTarget {
 }
 
 enum InsertionError: LocalizedError {
-    case permission, focusChanged, focusUnavailable, secureField, modifiers, unavailable, liveUnsupported
+    case permission, focusChanged, focusUnavailable, secureField, modifiers, unavailable
 
     var errorDescription: String? {
         switch self {
@@ -233,7 +233,6 @@ enum InsertionError: LocalizedError {
         case .secureField: "This is a password field. Copy your words if you want to keep them."
         case .modifiers: "Another shortcut key is held. Copy your words below."
         case .unavailable: "Text could not be inserted. Copy your words below."
-        case .liveUnsupported: "This field supports insertion after release or a pause, rather than live correction."
         }
     }
 }

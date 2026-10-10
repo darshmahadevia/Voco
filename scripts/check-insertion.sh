@@ -8,7 +8,7 @@ xcrun swiftc -swift-version 6 -target "$(uname -m)-apple-macosx26.0" \
     -emit-library -static -emit-module -module-name VocoCore \
     Sources/VocoCore/*.swift -o "$scratch_dir/libVocoCore.a" \
     -emit-module-path "$scratch_dir/VocoCore.swiftmodule"
-cat native/Sources/TextInsertion.swift native/Sources/LiveTextWriter.swift \
+cat native/Sources/TextInsertion.swift \
     > "$scratch_dir/InsertionCheck.swift"
 cat native/Tests/InsertionCheck.swift >> "$scratch_dir/InsertionCheck.swift"
 xcrun swiftc -swift-version 6 -parse-as-library -target "$(uname -m)-apple-macosx26.0" \
