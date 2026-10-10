@@ -24,13 +24,15 @@ To create the disk image installer, run `npm run dist`. Build artifacts live in 
 
 ## Set up dictation
 
-1. Open Voco. First launch opens guided setup. Click **Get started**, then choose Moonshine, Parakeet, or Whisper and click **Download**. You can also open **Set up Voco** from the sidebar. Setup shows progress and supports cancellation or retry. Models download into Voco's Application Support directory, outside the app bundle. At least one model must finish downloading and load successfully before setup can finish.
+1. Open Voco, then click its menu bar icon and choose **Open Dashboard**. Voco starts in the menu bar on every launch. On first use, click **Set up Voco** in the sidebar, then **Get started**. Choose Moonshine, Parakeet, or Whisper and click **Download**. Setup shows progress and supports cancellation or retry. Models download into Voco's Application Support directory, outside the app bundle. At least one model must finish downloading and load successfully before setup can finish.
 2. Click **Allow** next to Microphone. Grant microphone access to Voco.
 3. Click **Allow** next to Keyboard access. Enable Voco in macOS **Privacy & Security**. The page is called **Accessibility** on macOS 26 and **Device Control and Data Access** on macOS 27. If approval for an earlier Voco build is still listed, remove it, then add the current app shown in Finder and enable it. If access is granted but the shortcut is unavailable, use **Restart Voco**.
 4. In macOS Keyboard settings, set **Press Globe key to** to **Do Nothing**. Disable any Apple Dictation shortcut that uses the same key.
 5. Continue to **Your first words** and try dictation in the practice field. Click **Open Voco** to reach Home. To dictate elsewhere, focus a text field in another app, hold Fn or Globe, and speak.
 
 In Settings, use **Speech model** to download another model or choose **Use model** for an installed one. The active choice persists across restarts. Switch models while dictation is idle.
+
+The menu bar icon opens a menu with **Open Dashboard**, **Transcripts**, and **Settings**. While Voco is focused, use **⌘1**, **⌘2**, and **⌘,** to open those pages. The dashboard defaults to 960 × 720px. Closing the window keeps Voco running in the menu bar.
 
 Parakeet is recommended based on the [benchmark on this laptop](benchmarks/README.md). All three choices currently use English dictation. Whisper uses multilingual weights in English mode.
 

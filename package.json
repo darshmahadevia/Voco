@@ -18,7 +18,8 @@
     "pack": "npm run build && node scripts/package-desktop.mjs",
     "dist": "npm run build && node scripts/package-desktop.mjs dmg",
     "verify": "npm run typecheck && npm test && npm run build && npm run verify:renderer",
-    "verify:compact-ui": "env -u ELECTRON_RUN_AS_NODE electron scripts/verify-compact-ui.cjs"
+    "verify:compact-ui": "env -u ELECTRON_RUN_AS_NODE electron scripts/verify-compact-ui.cjs",
+    "verify:menu-bar": "node scripts/verify-menu-bar.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.577.0",

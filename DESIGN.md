@@ -195,7 +195,7 @@ The main palette stays black and gray. Orange marks actions and voice activity; 
 
 ## Layout
 
-The macOS window opens at 820 by 620px, with a 720 by 520px minimum and a 960 by 720px maximum. It cannot maximize or enter full screen. Onboarding and the workspace share the same bounds; finishing setup does not resize the window. Closing hides the window, and Voco stays available in the menu bar.
+Voco starts in the menu bar on every launch with the dashboard hidden. Clicking the icon opens a menu with Open Dashboard, Transcripts, and Settings. Their shortcuts are ⌘1, ⌘2, and ⌘, while Voco is focused. The macOS window opens at 960 by 720px, with a 720 by 520px minimum and a 960 by 720px maximum. It cannot maximize or enter full screen. Onboarding and the workspace share the same bounds; finishing setup does not resize the window. Closing hides the window, and Voco stays available in the menu bar.
 
 The workspace uses a 148px sidebar, reducing to 132px at widths of 760px and below. The title bar and navigation stay fixed. Content scrolls inside the window with 22px gutters, reducing to 16px at the minimum size. Home preserves the readiness header, three usage totals, yearly calendar, daily goal and milestone columns, and recent transcripts. Calendar cells have a fixed 7px height to keep the year compact. The full Stats page adds session totals and achievement progress.
 

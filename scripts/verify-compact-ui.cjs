@@ -53,7 +53,7 @@ async function click(label) {
 }
 app.whenReady().then(async () => {
   await mkdir(output, { recursive: true });
-  window = new BrowserWindow({ width: 820, height: 620, show: false, titleBarStyle: 'hiddenInset', webPreferences: { contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
+  window = new BrowserWindow({ width: 960, height: 720, show: false, titleBarStyle: 'hiddenInset', webPreferences: { contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
   window.webContents.on('console-message', (_event, details) => { if (details.level === 'error') errors.push(details.message); });
   for (const [width, height] of sizes) {
     window.setSize(width, height);

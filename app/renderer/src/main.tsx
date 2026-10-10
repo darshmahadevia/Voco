@@ -26,6 +26,8 @@ import {
   type AppState,
   type Command,
   type Preferences,
+  navigationPageSchema,
+  type NavigationPage,
 } from '../../shared/protocol';
 import { speechModels } from '../../shared/models';
 import { initialState, isReady, isSetupComplete } from '../../shared/state';
@@ -35,8 +37,7 @@ import { retainTranscripts, type RecentTranscript } from './recent-transcripts';
 import './styles.css';
 
 type PreviewScenario = 'setup' | 'ready' | 'downloading' | 'recovery' | 'listening' | 'finishing' | 'silent';
-type AppPage = 'auto' | 'home' | 'transcripts' | 'stats' | 'settings' | 'onboarding';
-type NavigationPage = Exclude<AppPage, 'auto'>;
+type AppPage = 'auto' | NavigationPage;
 
 const query = new URLSearchParams(window.location.search);
 const view = query.get('view') === 'pill' ? 'pill' : 'settings';
@@ -1042,10 +1043,14 @@ function canResumeHome(state: AppState, setupSeen: boolean): boolean {
 function App(): React.JSX.Element {
   const { state, transcripts, error } = useAppState();
   const [page, setPage] = useState<AppPage>(() => {
-    const requested = query.get('page');
-    return requested === 'home' || requested === 'transcripts' || requested === 'stats' || requested === 'settings' || requested === 'onboarding' ? requested : 'auto';
+    const requested = navigationPageSchema.safeParse(query.get('page'));
+    return requested.success ? requested.data : 'auto';
   });
   const [setupSeen, setSetupSeen] = useState(() => { try { return localStorage.getItem('voco.setup.v1') === 'seen'; } catch { return false; } });
+  useEffect(() => {
+    if (view === 'pill') return;
+    return window.voco?.subscribeNavigation(setPage);
+  }, []);
   useEffect(() => {
     if (state && page === 'auto') setPage(canResumeHome(state, setupSeen) ? 'home' : 'onboarding');
   }, [state, page, setupSeen]);
