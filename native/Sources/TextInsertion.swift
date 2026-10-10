@@ -98,6 +98,15 @@ struct FocusTarget {
         else { throw InsertionError.modifiers }
         let before = Self.textValue(of: element)
         let selectionBefore = Self.selectedRange(of: element)
+        let expected: String? = before.flatMap { value in
+            selectionBefore.flatMap { selection in
+                guard selection.location >= 0, selection.length >= 0,
+                      selection.location <= value.utf16.count,
+                      selection.length <= value.utf16.count - selection.location else { return nil }
+                return (value as NSString).replacingCharacters(
+                    in: NSRange(location: selection.location, length: selection.length), with: text)
+            }
+        }
         var writable = DarwinBoolean(false)
         // Web editors need input/paste events to update their application state.
         if !Self.isWebEditor(element),
@@ -106,6 +115,10 @@ struct FocusTarget {
            AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success {
             if let before {
                 let after = Self.textValue(of: element)
+                if let expected, let after, after != before, !after.utf16.elementsEqual(expected.utf16) {
+                    // An app can accept an AX write but insert only part of it. Do not retry and duplicate it.
+                    throw InsertionError.unavailable
+                }
                 if let after, after != before || Self.didReplaceIdenticalText(
                     text, before: before, after: after, selection: selectionBefore, element: element
                 ) { return }

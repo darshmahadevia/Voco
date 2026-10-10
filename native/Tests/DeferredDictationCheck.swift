@@ -299,6 +299,17 @@ extension NativeCoordinator {
             engine.deliver([])
             try await settle()
             precondition(coordinator.snapshot["kind"] as? String == "idle")
+            InsertionFixture.reset()
+            InsertionFixture.partialWrite = true
+            coordinator.press()
+            try await settle()
+            coordinator.release()
+            engine.deliver([final("Keep the complete transcript.")])
+            try await settle()
+            precondition(InsertionFixture.text == "Before. Wrong" && InsertionFixture.axWrites == 1)
+            precondition(InsertionFixture.pastes == 0)
+            precondition(coordinator.snapshot["kind"] as? String == "recovery")
+            precondition(coordinator.snapshot["text"] as? String == "Keep the complete transcript.")
             print("PASS \(id.rawValue): capture, release, one paste, current cursor, cancellation, stale result, recovery, silence, tap, continuous promotion/stop/cancel/failure/permissions")
         }
     }
