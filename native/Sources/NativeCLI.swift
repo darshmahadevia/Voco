@@ -9,12 +9,17 @@ enum NativeCLI {
             || arguments.contains("--model-status") || arguments.contains("--smoke-status")
             || arguments.contains("--model-manifest") || arguments.contains("--verify-live-insertion") || arguments.contains("--stream-transcribe-file")
             || arguments.contains("--verify-empty-rich-editor")
+            || arguments.contains("--verify-buffered-insertion")
             || arguments.contains("--verify-microphone") || arguments.contains("--benchmark-file")
     }
 
     @MainActor
     static func run(_ arguments: [String]) async -> Int32 {
         do {
+            if let transcript = value(after: "--verify-buffered-insertion", in: arguments) {
+                try await verifyBufferedInsertion(transcript: transcript, arguments: arguments)
+                return 0
+            }
             if arguments.contains("--verify-microphone") {
                 try await verifyMicrophone(arguments)
                 return 0
@@ -114,14 +119,7 @@ enum NativeCLI {
                 print("Streaming speech checks: PASS (\(partialUpdates) partial updates)")
                 return 0
             }
-            let stream = try engine.openStream()
-            do {
-                try await NativeAudioFile.feed(URL(fileURLWithPath: fixturePath), to: engine, stream: stream)
-            } catch {
-                engine.cancel(stream: stream)
-                throw error
-            }
-            let lines = try engine.finishSynchronously(stream: stream)
+            let lines = try await transcribeFile(URL(fileURLWithPath: fixturePath), engine: engine)
             let text = lines.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { throw NativeError.noTranscript }
             print(text)
@@ -135,6 +133,43 @@ enum NativeCLI {
             }
             FileHandle.standardError.write(Data("Voco native: \(error.localizedDescription)\n".utf8))
             return 1
+        }
+    }
+
+    @MainActor
+    private static func verifyBufferedInsertion(transcript: String, arguments: [String]) async throws {
+        guard let captured = FocusTarget.capture() else { throw InsertionError.focusUnavailable }
+        let target = try await captured.resolved()
+        var text = transcript
+        if let fixture = value(after: "--audio-fixture", in: arguments) {
+            guard let modelPath = value(after: "--model-directory", in: arguments) else {
+                throw NativeError.invalidCommand("Pass --model-directory PATH with --audio-fixture.")
+            }
+            let directory = URL(fileURLWithPath: modelPath)
+            let installer = ModelInstaller(modelDirectory: directory, modelID: try chosenModel(arguments), whisperVariant: try chosenVariant(arguments))
+            guard try installer.verifyCachedModel() else { throw NativeError.unavailable("The speech model is missing. Run --download-model first.") }
+            let engine = try chosenEngine(arguments)
+            defer { engine.unload() }
+            try engine.loadIfNeeded(modelDirectory: directory)
+            let lines = try await transcribeFile(URL(fileURLWithPath: fixture), engine: engine)
+            guard lines.allSatisfy(\.complete) else { throw NativeError.unavailable("The speech model returned an unfinished phrase.") }
+            text = TranscriptLedger.join(lines.map(\.text))
+        }
+        guard !text.isEmpty else { throw NativeError.noTranscript }
+        try await target.insert(text)
+        print("Final: \(text)")
+        print("Buffered insertion checks: PASS")
+    }
+
+    @MainActor
+    private static func transcribeFile(_ url: URL, engine: any SpeechEngine) async throws -> [SpeechLine] {
+        let stream = try engine.openStream()
+        do {
+            try await NativeAudioFile.feed(url, to: engine, stream: stream)
+            return try engine.finishSynchronously(stream: stream)
+        } catch {
+            engine.cancel(stream: stream)
+            throw error
         }
     }
 
