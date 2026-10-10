@@ -7,7 +7,7 @@
   "license": "MIT",
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "npm run build:native && electron-vite dev",
+    "dev": "npm run build:native && env -u ELECTRON_RUN_AS_NODE electron-vite dev",
     "dev:ui": "vite --config vite.preview.config.ts --host 127.0.0.1",
     "build:icons": "bash scripts/build-icons.sh",
     "build:native": "bash scripts/build-native.sh",
@@ -19,7 +19,8 @@
     "dist": "npm run build && node scripts/package-desktop.mjs dmg",
     "verify": "npm run typecheck && npm test && npm run build && npm run verify:renderer",
     "verify:compact-ui": "env -u ELECTRON_RUN_AS_NODE electron scripts/verify-compact-ui.cjs",
-    "verify:menu-bar": "node scripts/verify-menu-bar.mjs"
+    "verify:menu-bar": "node scripts/verify-menu-bar.mjs",
+    "verify:insertion": "bash scripts/verify-buffered-insertion.sh"
   },
   "dependencies": {
     "lucide-react": "^0.577.0",

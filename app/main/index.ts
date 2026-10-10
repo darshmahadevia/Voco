@@ -193,13 +193,12 @@ else {
       ? join(process.resourcesPath, 'native/VocoNative.app/Contents/MacOS/VocoNative')
       : join(app.getAppPath(), 'native/build/VocoNative.app/Contents/MacOS/VocoNative');
     const modelDirectory = verificationModelDirectory ?? join(app.getPath('userData'), 'models/moonshine-medium-streaming-en');
-    const liveInsertionIndex = process.argv.indexOf('--verify-live-insertion');
-    const expectedEditorText = liveInsertionIndex >= 0 ? process.argv[liveInsertionIndex + 1] : undefined;
+    const insertionIndex = process.argv.indexOf('--verify-buffered-insertion');
+    const insertionText = insertionIndex >= 0 ? process.argv[insertionIndex + 1] : undefined;
     const nativeVerificationArguments = process.argv.includes('--verify-microphone')
       ? ['--verify-microphone', '5', '--verification-output', join(verificationDirectory ?? '', 'microphone.json')]
-      : expectedEditorText !== undefined
-        ? ['--verify-live-insertion', expectedEditorText]
-        : process.argv.includes('--verify-empty-rich-editor') ? ['--verify-empty-rich-editor'] : null;
+      : insertionText !== undefined
+        ? ['--verify-buffered-insertion', insertionText] : null;
     if (verificationDirectory && nativeVerificationArguments) {
       const fixtureIndex = process.argv.indexOf('--audio-fixture');
       const audioFixture = fixtureIndex >= 0 ? process.argv[fixtureIndex + 1] : undefined;
@@ -268,10 +267,10 @@ else {
         return;
       }
       if (!bridge?.isRunning) {
-        if (command.kind === 'copyLast') { clipboard.writeText(state.lastTranscript); return; }
+        if (command.kind === 'copyLast') return clipboard.writeText(state.lastTranscript);
         if (command.kind === 'cancel' || command.kind === 'copyRecovery') {
           if (command.kind === 'copyRecovery' && state.session.kind === 'recovery' && state.session.text) {
-            clipboard.writeText(state.session.text);
+            await clipboard.writeText(state.session.text);
           }
           publish({ ...state, session: { kind: 'idle' } });
           return;
