@@ -31,6 +31,21 @@ typography:
     fontSize: "1.18em"
     fontWeight: 400
     letterSpacing: "-0.02em"
+  greeting:
+    fontFamily: '"Manrope", -apple-system, sans-serif'
+    fontSize: "34px"
+    fontWeight: 450
+    lineHeight: 1.3
+    letterSpacing: "-0.03em"
+  page-heading:
+    fontFamily: '"Manrope", -apple-system, sans-serif'
+    fontSize: "30px"
+    fontWeight: 550
+    lineHeight: 1.3
+  section-heading:
+    fontFamily: '"Manrope", -apple-system, sans-serif'
+    fontSize: "16px"
+    fontWeight: 600
   brand:
     fontFamily: '"Manrope", -apple-system, sans-serif'
     fontSize: "22px"
@@ -70,10 +85,10 @@ rounded:
   pill: "999px"
   circle: "50%"
 spacing:
-  sidebar-width: "148px"
+  sidebar-width: "156px"
   sidebar-compact: "132px"
-  content-gutter: "22px"
-  content-gutter-wide: "22px"
+  content-gutter: "26px"
+  content-gutter-wide: "26px"
   content-gutter-compact: "16px"
   content-gutter-mobile: "20px"
   setup-panel: "24px"
@@ -217,10 +232,10 @@ Buttons have gently rounded corners (7px), navigation items use 8px, and keyboar
 Primary actions use orange with a dark label. Secondary actions use a dark gray fill and fine border. Quiet actions use light orange text. Hover changes color; keyboard focus uses an orange outline. Disabled controls use 58% opacity.
 
 ### Navigation
-The left sidebar holds the wordmark, Home, Settings, and setup when setup remains needed. The selected item uses a gray fill and an orange icon. At narrow widths, navigation becomes compact while preserving accessible labels. Home has no separate Settings link.
+The left sidebar holds the wordmark, Home, Transcripts, Stats, and setup when needed. Settings sits at the bottom. The selected item uses a quiet gray fill with white text and icon, without a border. At narrow widths, navigation becomes compact while preserving accessible labels. Home has no separate Settings link.
 
 ### Dashboard
-Home shows readiness in a blue microphone badge with an accessible status label. Calendar cells keep a square aspect ratio as the window resizes. Home groups a compact welcome and readiness header, the Fn / Globe shortcut, usage totals, yearly calendar, daily goal, and milestone grid. A link opens the complete Stats page. Recent transcripts sit below the overview with copy buttons and a link to the session list. Home excerpts scroll for longer text; the full transcript view wraps the complete text and supports session search. Copy feedback appears after the clipboard write succeeds, with retry on failure. Empty and disabled-retention states explain how transcripts become available. Transcripts remain in memory until quit; turning retention off clears them.
+Home has a flat welcome header with a 34px personalized greeting and readiness status. A single divided strip shows words spoken, estimated typing time saved, and the current streak. Recent transcripts follow immediately as a divided list with copy actions. No calendar, goals, or milestones appear on Home. All stats opens the dedicated Stats page, which owns the square-cell activity calendar, daily goal controls, and milestone list. Stats uses flat sections without a surrounding card. Home excerpts scroll for longer text; the full transcript view wraps the complete text and supports session search. Copy feedback appears after the clipboard write succeeds, with retry on failure. Empty and disabled-retention states explain how transcripts become available. Transcripts remain in memory until quit; turning retention off clears them.
 
 ### First-time setup
 The four steps are Welcome, Speech model, App permissions, and Your first words. A step title and count show progress; labeled Back and next buttons navigate the sequence. Onboarding has no footer commentary or promotional notes. Model rows and permission controls show the state of each required step. Enter advances from a focused step heading when the next step is available. Setup shows all three speech models in a divided list beside the explanation, with the recommended option first. Each row shows its version, download size, status, and action. Downloads continue while the user grants permissions. Setup keeps an Explore the app link available once the selected model is ready. Practice explains unavailable dictation and links to the model or permission step. Its text field preserves words when moving between steps and has an expandable Fn / Globe guide for macOS keyboard conflicts. Keep a neutral startup view until the first native state arrives, then choose the initial page once. Route to Home when setup has been seen, or when the model is loading or ready and microphone, accessibility, and shortcut permissions are present. When those permissions are present but the model is still loading, Home says "Loading speech model" and shows no setup prompt. Native actions stay disabled in browser preview.

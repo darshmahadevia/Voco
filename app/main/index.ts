@@ -79,6 +79,7 @@ function navigationMenuItems(): Electron.MenuItemConstructorOptions[] {
   return [
     { id: 'open-dashboard', label: 'Open Dashboard', accelerator: 'CommandOrControl+1', click: () => openPage('home') },
     { id: 'open-transcripts', label: 'Transcripts', accelerator: 'CommandOrControl+2', click: () => openPage('transcripts') },
+    { id: 'open-stats', label: 'Stats', accelerator: 'CommandOrControl+3', click: () => openPage('stats') },
     { id: 'open-settings', label: 'Settings…', accelerator: 'CommandOrControl+,', click: () => openPage('settings') },
   ];
 }

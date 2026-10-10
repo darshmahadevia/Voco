@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, clipboard } = require('electron');
 const { mkdir, writeFile } = require('node:fs/promises');
 const { resolve, join } = require('node:path');
 const assert = require('node:assert/strict');
@@ -47,7 +47,7 @@ async function load(query) {
   await settle();
 }
 async function click(label) {
-  const clicked = await evaluate(`(() => { const button = [...document.querySelectorAll('button')].find(button => button.getAttribute('aria-label') === ${JSON.stringify(label)}); if (!button || button.disabled) return false; button.click(); return true; })()`);
+  const clicked = await evaluate(`(() => { const button = [...document.querySelectorAll('button')].find(button => (button.getAttribute('aria-label') === ${JSON.stringify(label)} || button.textContent.trim() === ${JSON.stringify(label)})); if (!button || button.disabled) return false; button.click(); return true; })()`);
   assert.ok(clicked, `${label}: action unavailable`);
   await settle();
 }
@@ -62,6 +62,12 @@ app.whenReady().then(async () => {
       await load({ preview: 'ready', page });
       await capture(`${prefix}-${page}`);
       assert.ok(await evaluate("!document.body.textContent.includes('Local by design')"));
+      if (page === 'home') {
+        assert.equal(await evaluate("document.querySelectorAll('.activity-calendar, .daily-goal, .milestones').length"), 0);
+        assert.ok(await evaluate("document.querySelector('.transcript-panel').getBoundingClientRect().top < innerHeight"), `${prefix}: transcripts are below the viewport`);
+        assert.ok(await evaluate("parseFloat(getComputedStyle(document.querySelector('#home-heading')).fontSize) >= 30"));
+      }
+      if (page === 'stats') assert.ok(await evaluate("Boolean(document.querySelector('.activity-calendar'))"));
       if (page === 'settings') {
         assert.ok(await evaluate("![...document.querySelectorAll('button')].some(button => button.textContent.trim() === 'Done')"));
         await evaluate("document.querySelector('.workspace-main').scrollTo({ top: 10000 })");
@@ -109,6 +115,8 @@ app.whenReady().then(async () => {
   await settle();
   assert.match(await evaluate("document.querySelector('.transcript-search-empty').textContent"), /No transcripts match/);
   await load({ preview: 'ready', page: 'home' });
+  await click('All stats');
+  assert.ok(await evaluate("Boolean(document.querySelector('.stats-page .activity-calendar'))"));
   const originalDay = await evaluate("document.querySelector('.heatmap-day[tabindex=\"0\"]').dataset.date");
   await evaluate("document.querySelector('.heatmap-day[tabindex=\"0\"]').focus()");
   await window.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Left' });
@@ -117,11 +125,15 @@ app.whenReady().then(async () => {
   assert.equal(await evaluate("document.activeElement.getAttribute('aria-pressed')"), 'true');
   await load({ preview: 'ready', page: 'transcripts' });
   window.show();
+  app.focus({ steal: true });
   window.focus();
   await settle();
-  await click('Copy transcript');
+  const copyPoint = await evaluate("(() => { const rect = document.querySelector('.copy-transcript-button').getBoundingClientRect(); return { x: Math.round(rect.x + rect.width / 2), y: Math.round(rect.y + rect.height / 2) }; })()");
+  window.webContents.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, ...copyPoint });
+  window.webContents.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, ...copyPoint });
   await settle();
   assert.equal(await evaluate("document.querySelector('.copy-transcript-button').dataset.state"), 'copied');
+  assert.equal(await clipboard.readText(), await evaluate("document.querySelector('.last-transcript').textContent"));
   window.hide();
   await load({ preview: 'ready', page: 'stats', progress: 'empty' });
   await evaluate("document.querySelector('.progress-preferences').open = true");

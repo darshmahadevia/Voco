@@ -5,13 +5,27 @@ import type { Command } from '../../shared/protocol';
 
 const number = new Intl.NumberFormat();
 
+export function UsageTotals({ usage = emptyUsage }: { usage: Usage | undefined }): React.JSX.Element {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const summary = usageSummary(usage, now);
+  return (
+    <dl className="progress-totals">
+      <div><dt>Words spoken</dt><dd>{number.format(summary.words)}</dd><span>All time</span></div>
+      <div><dt>Typing time saved</dt><dd>{savedTimeLabel(summary.secondsSaved)}</dd><span>Estimated at {usage.typingWpm} words / min</span></div>
+      <div><dt>Current streak <Flame size={15} aria-hidden="true" /></dt><dd>{summary.streak} <small>{summary.streak === 1 ? 'day' : 'days'}</small></dd><span>Best streak: {summary.bestStreak} {summary.bestStreak === 1 ? 'day' : 'days'}</span></div>
+    </dl>
+  );
+}
 
-export function ProgressDashboard({ usage: providedUsage, preview, run, pending, expanded = false }: {
+export function ProgressDashboard({ usage: providedUsage, preview, run, pending }: {
   usage: Usage | undefined;
   preview: boolean;
   run: (command: Command) => Promise<void>;
   pending: boolean;
-  expanded?: boolean;
 }): React.JSX.Element {
   const [now, setNow] = useState(() => new Date());
   const [yearOffset, setYearOffset] = useState(0);
@@ -53,18 +67,14 @@ export function ProgressDashboard({ usage: providedUsage, preview, run, pending,
     if (preview) setPreviewPreferences({ dailyGoal, typingWpm });
     else void run({ kind: 'setUsagePreferences', dailyGoal, typingWpm });
   }
-  return <section className={`progress-dashboard${expanded ? ' progress-expanded' : ''}`} aria-label="Your dictation progress">
+  return <section className="progress-dashboard progress-expanded" aria-label="Your dictation progress">
     <div className="progress-heading"><h2 className="visually-hidden" id="activity-heading" tabIndex={-1}>Your activity</h2><span>{preview ? 'Sample progress · preview' : 'Only usage totals are saved on this Mac'}</span></div>
-    <dl className="progress-totals">
-      <div><dt>Words spoken</dt><dd>{number.format(summary.words)}</dd><span>All time</span></div>
-      <div><dt>Typing time saved</dt><dd>{savedTimeLabel(summary.secondsSaved)}</dd><span>Estimated at {usage.typingWpm} words / min</span></div>
-      <div><dt>Current streak <Flame size={15} aria-hidden="true" /></dt><dd>{summary.streak} <small>{summary.streak === 1 ? 'day' : 'days'}</small></dd><span>Best streak: {summary.bestStreak} {summary.bestStreak === 1 ? 'day' : 'days'}</span></div>
-    </dl>
-    {expanded && <dl className="stats-session-totals">
+    <UsageTotals usage={usage} />
+    <dl className="stats-session-totals">
       <div><dt>Completed dictations</dt><dd>{number.format(summary.sessions)}</dd></div>
       <div><dt>Active days, all time</dt><dd>{number.format(Object.values(usage.days).filter(day => day.words > 0).length)}</dd></div>
       <div><dt>Daily goals reached</dt><dd>{number.format(Object.values(usage.days).filter(day => day.words >= usage.dailyGoal).length)}</dd><span>At your current {number.format(usage.dailyGoal)} word goal</span></div>
-    </dl>}
+    </dl>
     <section className="activity-calendar" aria-label="Yearly dictation activity">
       <div className="calendar-heading"><h3>Dictation activity</h3><div className="calendar-controls">
         <button type="button" aria-label="Previous year" onClick={() => { setYearOffset(value => value - 1); setSelectedDay(null); }}><ChevronLeft size={16} /></button>
@@ -125,7 +135,7 @@ export function ProgressDashboard({ usage: providedUsage, preview, run, pending,
       <div className="milestones-heading"><h3 id="milestones-heading">Milestones</h3><span>{badges.filter(badge => badge.unlocked).length} / {badges.length} earned</span></div>
       <ul>{badges.map(badge => <li key={badge.name} className={badge.unlocked ? 'badge-earned' : ''}>
         <span className="milestone-icon" aria-hidden="true">{badge.icon}{badge.unlocked && <Check size={10} className="badge-check" />}</span>
-        <span><strong>{badge.name}</strong><span>{badge.hint}</span>{expanded && <span className="milestone-progress"><progress aria-label={`${badge.name} progress`} value={Math.min(badge.value, badge.target)} max={badge.target} /><span>{badge.unlocked ? 'Earned' : `${number.format(badge.value)} / ${number.format(badge.target)} ${badge.unit}`}</span></span>}
+        <span><strong>{badge.name}</strong><span>{badge.hint}</span><span className="milestone-progress"><progress aria-label={`${badge.name} progress`} value={Math.min(badge.value, badge.target)} max={badge.target} /><span>{badge.unlocked ? 'Earned' : `${number.format(badge.value)} / ${number.format(badge.target)} ${badge.unit}`}</span></span>
         <span className="visually-hidden">{badge.unlocked ? 'Earned' : 'Not yet earned'}</span></span>
       </li>)}</ul>
     </section>

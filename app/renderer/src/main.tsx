@@ -31,7 +31,7 @@ import {
 } from '../../shared/protocol';
 import { speechModels } from '../../shared/models';
 import { initialState, isReady, isSetupComplete } from '../../shared/state';
-import { ProgressDashboard } from './ProgressDashboard';
+import { ProgressDashboard, UsageTotals } from './ProgressDashboard';
 import { sampleUsage } from '../../shared/usage';
 import { retainTranscripts, type RecentTranscript } from './recent-transcripts';
 import './styles.css';
@@ -219,7 +219,7 @@ function AppSidebar({
   showSetup: boolean;
   onNavigate: (page: NavigationPage) => void;
 }): React.JSX.Element {
-  const navigationPages: NavigationPage[] = showSetup ? ['home', 'onboarding', 'transcripts', 'stats', 'settings'] : ['home', 'transcripts', 'stats', 'settings'];
+  const navigationPages: NavigationPage[] = showSetup ? ['home', 'onboarding', 'transcripts', 'stats'] : ['home', 'transcripts', 'stats'];
   return <aside className="app-sidebar" aria-label="Voco workspace">
     <div className="sidebar-titlebar window-drag" aria-hidden="true" />
     <div className="sidebar-brand" aria-label="Voco">
@@ -245,6 +245,9 @@ function AppSidebar({
       })}
     </nav>
     <div className="sidebar-spacer" />
+    <button className={`nav-item nav-settings${currentPage === 'settings' ? ' active' : ''}`} type="button" aria-label="Settings" title="Settings" aria-current={currentPage === 'settings' ? 'page' : undefined} onClick={() => onNavigate('settings')}>
+      {NAVIGATION_ITEMS.settings.icon}<span>Settings</span>
+    </button>
   </aside>;
 }
 
@@ -261,7 +264,7 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
   return (
     <main className="settings-shell">
       <header className="settings-header">
-        <div><h1>Settings</h1><p className="intro-copy">Model, permissions, and dictation.</p></div>
+        <div><h1>Settings</h1><p className="intro-copy">Make Voco work for you. Changes apply immediately.</p></div>
       </header>
 
       <section className="settings-section" aria-labelledby="model-heading">
@@ -660,20 +663,21 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
   return <main className="dashboard">
     <div className="dashboard-overview">
     <section className="home-hero" aria-labelledby="home-heading">
-      <h1 id="home-heading">Welcome{state.userName ? `, ${state.userName}` : ''}</h1>
+      <h1 id="home-heading">{state.userName ? <>Hello, <span className="user-name">{state.userName}</span></> : 'Welcome to Voco'}</h1>
       <span className="dashboard-ready dictation-status" data-ready={ready && state.session.kind === 'idle'} role="status" aria-live="polite">
         {state.session.kind === 'starting' || state.session.kind === 'finishing' || (setupComplete && !ready)
           ? <LoaderCircle className="spin" size={14} aria-hidden="true" />
           : state.session.kind === 'recovery' || !ready ? <Info size={14} aria-hidden="true" /> : <Mic size={14} aria-hidden="true" />}
         {status}
       </span>
-      <p className="hero-shortcut"><span>Hold</span><kbd>Fn <Globe size={16} aria-hidden="true" /></kbd><span>to speak. Release to paste. Or use Fn + Space to start and stop.</span></p>
+      <p className="hero-shortcut"><span>Hold</span><kbd>Fn <Globe size={16} aria-hidden="true" /></kbd><span>to speak. Release to paste.</span><span className="shortcut-alternative">Fn + Space to toggle</span></p>
       {!setupComplete && <button className="button button-primary setup-button" type="button" onClick={onSetup}>Finish setting up <ArrowRight size={16} /></button>}
     </section>
-    {(!ready || state.session.kind !== 'idle') && <p className="home-status" role="status" aria-live="polite">{status}</p>}
     {state.session.kind === 'recovery' && <div className="home-recovery"><RecoveryContent session={state.session} preview={preview} pending={pending} run={run} error={error || loadError} /></div>}
-    <ProgressDashboard usage={state.usage} preview={preview} run={run} pending={pending !== null} />
-    <button type="button" className="text-link activity-link" onClick={onStats}>View all stats <ArrowRight size={14} aria-hidden="true" /></button>
+    <div className="dashboard-summary">
+      <UsageTotals usage={state.usage} />
+      <button type="button" className="text-link activity-link" onClick={onStats}>All stats <ArrowRight size={14} aria-hidden="true" /></button>
+    </div>
     </div>
     <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} onShowMore={onTranscripts} />
     {state.session.kind !== 'recovery' && <ActionError message={error || loadError} />}
@@ -728,8 +732,8 @@ function TranscriptsView({ state, transcripts, loadError }: { state: AppState; t
 function StatsView({ state, loadError }: { state: AppState; loadError: string }): React.JSX.Element {
   const { run, pending, error } = useCommands();
   return <main className="detail-page stats-page">
-    <header className="detail-page-heading"><h1 tabIndex={-1}>Stats</h1><p>Track your activity, reach your daily goal, and earn milestones.</p></header>
-    <ProgressDashboard usage={state.usage} preview={preview} run={run} pending={pending !== null} expanded />
+    <header className="detail-page-heading"><h1 tabIndex={-1}>Stats</h1><p>Your dictation activity and progress over time.</p></header>
+    <ProgressDashboard usage={state.usage} preview={preview} run={run} pending={pending !== null} />
     <ActionError message={error || loadError} />
   </main>;
 }

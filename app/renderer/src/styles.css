@@ -1952,9 +1952,9 @@ textarea:focus-visible {
 .dashboard-overview,
 .desktop-shell-workspace .transcript-panel,
 .desktop-shell-workspace .settings-section {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #0c0c0c;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .dashboard .home-hero { display: grid; align-items: center; padding: 0 0 16px; text-align: left; }
 .home-hero h1 { margin: 0; font-weight: 550; line-height: 1.3; letter-spacing: -0.03em; overflow-wrap: anywhere; }
@@ -2042,7 +2042,7 @@ textarea:focus-visible {
 .desktop-shell-workspace .transcript-panel-status { font-size: 11px; }
 .transcript-count { color: var(--text-tertiary); font-size: 11px; }
 .recent-transcript-list { display: grid; gap: 8px; list-style: none; padding: 0; margin: 0; }
-.recent-transcript-row { display: flex; justify-content: space-between; border: 1px solid var(--line); background: #101010; }
+.recent-transcript-row { display: flex; justify-content: space-between; border: 0; border-bottom: 1px solid var(--line); background: transparent; }
 .recent-transcript-copy { min-width: 0; }
 .transcript-metadata { display: flex; align-items: center; color: var(--text-tertiary); }
 .transcript-metadata span + span::before { content: "·"; }
@@ -2201,7 +2201,7 @@ textarea:focus-visible {
 .transcripts-page .recent-transcript-row .last-transcript { max-height: none; overflow: visible; overflow-wrap: anywhere; }
 .transcripts-page .transcript-metadata { font-size: 11px; }
 .transcripts-page .recent-transcript-list { gap: 12px; }
-.stats-page .progress-dashboard { border: 1px solid var(--line); background: #0c0c0c; }
+.stats-page .progress-dashboard { border: 0; background: transparent; }
 .progress-expanded .progress-totals > div > span { font-size: 11px; }
 .stats-session-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 28px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .stats-session-totals dt { color: var(--text-secondary); }
@@ -2231,7 +2231,7 @@ textarea:focus-visible {
   .detail-page-heading h1 { font-size: 25px; }
   .stats-page .progress-dashboard { padding: 18px 14px; border-radius: 14px; }
   .stats-session-totals { grid-template-columns: 1fr; gap: 16px; }
-  .transcripts-page .recent-transcript-row { padding: 14px; }
+  .transcripts-page .recent-transcript-row { padding: 16px 0; }
   .progress-expanded .calendar-heading { align-items: flex-start; flex-direction: column; }
 }
 
@@ -2246,24 +2246,25 @@ html:not([data-view="pill"]) #root { height: 100%; overflow: hidden; }
 }
 .desktop-shell-workspace .app-sidebar {
   --window-control-height: 42px;
-  position: static; width: 148px; flex-basis: 148px; height: 100%; min-height: 0;
-  padding: 0 10px 10px; border: 0; border-right: 1px solid var(--line); border-radius: 0;
+  position: static; width: 156px; flex-basis: 156px; height: 100%; min-height: 0;
+  padding: 0 12px 18px; border: 0; border-right: 1px solid #202020; border-radius: 0; background: #0c0c0c;
 }
 .desktop-shell-workspace .sidebar-brand { gap: 9px; padding: 8px 8px 0; }
 .desktop-shell-workspace .brand-icon { width: 25px; height: 20px; }
 .desktop-shell-workspace .wordmark { font-size: 22px; }
-.desktop-shell-workspace .sidebar-navigation { margin-top: 26px; gap: 4px; }
-.desktop-shell-workspace .nav-item { min-height: 38px; padding: 0 10px; gap: 9px; border-radius: 7px; font-size: 12px; }
+.desktop-shell-workspace .sidebar-navigation { margin-top: 30px; gap: 6px; }
+.desktop-shell-workspace .nav-item { min-height: 40px; padding: 0 10px; gap: 10px; border-radius: 8px; font-size: 12px; }
 .desktop-shell-workspace .app-content { --window-control-height: 38px; height: 100%; min-height: 0; }
 .desktop-shell-workspace .workspace-main {
   display: block; min-height: 0; overflow-y: auto; overflow-x: hidden;
-  padding: 0 22px 18px; scrollbar-gutter: stable; overscroll-behavior: contain;
+  padding: 8px 26px 24px; scrollbar-gutter: stable; overscroll-behavior: contain;
 }
 .desktop-shell-workspace .workspace-main > .preview-notice { margin: 0 auto 10px; font-size: 11px; }
-.desktop-shell-workspace .dashboard { max-width: 760px; gap: 14px; }
-.dashboard-overview { padding: 18px 20px 12px; }
-.dashboard .home-hero { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; padding-bottom: 16px; }
-.home-hero h1 { font-size: 24px; }
+.desktop-shell-workspace .dashboard { max-width: 760px; gap: 28px; }
+.dashboard-overview { padding: 0; }
+.dashboard .home-hero { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding-bottom: 24px; }
+.home-hero h1 { font-size: 34px; font-weight: 450; }
+.user-name { font-weight: 650; }
 .dashboard-ready { grid-row: auto; grid-column: auto; font-size: 11px; white-space: nowrap; }
 .dashboard .hero-shortcut > span { font-size: 12px; }
 .progress-heading { display: none; }
@@ -2292,26 +2293,26 @@ html:not([data-view="pill"]) #root { height: 100%; overflow: hidden; }
 .goal-count { margin-top: 10px; }
 .goal-count > span, .goal-message, .progress-preferences summary, .progress-preferences p { font-size: 11px; }
 .activity-link { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin: 12px 0 0 auto; min-height: 28px; font-size: 11px; }
-.desktop-shell-workspace .transcript-panel { padding: 18px 20px 12px; }
+.desktop-shell-workspace .transcript-panel { padding: 0; }
 .desktop-shell-workspace .transcript-panel-header { gap: 10px; margin-bottom: 12px; }
-.desktop-shell-workspace .transcript-panel h2 { font-size: 14px; }
-.recent-transcript-row { align-items: flex-start; padding: 12px; gap: 12px; border-radius: 8px; }
-.recent-transcript-row .last-transcript { font-size: 13px; line-height: 1.6; max-height: 84px; }
+.desktop-shell-workspace .transcript-panel h2 { font-size: 16px; }
+.recent-transcript-row { align-items: flex-start; padding: 16px 0; gap: 16px; border-radius: 0; }
+.recent-transcript-row .last-transcript { font-size: 14px; line-height: 1.6; max-height: 84px; }
 .transcript-metadata { margin-top: 6px; gap: 8px; font-size: 11px; }
 .transcript-metadata span + span::before { margin-right: 8px; }
 .recent-transcript-row .copy-transcript-button { border-radius: 7px; }
 .detail-page { max-width: 760px; padding-bottom: 0; }
 .detail-page-heading { padding: 0 0 18px; }
-.detail-page-heading h1 { font-size: 24px; margin-bottom: 5px; }
+.detail-page-heading h1 { font-size: 30px; margin-bottom: 5px; }
 .detail-page-heading p { font-size: 12px; line-height: 1.6; }
-.transcripts-page .recent-transcript-row { padding: 14px; }
-.transcripts-page .recent-transcript-row .last-transcript { font-size: 13px; line-height: 1.65; }
+.transcripts-page .recent-transcript-row { padding: 16px 0; }
+.transcripts-page .recent-transcript-row .last-transcript { font-size: 14px; line-height: 1.65; }
 .transcript-search { display: flex; align-items: center; gap: 9px; margin: 0 0 14px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; color: var(--text-secondary); background: var(--surface); }
 .transcript-search:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .transcript-search input { width: 100%; height: 34px; border: 0; outline: 0; background: transparent; color: var(--text-primary); caret-color: var(--accent); font: inherit; }
 .transcript-search input::placeholder { color: var(--text-tertiary); }
 .transcript-search-empty { color: var(--text-secondary); padding: 16px 0; }
-.stats-page .progress-dashboard { padding: 18px 20px; border-radius: 12px; }
+.stats-page .progress-dashboard { padding: 0; border-radius: 0; }
 .stats-page .progress-heading { display: flex; padding-bottom: 12px; }
 .progress-expanded .progress-totals { padding: 16px 0; }
 .progress-expanded .progress-totals dd { font-size: 28px; }
@@ -2329,8 +2330,8 @@ html:not([data-view="pill"]) #root { height: 100%; overflow: hidden; }
 .progress-expanded .milestones strong { font-size: 12px; }
 .desktop-shell-workspace .settings-shell { max-width: 760px; padding: 0; }
 .desktop-shell-workspace .settings-header { padding: 0; margin-bottom: 18px; }
-.desktop-shell-workspace .settings-header h1 { font-size: 24px; margin-bottom: 5px; }
-.desktop-shell-workspace .settings-section { padding: 18px 20px; margin-bottom: 14px; }
+.desktop-shell-workspace .settings-header h1 { font-size: 30px; margin-bottom: 5px; }
+.desktop-shell-workspace .settings-section { padding: 20px 0; margin-bottom: 0; border-top: 1px solid var(--line); }
 .desktop-shell-workspace .settings-section .section-heading { font-size: 14px; }
 .desktop-shell-workspace .model-row { padding: 12px 0; gap: 8px 12px; }
 .desktop-shell-workspace .row-description { font-size: 12px; line-height: 1.5; }
@@ -2383,7 +2384,8 @@ html:not([data-view="pill"]) #root { height: 100%; overflow: hidden; }
   .desktop-shell-workspace .nav-item { justify-content: flex-start; }
   .desktop-shell-workspace .nav-item > span:first-of-type { position: static; width: auto; height: auto; clip-path: none; overflow: visible; }
   .desktop-shell-workspace .workspace-main { padding-inline: 16px; }
-  .dashboard-overview, .desktop-shell-workspace .transcript-panel, .stats-page .progress-dashboard, .desktop-shell-workspace .settings-section { padding: 16px; }
+  .dashboard-overview, .desktop-shell-workspace .transcript-panel, .stats-page .progress-dashboard { padding: 0; }
+  .desktop-shell-workspace .settings-section { padding: 20px 0; }
   .dashboard .home-hero { grid-template-columns: 1fr; }
   .dashboard-ready { grid-column: 1; justify-self: start; }
   .progress-totals dd { font-size: 22px; }
@@ -2425,4 +2427,49 @@ html:not([data-view="pill"]) #root { height: 100%; overflow: hidden; }
   .desktop-shell-onboarding .onboarding-layout-model { gap: 20px; padding: 20px 0; }
   .desktop-shell-onboarding .onboarding-layout-model .onboarding-copy h2 { font-size: 28px; }
   .desktop-shell-onboarding .setup-workspace-model { padding-left: 20px; }
+}
+
+/* A single usage strip and divided lists keep the workspace quiet. */
+.desktop-shell-workspace .nav-item.active { border-color: transparent; background: #222; }
+.desktop-shell-workspace .nav-item.active > svg { color: var(--text-primary); }
+.desktop-shell-workspace .nav-settings { margin-top: 12px; }
+.desktop-shell-workspace .dashboard,
+.desktop-shell-workspace .workspace-main:not(:has(> .preview-notice)) .dashboard { gap: 28px; max-width: 760px; }
+.dashboard-summary { position: relative; }
+.dashboard-summary .progress-totals { padding: 20px 0; border-bottom: 1px solid var(--line); }
+.dashboard-summary .activity-link { margin-top: 6px; color: var(--text-secondary); }
+.dashboard .shortcut-alternative { margin-left: auto; color: var(--text-tertiary); font-size: 11px; }
+.desktop-shell-workspace .recent-transcript-list { gap: 0; }
+.desktop-shell-workspace .recent-transcript-row:last-child { border-bottom: 0; }
+.desktop-shell-workspace .transcript-panel-header { margin-bottom: 4px; }
+.desktop-shell-workspace .recent-transcript-row .copy-transcript-button { background: transparent; border-color: transparent; }
+.show-transcripts { justify-content: flex-start; width: fit-content; padding-inline: 0; margin-top: 4px; }
+.stats-page .progress-heading { justify-content: flex-start; }
+.progress-expanded .activity-calendar { padding-top: 8px; }
+.progress-expanded .progress-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 24px; }
+.progress-expanded .milestones { padding-left: 24px; }
+.progress-expanded .milestones li > span > span:not(.visually-hidden) { max-width: none; }
+@media (max-width: 760px) {
+  .home-hero h1 { font-size: 30px; }
+  .dashboard .home-hero { grid-template-columns: minmax(0, 1fr) auto; }
+  .dashboard-ready { grid-column: 2; justify-self: end; }
+  .dashboard .shortcut-alternative { margin-left: 0; flex-basis: 100%; }
+  .progress-totals { grid-template-columns: 1fr 1.3fr 1fr; }
+  .progress-totals dd { font-size: 22px; }
+  .progress-expanded .progress-layout { grid-template-columns: 1fr; }
+  .progress-expanded .milestones { border-left: 0; border-top: 1px solid var(--line); padding: 20px 0 0; }
+}
+@media (max-width: 560px) {
+  .desktop-shell-workspace .app-sidebar { width: 52px; flex-basis: 52px; padding-inline: 5px; }
+  .desktop-shell-workspace .sidebar-brand { justify-content: center; padding-inline: 0; }
+  .desktop-shell-workspace .sidebar-brand .wordmark { display: none; }
+  .desktop-shell-workspace .nav-item { justify-content: center; padding-inline: 0; }
+  .desktop-shell-workspace .nav-item > span:first-of-type { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
+  .dashboard .home-hero { grid-template-columns: 1fr; }
+  .dashboard-ready { grid-column: 1; justify-self: start; }
+  .dashboard-summary .progress-totals { grid-template-columns: 1fr; gap: 16px; }
+  .dashboard-summary .progress-totals > div { border-left: 0; padding: 0; }
+  .progress-expanded .progress-totals { grid-template-columns: 1fr; gap: 16px; }
+  .progress-expanded .progress-totals > div { border-left: 0; padding: 0; }
+  .stats-page .progress-dashboard { padding: 0; border-radius: 0; }
 }
