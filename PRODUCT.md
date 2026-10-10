@@ -6,27 +6,28 @@
 
 web
 
-Electron desktop application for macOS and Apple Silicon. Windows follows after the macOS application is stable.
+Electron desktop application for Apple Silicon Macs running macOS 26 or newer.
 
 ## Stack
 
-Electron, React, TypeScript, and Motion provide the interface. A bundled Swift/AppKit/AVFoundation helper owns system integration and runs the pinned native Moonshine library. English Medium Streaming is the speech model.
+Electron, React, TypeScript, and Motion provide the interface. A bundled Swift/AppKit/AVFoundation helper owns system integration and local recognition. Users choose Moonshine Medium Streaming, Parakeet TDT 0.6B v2, or Whisper Large v3 Turbo. All run in English mode.
 
 ## Product purpose
 
-Dictate English directly into the text field you are using. Hold Fn or Globe to dictate and release to finish. A floating pill shows microphone status without taking typing focus.
+Dictate English directly into the text field you are using. Hold Fn or Globe to dictate and release to finish. Fn + Space toggles continuous capture. Escape cancels capture or pending transcription. A floating pill shows microphone status without taking typing focus.
 
 ## Capabilities and constraints
 
-- Free to build and use, with open-source app code and an MIT-licensed English streaming model.
-- Install the app first, then explicitly download Moonshine Medium Streaming in setup.
+- Free to build and use, with open-source app code and local speech models. Preserve the license notices for each engine and model.
+- Install the app first, then explicitly download and load a speech model in setup. Switch models while dictation is idle.
 - Show download progress, cancellation, retry, loading, and readiness. Keep the model outside the app bundle so updates preserve it.
 - Run speech recognition offline after setup, without an account, cloud service, API key, or subscription.
 - Keep microphone capture and safe system text insertion in the native helper. Reveal the exact helper app when manual keyboard permission is needed.
-- Revise only Voco's inserted text in supported native fields. Stop writing on a changed field, document, caret, or app.
-- Favor a fast first response and rapid character bursts. Delay provisional words briefly, then insert stable text without revising earlier output. Stable short utterances appear before release. Use live keyboard input for readable web and Electron fields with writable selections. Buffer text in fields that reject live insertion and insert it on release.
+- Record while listening, then insert the completed transcript once after hold release or continuous stop. Do not insert provisional words or revise earlier output.
+- Use the current caret or selection in the original field. Refuse insertion if the app or field changes. Verify complete writes where the field exposes text and selection; retain the full transcript if insertion fails, without retrying a partial write.
+- Show the microphone waveform during capture and Transcribing while recognition finishes. Keep the pill from taking typing focus.
 - Retain recovery words for manual copying. Keep optional recent transcripts in memory until quit. Do not persist audio or transcript history.
-- Open to a compact dashboard with readiness, Fn / Globe guidance, and recent transcripts held in memory. Use black surfaces, gray borders, a restrained orange accent, bundled Manrope, a Pixelify Sans Home accent matching the first headline line in size, and Instrument Serif setup headlines, and reduced-motion support. First-run onboarding guides welcome, model download, microphone and keyboard access, and practice dictation with Fn / Globe troubleshooting. Keep model, access, shortcut, and transcript controls in Settings.
+- Start in the menu bar with the dashboard hidden. Closing the dashboard keeps dictation running. Provide a compact dashboard with readiness, Fn / Globe guidance, and recent transcripts held in memory. Use black surfaces, gray borders, a restrained orange accent, bundled Manrope, a Pixelify Sans Home accent matching the first headline line in size, and Instrument Serif setup headlines, and reduced-motion support. First-run onboarding guides welcome, model download, microphone and keyboard access, and practice dictation with Fn / Globe troubleshooting. Keep model, access, shortcut, and transcript controls in Settings.
 - Do not submit forms, press Return, or write to password fields.
 
 ## Deferred work

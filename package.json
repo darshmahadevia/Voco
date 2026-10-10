@@ -2,7 +2,7 @@
   "name": "voco",
   "version": "0.2.1",
   "private": true,
-  "description": "Local streaming dictation for macOS",
+  "description": "Local dictation for macOS",
   "author": "Voco contributors",
   "license": "MIT",
   "main": "out/main/index.js",
