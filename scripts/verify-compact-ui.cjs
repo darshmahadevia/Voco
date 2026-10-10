@@ -28,12 +28,14 @@ async function capture(name) {
       mainWidth: main.clientWidth, mainScrollWidth: main.scrollWidth,
       setupWidth: setup?.clientWidth, setupScrollWidth: setup?.scrollWidth,
       nextVisible: !rect || (rect.top >= 0 && rect.bottom <= innerHeight),
+      calendarSquares: [...document.querySelectorAll('.heatmap-day, .heatmap-blank')].every(cell => { const rect = cell.getBoundingClientRect(); return Math.abs(rect.width - rect.height) < 0.1; }),
       calendarWidth: document.querySelector('.activity-scroll')?.clientWidth,
       calendarScrollWidth: document.querySelector('.activity-scroll')?.scrollWidth };
   })()`);
   assert.equal(layout.bodyWidth, layout.width, `${name}: page spills horizontally`);
   assert.equal(layout.bodyHeight, layout.height, `${name}: window spills vertically`);
   assert.ok(layout.mainScrollWidth <= layout.mainWidth + 1, `${name}: content spills horizontally`);
+  assert.ok(layout.calendarSquares, `${name}: calendar cells are not square`);
   assert.ok(layout.nextVisible, `${name}: setup action is clipped`);
   if (layout.setupWidth) assert.ok(layout.setupScrollWidth <= layout.setupWidth + 1, `${name}: setup spills horizontally`);
   if (layout.calendarWidth) assert.ok(layout.calendarScrollWidth <= layout.calendarWidth + 1, `${name}: calendar spills horizontally`);
@@ -59,6 +61,13 @@ app.whenReady().then(async () => {
     for (const page of ['home', 'transcripts', 'stats', 'settings']) {
       await load({ preview: 'ready', page });
       await capture(`${prefix}-${page}`);
+      assert.ok(await evaluate("!document.body.textContent.includes('Local by design')"));
+      if (page === 'settings') {
+        assert.ok(await evaluate("![...document.querySelectorAll('button')].some(button => button.textContent.trim() === 'Done')"));
+        await evaluate("document.querySelector('.workspace-main').scrollTo({ top: 10000 })");
+        await capture(`${prefix}-settings-footer`);
+      }
+      if (page === 'home' || page === 'settings') assert.ok(await evaluate("Boolean(document.querySelector('.dictation-status[data-ready=\"true\"] svg'))"));
     }
     await load({ preview: 'ready', page: 'onboarding' });
     await capture(`${prefix}-welcome`);

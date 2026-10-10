@@ -8,7 +8,6 @@ import {
   FileText,
   ChartNoAxesColumn,
   Globe,
-  LockKeyhole,
   ArrowRight,
   Settings2,
   ShieldCheck,
@@ -46,13 +45,6 @@ const previewScenario = parsePreviewScenario(query.get('preview'));
 const preview = window.voco === undefined;
 const previewState = createPreviewState(previewScenario);
 document.documentElement.dataset.view = view;
-
-const READINESS_CHECK = {
-  type: 'spring',
-  stiffness: 460,
-  damping: 30,
-  mass: 0.7,
-} satisfies Transition;
 
 const PILL_RECOVERY_TRANSITION = {
   type: 'spring',
@@ -253,7 +245,6 @@ function AppSidebar({
       })}
     </nav>
     <div className="sidebar-spacer" />
-    <div className="sidebar-privacy"><LockKeyhole size={14} aria-hidden="true" /><span>Local by design</span></div>
   </aside>;
 }
 
@@ -264,19 +255,8 @@ function ActionError({ message }: { message: string }): React.JSX.Element | null
 
 function SettingsView({ state, loadError }: { state: AppState; loadError: string }): React.JSX.Element {
   const { run, pending, error } = useCommands();
-  const reducedMotion = useReducedMotion();
-  const [closeError, setCloseError] = useState('');
   const ready = isReady(state);
   const canCopyLast = state.preferences.keepLastTranscript && state.lastTranscript.length > 0;
-
-  async function closeSettings(): Promise<void> {
-    if (!window.voco || !ready) return;
-    try {
-      await window.voco.closeSettings();
-    } catch (caught: unknown) {
-      setCloseError(caught instanceof Error ? caught.message : 'Voco could not close this window.');
-    }
-  }
 
   return (
     <main className="settings-shell">
@@ -374,22 +354,13 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
         )}
       </section>
 
-      <ActionError message={error || closeError || loadError} />
+      <ActionError message={error || loadError} />
       {ready && (
         <footer className="settings-footer">
-          <span className="ready-label">
-            <motion.span
-              className="ready-check"
-              aria-hidden="true"
-              initial={reducedMotion ? false : { scale: 0.6, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={reducedMotion ? { duration: 0 } : READINESS_CHECK}
-            >
-              <Check size={13} strokeWidth={2.8} />
-            </motion.span>
-            Ready to dictate
+          <span className="dictation-status" data-ready="true" role="status">
+            <Mic size={14} aria-hidden="true" /> Ready to dictate
           </span>
-          <Button disabled={preview} onClick={() => void closeSettings()}>Done</Button>
+          <span className="settings-shortcut">Hold <kbd>Fn / Globe</kbd> to speak</span>
         </footer>
       )}
     </main>
@@ -690,7 +661,12 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
     <div className="dashboard-overview">
     <section className="home-hero" aria-labelledby="home-heading">
       <h1 id="home-heading">Welcome{state.userName ? `, ${state.userName}` : ''}</h1>
-      <span className="dashboard-ready"><span className={`readiness-dot${ready ? ' is-ready' : ''}`} />{status}</span>
+      <span className="dashboard-ready dictation-status" data-ready={ready && state.session.kind === 'idle'} role="status" aria-live="polite">
+        {state.session.kind === 'starting' || state.session.kind === 'finishing' || (setupComplete && !ready)
+          ? <LoaderCircle className="spin" size={14} aria-hidden="true" />
+          : state.session.kind === 'recovery' || !ready ? <Info size={14} aria-hidden="true" /> : <Mic size={14} aria-hidden="true" />}
+        {status}
+      </span>
       <p className="hero-shortcut"><span>Hold</span><kbd>Fn <Globe size={16} aria-hidden="true" /></kbd><span>to speak. Release to paste.</span></p>
       {!setupComplete && <button className="button button-primary setup-button" type="button" onClick={onSetup}>Finish setting up <ArrowRight size={16} /></button>}
     </section>

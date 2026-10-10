@@ -483,28 +483,35 @@ select:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: 11px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 
-.ready-label {
+.dictation-status {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  color: var(--success);
-  font-size: 12px;
-  font-weight: 560;
+  justify-self: start;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 550;
+  line-height: 1.4;
 }
 
-.ready-check {
-  display: inline-grid;
-  width: 18px;
-  height: 18px;
-  place-items: center;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--success) 15%, transparent);
+.dictation-status svg { flex: 0 0 auto; }
+.dictation-status[data-ready="true"] {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
 }
+.settings-shortcut { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 5px; color: var(--text-secondary); font-size: 11px; }
+.settings-shortcut kbd { padding: 3px 5px; font-size: 10px; }
 
 .action-error {
   margin: 10px 0 0;
@@ -904,21 +911,6 @@ textarea:focus-visible {
 
 .sidebar-spacer {
   flex: 1 1 auto;
-}
-
-.sidebar-privacy {
-  display: flex;
-  min-height: 37px;
-  align-items: center;
-  gap: 9px;
-  padding: 0 8px;
-  color: var(--text-tertiary);
-  font-size: 12px;
-}
-
-.sidebar-privacy svg {
-  flex: 0 0 auto;
-  color: var(--text-secondary);
 }
 
 .app-content {
@@ -1802,21 +1794,6 @@ textarea:focus-visible {
     margin: 0;
   }
 
-  .sidebar-privacy {
-    justify-content: center;
-    padding: 0;
-  }
-
-  .sidebar-privacy span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    clip-path: inset(50%);
-  }
-
   .app-content {
     --window-control-height: 42px;
     min-height: 100svh;
@@ -2003,9 +1980,7 @@ textarea:focus-visible {
 }
 .dashboard .home-hero { display: grid; align-items: center; padding: 0 0 16px; text-align: left; }
 .home-hero h1 { margin: 0; font-weight: 550; line-height: 1.3; letter-spacing: -0.03em; overflow-wrap: anywhere; }
-.dashboard-ready { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); }
-.readiness-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
-.readiness-dot.is-ready { background: var(--success); }
+.dashboard-ready { justify-self: end; }
 .dashboard .hero-shortcut { display: flex; grid-column: 1 / -1; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; }
 .dashboard .hero-shortcut kbd { min-height: 28px; padding: 4px 8px; font-size: 11px; }
 .dashboard .setup-button { width: fit-content; grid-column: 1 / -1; margin: 4px 0 0; }
@@ -2035,7 +2010,7 @@ textarea:focus-visible {
 .activity-weekdays span:nth-child(2) { grid-row: 3; }
 .activity-weekdays span:nth-child(3) { grid-row: 5; }
 .heatmap-grid { display: grid; grid-column: 2 / -1; grid-row: 1; grid-template-columns: subgrid; grid-template-rows: repeat(7, auto); grid-auto-flow: column; }
-.heatmap-day, .heatmap-blank { height: 7px; aspect-ratio: auto; width: 100%; min-width: 0; padding: 0; border: 0; border-radius: 2px; }
+.heatmap-day, .heatmap-blank { height: auto; aspect-ratio: 1; width: 100%; min-width: 0; padding: 0; border: 0; border-radius: 2px; }
 .heatmap-day { background: #262626; cursor: pointer; }
 .heatmap-day[data-level="1"], .heatmap-scale [data-level="1"] { background: #61351e; }
 .heatmap-day[data-level="2"], .heatmap-scale [data-level="2"] { background: #9d4d25; }
@@ -2133,8 +2108,7 @@ textarea:focus-visible {
   .desktop-shell-workspace .sidebar-brand .wordmark { display: none; }
   .desktop-shell-workspace .sidebar-navigation { margin-top: 28px; }
   .desktop-shell-workspace .nav-item { justify-content: center; padding: 0; position: relative; }
-  .desktop-shell-workspace .nav-item > span:first-of-type, .desktop-shell-workspace .sidebar-privacy span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .desktop-shell-workspace .sidebar-privacy { justify-content: center; padding: 0; }
+  .desktop-shell-workspace .nav-item > span:first-of-type { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .progress-layout { grid-template-columns: 1fr; }
   .milestones { padding: 16px 0 0; border-left: 0; border-top: 1px solid var(--line); }
   .calendar-heading { align-items: flex-start; flex-direction: column; gap: 8px; }
@@ -2302,7 +2276,6 @@ html:not([data-view="pill"]) #root { height: 100%; overflow: hidden; }
 .desktop-shell-workspace .wordmark { font-size: 22px; }
 .desktop-shell-workspace .sidebar-navigation { margin-top: 26px; gap: 4px; }
 .desktop-shell-workspace .nav-item { min-height: 38px; padding: 0 10px; gap: 9px; border-radius: 7px; font-size: 12px; }
-.desktop-shell-workspace .sidebar-privacy { gap: 6px; padding: 0 7px; font-size: 11px; }
 .desktop-shell-workspace .app-content { --window-control-height: 38px; height: 100%; min-height: 0; }
 .desktop-shell-workspace .workspace-main {
   display: block; min-height: 0; overflow-y: auto; overflow-x: hidden;
@@ -2432,12 +2405,11 @@ html:not([data-view="pill"]) #root { height: 100%; overflow: hidden; }
   .desktop-shell-workspace .sidebar-brand { justify-content: flex-start; }
   .desktop-shell-workspace .sidebar-brand .wordmark { display: inline; }
   .desktop-shell-workspace .nav-item { justify-content: flex-start; }
-  .desktop-shell-workspace .nav-item > span:first-of-type,
-  .desktop-shell-workspace .sidebar-privacy span { position: static; width: auto; height: auto; clip-path: none; overflow: visible; }
+  .desktop-shell-workspace .nav-item > span:first-of-type { position: static; width: auto; height: auto; clip-path: none; overflow: visible; }
   .desktop-shell-workspace .workspace-main { padding-inline: 16px; }
   .dashboard-overview, .desktop-shell-workspace .transcript-panel, .stats-page .progress-dashboard, .desktop-shell-workspace .settings-section { padding: 16px; }
   .dashboard .home-hero { grid-template-columns: 1fr; }
-  .dashboard-ready { grid-column: 1; }
+  .dashboard-ready { grid-column: 1; justify-self: start; }
   .progress-totals dd { font-size: 22px; }
   .calendar-heading { flex-wrap: wrap; }
   .desktop-shell-onboarding .onboarding-layout { padding-inline: 20px; }
