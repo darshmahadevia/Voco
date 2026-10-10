@@ -52,8 +52,8 @@ describe('desktop protocol boundary', () => {
   });
 
   it('publishes capture status without provisional text or insertion modes', () => {
-    expect(appStateSchema.parse({ ...initialState, session: { kind: 'listening', mode: 'hold' } }).session).toEqual({ kind: 'listening', mode: 'hold' });
-    expect(appStateSchema.safeParse({ ...initialState, session: { kind: 'listening', mode: 'hold', buffered: false, text: 'Partial words' } }).success).toBe(false);
+    expect(appStateSchema.parse({ ...initialState, session: { kind: 'listening' } }).session).toEqual({ kind: 'listening' });
+    expect(appStateSchema.safeParse({ ...initialState, session: { kind: 'listening', buffered: false, text: 'Partial words' } }).success).toBe(false);
     expect(appStateSchema.parse({ ...initialState, session: { kind: 'recovery', message: 'The field changed.', text: 'Saved words.' } }).session).toEqual({ kind: 'recovery', message: 'The field changed.', text: 'Saved words.' });
     expect(nativeMessageSchema.safeParse({ type: 'state', state: { ...initialState, session: { kind: 'recovery', message: 'Missing text' } } }).success).toBe(false);
   });

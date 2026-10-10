@@ -127,7 +127,7 @@ async function verifyPermissionReturnFlow(window: BrowserWindow): Promise<Record
   publish({ ...state, permissions: { ...state.permissions, accessibility: true } });
   const closeCanceledReturn = !window.isVisible();
   window.hide();
-  publish({ ...state, session: { kind: 'listening', mode: 'hold' } });
+  publish({ ...state, session: { kind: 'listening' } });
   handleNativeFailure('Verification failure.');
   return { ordinaryGrantStayedClosed, returnedOnGrant, focusedOnGrant, repeatedSnapshotStayedClosed,
     closeCanceledReturn, helperFailureRestoredSettings: window.isVisible() };

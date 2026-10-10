@@ -103,11 +103,11 @@ function createPreviewState(scenario: PreviewScenario): AppState {
     case 'finishing':
       return { ...ready, session: { kind: 'finishing' } };
     case 'silent':
-      return { ...ready, session: { kind: 'listening', mode: 'hold' } };
+      return { ...ready, session: { kind: 'listening' } };
     case 'listening':
       return {
         ...ready,
-        session: { kind: 'listening', mode: 'hold' },
+        session: { kind: 'listening' },
         audioLevel: 0.65,
         audioWaveform: [0.035, 0.09, 0.04, 0.16, 0.08, 0.28, 0.19, 0.12, 0.24, 0.06, 0.11],
       };

@@ -20,7 +20,7 @@ export const modelSchema = z.discriminatedUnion('kind', [
 export const sessionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('idle') }),
   z.object({ kind: z.literal('starting') }),
-  z.object({ kind: z.literal('listening'), mode: z.literal('hold') }).strict(),
+  z.object({ kind: z.literal('listening') }).strict(),
   z.object({ kind: z.literal('finishing') }),
   z.object({ kind: z.literal('recovery'), message: z.string(), text: z.string() }),
 ]);

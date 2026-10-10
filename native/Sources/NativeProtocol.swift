@@ -67,7 +67,7 @@ enum NativeSessionState {
         switch self {
         case .idle: ["kind": "idle"]
         case .starting: ["kind": "starting"]
-        case .listening: ["kind": "listening", "mode": "hold"]
+        case .listening: ["kind": "listening"]
         case .finishing: ["kind": "finishing"]
         case let .recovery(message, text): ["kind": "recovery", "message": message, "text": text]
         }

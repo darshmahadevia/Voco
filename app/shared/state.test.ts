@@ -4,7 +4,7 @@ import type { AppState } from './protocol';
 
 it.each([
   { kind: 'starting' },
-  { kind: 'listening', mode: 'hold' },
+  { kind: 'listening' },
   { kind: 'finishing' },
 ] satisfies AppState['session'][])('does not offer a previous transcript after a helper failure during $kind', (session) => {
   const failed = nativeFailureState({ ...initialState, lastTranscript: 'Previous dictation.', session }, 'Connection lost.');
