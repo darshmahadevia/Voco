@@ -7,8 +7,6 @@ import {
   Home,
   FileText,
   ChartNoAxesColumn,
-  ChevronDown,
-  ChevronUp,
   Globe,
   LockKeyhole,
   ArrowRight,
@@ -22,6 +20,7 @@ import {
   Keyboard,
   LoaderCircle,
   Mic,
+  Search,
   RotateCw,
   X,
 } from 'lucide-react';
@@ -38,7 +37,7 @@ import { retainTranscripts, type RecentTranscript } from './recent-transcripts';
 import './styles.css';
 
 type PreviewScenario = 'setup' | 'ready' | 'downloading' | 'recovery' | 'listening' | 'finishing' | 'silent';
-type AppPage = 'auto' | 'home' | 'settings' | 'onboarding';
+type AppPage = 'auto' | 'home' | 'transcripts' | 'stats' | 'settings' | 'onboarding';
 type NavigationPage = Exclude<AppPage, 'auto'>;
 
 const query = new URLSearchParams(window.location.search);
@@ -213,6 +212,8 @@ function PreviewNotice(): React.JSX.Element | null {
 
 const NAVIGATION_ITEMS: Record<NavigationPage, { label: string; icon: React.ReactNode }> = {
   home: { label: 'Home', icon: <Home size={17} aria-hidden="true" /> },
+  transcripts: { label: 'Transcripts', icon: <FileText size={17} aria-hidden="true" /> },
+  stats: { label: 'Stats', icon: <ChartNoAxesColumn size={17} aria-hidden="true" /> },
   settings: { label: 'Settings', icon: <Settings2 size={17} aria-hidden="true" /> },
   onboarding: { label: 'Set up Voco', icon: <Mic size={17} aria-hidden="true" /> },
 };
@@ -226,7 +227,7 @@ function AppSidebar({
   showSetup: boolean;
   onNavigate: (page: NavigationPage) => void;
 }): React.JSX.Element {
-  const navigationPages: NavigationPage[] = showSetup ? ['home', 'onboarding'] : ['home'];
+  const navigationPages: NavigationPage[] = showSetup ? ['home', 'onboarding', 'transcripts', 'stats', 'settings'] : ['home', 'transcripts', 'stats', 'settings'];
   return <aside className="app-sidebar" aria-label="Voco workspace">
     <div className="sidebar-titlebar window-drag" aria-hidden="true" />
     <div className="sidebar-brand" aria-label="Voco">
@@ -250,11 +251,6 @@ function AppSidebar({
           {page === 'onboarding' && <span className="nav-dot" aria-hidden="true" />}
         </button>;
       })}
-      <button className="nav-item" type="button" aria-label="Transcripts" title="Transcripts" onClick={() => { onNavigate('home'); window.requestAnimationFrame(() => document.getElementById('transcript-panel-heading')?.scrollIntoView({ block: 'center', behavior: 'instant' })); }}><FileText size={17} aria-hidden="true" /><span>Transcripts</span></button>
-      <button className="nav-item" type="button" aria-label="Stats" title="Stats" onClick={() => { onNavigate('home'); window.requestAnimationFrame(() => document.getElementById('activity-heading')?.scrollIntoView({ block: 'center', behavior: 'instant' })); }}><ChartNoAxesColumn size={17} aria-hidden="true" /><span>Stats</span></button>
-      <button className={currentPage === 'settings' ? 'nav-item active' : 'nav-item'} type="button" aria-label="Settings" title="Settings" aria-current={currentPage === 'settings' ? 'page' : undefined} onClick={() => onNavigate('settings')}>
-        {NAVIGATION_ITEMS.settings.icon}<span>Settings</span>
-      </button>
     </nav>
     <div className="sidebar-spacer" />
     <div className="sidebar-privacy"><LockKeyhole size={14} aria-hidden="true" /><span>Local by design</span></div>
@@ -685,7 +681,7 @@ function PillStatus({ state }: { state: AppState }): React.JSX.Element {
   </div>;
 }
 
-function HomeView({ state, transcripts, loadError, onSetup }: { state: AppState; transcripts: RecentTranscript[]; loadError: string; onSetup: () => void }): React.JSX.Element {
+function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onStats }: { state: AppState; transcripts: RecentTranscript[]; loadError: string; onSetup: () => void; onTranscripts: () => void; onStats: () => void }): React.JSX.Element {
   const ready = isReady(state);
   const setupComplete = isSetupComplete(state);
   const { run, pending, error } = useCommands();
@@ -708,8 +704,9 @@ function HomeView({ state, transcripts, loadError, onSetup }: { state: AppState;
     {(!ready || state.session.kind !== 'idle') && <p className="home-status" role="status" aria-live="polite">{status}</p>}
     {state.session.kind === 'recovery' && <div className="home-recovery"><RecoveryContent session={state.session} preview={preview} pending={pending} run={run} error={error || loadError} /></div>}
     <ProgressDashboard usage={state.usage} preview={preview} run={run} pending={pending !== null} />
+    <button type="button" className="text-link activity-link" onClick={onStats}>View all stats <ArrowRight size={14} aria-hidden="true" /></button>
     </div>
-    <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} />
+    <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} onShowMore={onTranscripts} />
     {state.session.kind !== 'recovery' && <ActionError message={error || loadError} />}
     <footer className="dashboard-footer"><ShieldCheck size={13} aria-hidden="true" /> Offline after setup. No account needed.</footer>
   </main>;
@@ -721,9 +718,10 @@ type TranscriptCopyState =
   | { kind: 'copied'; text: string }
   | { kind: 'error'; text: string; message: string };
 
-function TranscriptPanel({ entries, latestText, enabled }: { entries: RecentTranscript[]; latestText: string; enabled: boolean }): React.JSX.Element {
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? entries : entries.slice(0, 3);
+function TranscriptPanel({ entries, latestText, enabled, fullPage = false, onShowMore }: { entries: RecentTranscript[]; latestText: string; enabled: boolean; fullPage?: boolean; onShowMore?: () => void }): React.JSX.Element {
+  const [search, setSearch] = useState('');
+  const filtered = entries.filter(entry => entry.text.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+  const visible = fullPage ? filtered : entries.slice(0, 3);
   return <section className="transcript-panel" aria-labelledby="transcript-panel-heading">
     <div className="transcript-panel-header">
       <div className="transcript-heading-copy">
@@ -732,23 +730,40 @@ function TranscriptPanel({ entries, latestText, enabled }: { entries: RecentTran
       </div>
       <span className="transcript-count">{entries.length} {entries.length === 1 ? 'transcript' : 'transcripts'}</span>
     </div>
-    {entries.length ? <ol className="recent-transcript-list" id="recent-transcript-list">
+    {fullPage && entries.length > 0 && <label className="transcript-search"><Search size={16} aria-hidden="true" /><span className="visually-hidden">Search transcripts</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search this session" /></label>}
+    {entries.length ? <><ol className="recent-transcript-list" id="recent-transcript-list">
       {visible.map((entry, index) => <li className="recent-transcript-row" key={entry.id}>
         <div className="recent-transcript-copy">
           <p className="last-transcript">{entry.text}</p>
-          <div className="transcript-metadata"><span>{index === 0 ? 'Latest' : new Date(entry.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span><span>{entry.text.trim().split(/\s+/).length} words</span></div>
+          <div className="transcript-metadata"><span>{fullPage ? new Date(entry.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : index === 0 ? 'Latest' : new Date(entry.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span><span>{entry.text.trim().split(/\s+/).length} words</span></div>
         </div>
         <CopyTranscriptButton text={entry.text} disabled={false} latest={index === 0 && entry.text === latestText} />
       </li>)}
-    </ol> : <div className="transcript-body transcript-empty">
+    </ol>{visible.length === 0 && <p className="transcript-search-empty" role="status">No transcripts match your search.</p>}</> : <div className="transcript-body transcript-empty">
       <FileText size={24} strokeWidth={1.4} aria-hidden="true" />
       <p className="transcript-empty-copy">{enabled ? 'Your dictations will appear here. Hold Fn / Globe to start.' : 'Turn on Keep recent transcripts in Settings to see them here.'}</p>
-      <CopyTranscriptButton text="" disabled />
     </div>}
-    {entries.length > 3 && <button type="button" className="show-transcripts" aria-expanded={expanded} aria-controls="recent-transcript-list" onClick={() => setExpanded(value => !value)}>
-      {expanded ? 'Show fewer transcripts' : 'Show more transcripts'}{expanded ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
+    {!fullPage && entries.length > 3 && <button type="button" className="show-transcripts" onClick={onShowMore}>
+      View all {entries.length} transcripts<ArrowRight size={15} aria-hidden="true" />
     </button>}
   </section>;
+}
+
+function TranscriptsView({ state, transcripts, loadError }: { state: AppState; transcripts: RecentTranscript[]; loadError: string }): React.JSX.Element {
+  return <main className="detail-page transcripts-page">
+    <header className="detail-page-heading"><h1 tabIndex={-1}>Transcripts</h1><p>All your dictations from this session, ready to read and copy.</p></header>
+    <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} fullPage />
+    <ActionError message={loadError} />
+  </main>;
+}
+
+function StatsView({ state, loadError }: { state: AppState; loadError: string }): React.JSX.Element {
+  const { run, pending, error } = useCommands();
+  return <main className="detail-page stats-page">
+    <header className="detail-page-heading"><h1 tabIndex={-1}>Stats</h1><p>Track your activity, reach your daily goal, and earn milestones.</p></header>
+    <ProgressDashboard usage={state.usage} preview={preview} run={run} pending={pending !== null} expanded />
+    <ActionError message={error || loadError} />
+  </main>;
 }
 
 function CopyTranscriptButton({ text, disabled, latest = true }: { text: string; disabled: boolean; latest?: boolean }): React.JSX.Element {
@@ -822,6 +837,7 @@ function CopyTranscriptButton({ text, disabled, latest = true }: { text: string;
       data-state={currentState.kind}
       disabled={disabled || state.kind === 'copying'}
       aria-label={label}
+      title={label}
       onClick={() => void copyTranscript()}
     >
       <span className="t-icon-swap copy-icon-swap" data-state={copied ? 'b' : 'a'} aria-hidden="true">
@@ -931,30 +947,11 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
       goForward();
     }
   }}>
-    <header className="page-heading">
-      <div className="setup-heading-group">
-        <div className="setup-brand" aria-label="Voco">
-          <img className="brand-icon" src={vocoMark} alt="" aria-hidden="true" />
-          <span className="wordmark">voco<span className="wordmark-dot">.</span></span>
-        </div>
-        <h1>Set up Voco <span className="setup-count" aria-label={`Step ${stepIndex + 1} of ${SETUP_STEPS.length}: ${SETUP_STEPS[stepIndex]?.title}`}>{stepIndex + 1} of {SETUP_STEPS.length}</span></h1>
-      </div>
-      <button className="text-link" disabled={!modelReady} onClick={onDone}>Explore the app <ArrowRight size={14} /></button>
-    </header>
-    <ol className="setup-progress" aria-label="Setup steps">
-      {SETUP_STEPS.map((item, index) => {
-        const complete = item.id === 'welcome' ? stepIndex > 0 : item.id === 'model' ? modelReady : item.id === 'access' ? accessReady : false;
-        return <li key={item.id} aria-current={item.id === step ? 'step' : undefined} className={complete ? 'step-complete' : ''}>
-          <span className="setup-step-number" aria-hidden="true">{complete && item.id !== step ? <Check size={12} /> : index + 1}</span>
-          <span>{item.title}</span>
-          {complete && <span className="visually-hidden">Complete</span>}
-        </li>;
-      })}
-    </ol>
+    <h1 className="visually-hidden">Set up Voco</h1>
+    <header className="setup-header"><span className="wordmark">voco<span className="wordmark-dot">.</span></span><span className="setup-count">{SETUP_STEPS[stepIndex]?.title} · {stepIndex + 1} of {SETUP_STEPS.length}</span></header>
     <div className="setup-stage">
       <div className="setup-direction setup-previous">
-        <button className="setup-arrow" type="button" aria-label="Previous step" title="Previous step" disabled={step === 'welcome'} onClick={() => setStep(SETUP_STEPS[Math.max(0, stepIndex - 1)]?.id ?? 'welcome')}><ArrowLeft size={22} aria-hidden="true" /></button>
-        <span>Back</span>
+        <button className="setup-arrow" type="button" aria-label="Previous step" title="Previous step" disabled={step === 'welcome'} onClick={() => setStep(SETUP_STEPS[Math.max(0, stepIndex - 1)]?.id ?? 'welcome')}><ArrowLeft size={16} aria-hidden="true" /><span>Back</span></button>
       </div>
       <motion.div
         key={step}
@@ -966,15 +963,11 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
         <div className="onboarding-copy">
           <h2 ref={headingRef} tabIndex={-1}>{headings[step].split('\n').map((line, index) => <span key={line} className={index ? 'serif-line' : ''}>{line}</span>)}</h2>
           <p>{descriptions[step]}</p>
-          <span className="onboarding-privacy"><ShieldCheck size={17} aria-hidden="true" /> Audio and transcripts are never saved to disk.</span>
         </div>
         <section className={`setup-workspace setup-workspace-${step}`} aria-label={SETUP_STEPS[stepIndex]?.title}>
           {step === 'welcome' && <>
-            <div className="welcome-wave"><Waveform level={0.8} size="large" /></div>
-            <h3>Your voice, wherever you write.</h3>
-            <p>Emails, notes, messages. Keep your attention on what you want to say.</p>
-            <div className="welcome-shortcut"><kbd>fn <Globe size={16} /></kbd><span>Hold to speak.<br />Release to paste.</span></div>
-            <p className="setup-note">We’ll help you download a model, allow access, and try your first dictation.</p>
+            <div className="welcome-shortcut"><kbd>fn <Globe size={16} /></kbd><span>Hold to speak. Release to paste.</span></div>
+            <p className="setup-note"><ShieldCheck size={14} aria-hidden="true" /> Audio and transcripts are never saved to disk.</p>
           </>}
           {step === 'model' && <>
             <h3>Choose a speech model</h3>
@@ -1017,12 +1010,17 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
         </section>
       </motion.div>
       <div className="setup-direction setup-next">
-        <button className="setup-arrow setup-arrow-next" type="button" aria-label={nextLabel} aria-describedby="setup-hint" title={canContinue ? nextLabel : footerMessage} disabled={!canContinue} onClick={goForward}><ArrowRight size={22} aria-hidden="true" /></button>
-        <span>{nextLabel}</span>
+        <button className="setup-arrow setup-arrow-next" type="button" aria-label={nextLabel} aria-describedby="setup-hint" title={canContinue ? nextLabel : footerMessage} disabled={!canContinue} onClick={goForward}><span>{nextLabel}</span><ArrowRight size={16} aria-hidden="true" /></button>
       </div>
     </div>
     <footer className="setup-footer">
-      <p id="setup-hint" className={((step === 'model' && modelReady) || (step === 'access' && accessReady) || (step === 'practice' && ready)) ? 'status-good' : ''} role="status">{footerMessage}</p>
+      <ol className="setup-progress" aria-label="Setup steps">
+        {SETUP_STEPS.map(item => <li key={item.id} aria-current={item.id === step ? 'step' : undefined}>
+          <span className="visually-hidden">{item.title}</span>
+        </li>)}
+      </ol>
+      <p id="setup-hint" className="setup-hint" role="status">{footerMessage}</p>
+      {modelReady && <button className="text-link setup-explore" onClick={onDone}>Explore the app</button>}
     </footer>
   </main>;
 }
@@ -1085,11 +1083,20 @@ function canResumeHome(state: AppState, setupSeen: boolean): boolean {
 
 function App(): React.JSX.Element {
   const { state, transcripts, error } = useAppState();
-  const [page, setPage] = useState<AppPage>(() => query.get('page') === 'settings' ? 'settings' : query.get('page') === 'onboarding' ? 'onboarding' : query.get('page') === 'home' ? 'home' : 'auto');
+  const [page, setPage] = useState<AppPage>(() => {
+    const requested = query.get('page');
+    return requested === 'home' || requested === 'transcripts' || requested === 'stats' || requested === 'settings' || requested === 'onboarding' ? requested : 'auto';
+  });
   const [setupSeen, setSetupSeen] = useState(() => { try { return localStorage.getItem('voco.setup.v1') === 'seen'; } catch { return false; } });
   useEffect(() => {
     if (state && page === 'auto') setPage(canResumeHome(state, setupSeen) ? 'home' : 'onboarding');
   }, [state, page, setupSeen]);
+  useEffect(() => {
+    if (view === 'pill' || page === 'auto') return;
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    document.querySelector('.workspace-main')?.scrollTo({ top: 0, behavior: 'instant' });
+    document.querySelector<HTMLElement>('main h1')?.focus({ preventScroll: true });
+  }, [page]);
   const windowMode = page === 'auto' ? null : page === 'onboarding' ? 'onboarding' : 'workspace';
   useEffect(() => {
     if (view === 'pill' || !windowMode) return;
@@ -1116,7 +1123,7 @@ function App(): React.JSX.Element {
       <div className="titlebar window-drag" aria-hidden="true" />
       <div className="workspace-main">
         <PreviewNotice />
-        {currentPage === 'settings' ? <SettingsView state={state} loadError={error} /> : currentPage === 'onboarding' ? <OnboardingView state={state} loadError={error} onDone={finishSetup} /> : <HomeView state={state} transcripts={transcripts} loadError={error} onSetup={() => setPage('onboarding')} />}
+        {currentPage === 'settings' ? <SettingsView state={state} loadError={error} /> : currentPage === 'onboarding' ? <OnboardingView state={state} loadError={error} onDone={finishSetup} /> : currentPage === 'transcripts' ? <TranscriptsView state={state} transcripts={transcripts} loadError={error} /> : currentPage === 'stats' ? <StatsView state={state} loadError={error} /> : <HomeView state={state} transcripts={transcripts} loadError={error} onSetup={() => setPage('onboarding')} onTranscripts={() => setPage('transcripts')} onStats={() => setPage('stats')} />}
       </div>
     </div>
   </div>;

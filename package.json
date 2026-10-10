@@ -17,7 +17,8 @@
     "build": "npm run typecheck && npm run build:icons && npm run build:native && electron-vite build",
     "pack": "npm run build && node scripts/package-desktop.mjs",
     "dist": "npm run build && node scripts/package-desktop.mjs dmg",
-    "verify": "npm run typecheck && npm test && npm run build && npm run verify:renderer"
+    "verify": "npm run typecheck && npm test && npm run build && npm run verify:renderer",
+    "verify:compact-ui": "env -u ELECTRON_RUN_AS_NODE electron scripts/verify-compact-ui.cjs"
   },
   "dependencies": {
     "lucide-react": "^0.577.0",

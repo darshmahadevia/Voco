@@ -1,5 +1,14 @@
 # Voco verification
 
+## Compact desktop UI, October 10, 2026
+
+The window opens at 820 by 620px, has a 720 by 520px minimum and a 960 by 720px maximum, and keeps the same bounds during setup and workspace navigation. Full screen and maximize are disabled. Navigation stays fixed while longer views scroll inside the window.
+
+Run `npx electron-vite build`, then `npm run verify:compact-ui`. The script opens the production renderer in Electron, captures 39 layouts across the three supported window sizes, and checks horizontal overflow and setup action visibility. It exercises setup navigation, blocked continuation, transcript search and empty results, copy feedback, keyboard navigation in the activity calendar, and goal adjustment. It writes screenshots and a JSON report to `/tmp/voco-compact-ui`, or to a directory passed as the command's final argument. These renderer scenarios use sample state; native permission grants and physical Fn / Globe input remain separate checks.
+
+The native desktop verification run confirms the preload, helper connection, transparent dictation pill, and unchanged 820 by 620px bounds across workspace, onboarding, and workspace. It uses an isolated profile with a missing model and does not change permissions.
+
+
 ## Rapid insertion, October 9, 2026
 
 The installed desktop now favors a fast first response and rapid text bursts. Words with following context become eligible after 180 milliseconds, down from 550 milliseconds. Recognition polling runs every 120 milliseconds, with the engine's normal analysis cache intact. Delivery uses four, eight, or sixteen whole graphemes and an eight-millisecond minimum interval. Browser acknowledgement governs the actual interval when it takes longer. Capture and finalization use the same delivery path, and finalization adds no extra pacing delay.

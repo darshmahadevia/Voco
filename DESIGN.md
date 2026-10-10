@@ -1,6 +1,6 @@
 ---
 name: Voco
-description: A focused macOS dictation workspace with a wide dashboard and guided first run.
+description: A compact macOS dictation window with a dashboard and guided first run.
 colors:
   accent: "#ff742f"
   accent-strong: "#ff965f"
@@ -70,11 +70,11 @@ rounded:
   pill: "999px"
   circle: "50%"
 spacing:
-  sidebar-width: "194px"
-  sidebar-compact: "72px"
-  content-gutter: "48px"
-  content-gutter-wide: "72px"
-  content-gutter-compact: "30px"
+  sidebar-width: "148px"
+  sidebar-compact: "132px"
+  content-gutter: "22px"
+  content-gutter-wide: "22px"
+  content-gutter-compact: "16px"
   content-gutter-mobile: "20px"
   setup-panel: "24px"
 components:
@@ -141,13 +141,13 @@ components:
 
 **Creative North Star: "Focused Voice Workspace"**
 
-Voco pairs a wide desktop dashboard with a guided first run. Home shows readiness, the Fn / Globe shortcut, and the optional latest transcript. Settings hold model, access, shortcut, and transcript controls. A separate four-step setup takes a new user from welcome to a first dictation.
+Voco pairs a compact desktop dashboard with a guided first run. Home shows readiness, the Fn / Globe shortcut, and the optional latest transcript. Settings hold model, access, shortcut, and transcript controls. A separate four-step setup takes a new user from welcome to a first dictation.
 
 Black surfaces and fine gray borders carry the interface. Orange marks actions, the wordmark, and voice activity. Manrope handles interface text. Pixelify Sans emphasizes the second Home headline line. Instrument Serif stays in the setup headlines. The black app tile and sidebar repeat a five-capsule V mark with varied bar heights and centers that trace the V. The sidebar mark is 26px by 20px; the menu-bar template centers a 17px-wide mark in a 22px canvas. The floating pill stays compact while dictation runs and shows transcript text only when recovery needs attention.
 
 **Key Characteristics:**
 - Black and gray surfaces with a restrained orange accent.
-- Wide dashboard and guided first-run setup.
+- Compact desktop window and guided first-run setup.
 - Manrope interface text, a Pixelify Sans Home headline, and Instrument Serif setup headlines.
 - Optional latest transcript held in memory until quit.
 
@@ -195,11 +195,13 @@ The main palette stays black and gray. Orange marks actions and voice activity; 
 
 ## Layout
 
-First-run setup opens at 900 by 680px with an 820 by 640px minimum. Finishing setup expands the window to the 1120 by 780px workspace. Returning to setup preserves the workspace bounds for restoration. Home and Settings use a 194px left sidebar and a centered content column with 48px gutters; setup hides the sidebar. The content area grows to 1200px; windows at 1500px and wider use 72px gutters. Below 1050px, content gutters shrink to 30px.
+The macOS window opens at 820 by 620px, with a 720 by 520px minimum and a 960 by 720px maximum. It cannot maximize or enter full screen. Onboarding and the workspace share the same bounds; finishing setup does not resize the window. Closing hides the window, and Voco stays available in the menu bar.
 
-The dashboard centers a vertical hero with the waveform above two equally sized headline lines. The orbit is 140px and the headline is 56px, reducing to 112px and 46px below 960px. The latest transcript stays visible below the hero with a copy button. Settings uses a column up to 760px wide with compact divided sections. At supported desktop sizes, setup keeps its introduction and task area in two columns with 32px headlines. Circular previous and next arrows sit on the left and right. The header and status footer stay fixed while expanded choices and help scroll inside the content area. At 600px and below, the introduction becomes one column, the sidebar becomes a 72px icon rail, the centered hero scales down, and content gutters shrink to 14px.
+The workspace uses a 148px sidebar, reducing to 132px at widths of 760px and below. The title bar and navigation stay fixed. Content scrolls inside the window with 22px gutters, reducing to 16px at the minimum size. Home preserves the readiness header, three usage totals, yearly calendar, daily goal and milestone columns, and recent transcripts. Calendar cells have a fixed 7px height to keep the year compact. The full Stats page adds session totals and achievement progress.
 
-**The Wide Workspace Rule.** Keep the dashboard and setup content open on desktop. Stack their columns only at the implemented responsive breakpoints.
+Page headings use 24px Manrope. Metric values use 22–28px; descriptions and controls use 12–13px, and compact metadata uses 11px. Main panels use 12px corners; transcript rows and controls use 7–8px corners. The native window provides the outer frame, without another frame around the entire app.
+
+Setup keeps its centered introduction and task area, with a 34px heading and 13px introduction. Its step title and count sit in a compact header. Back and the named next action stay at the bottom alongside progress and a visible status explanation. Expanded model choices and keyboard help scroll inside the task area. The practice field has a fixed 100px height. Recent transcripts have a searchable session view; Home shows up to three excerpts and links to the full list.
 
 ## Elevation & Depth
 
@@ -218,10 +220,10 @@ Primary actions use orange with a dark label. Secondary actions use a dark gray 
 The left sidebar holds the wordmark, Home, Settings, and setup when setup remains needed. The selected item uses a gray fill and an orange icon. At narrow widths, navigation becomes compact while preserving accessible labels. Home has no separate Settings link.
 
 ### Dashboard
-The hero centers a circular voice mark above a two-line headline and shortcut or setup action. Manrope carries the first line, and the equally sized Pixelify Sans line carries the second. The ready mark stays still. During listening, eleven bars display RMS measurements from eleven consecutive parts of the latest microphone buffer. A soft amplification curve keeps quiet speech visible and preserves variation in louder speech. Silent measurements return the bars to a 3px baseline. Changes interpolate over 40ms without spring overshoot or repeating animation. Reduced motion updates the bars immediately. The lower panel keeps the optional latest transcript visible. Its copy button animates the icon and label after a successful clipboard write, then returns to its idle state. Copy errors retain the words and allow retry. Empty and disabled-retention states keep the panel visible and disable copying. The transcript remains in memory until quit and can be turned off in Settings.
+Home groups a compact welcome and readiness header, the Fn / Globe shortcut, usage totals, yearly calendar, daily goal, and milestone grid. A link opens the complete Stats page. Recent transcripts sit below the overview with copy buttons and a link to the session list. Home excerpts scroll for longer text; the full transcript view wraps the complete text and supports session search. Copy feedback appears after the clipboard write succeeds, with retry on failure. Empty and disabled-retention states explain how transcripts become available. Transcripts remain in memory until quit; turning retention off clears them.
 
 ### First-time setup
-The four steps are Welcome, Speech model, App permissions, and Your first words. A step count shows progress; circular side arrows navigate the sequence. Enter advances from a focused step heading when the next step is available. Setup highlights one speech model and puts alternatives in a disclosure. Downloads continue while the user grants permissions. Setup keeps an Explore the app link available once the selected model is ready. Practice explains unavailable dictation and links to the model or permission step. Its text field preserves words when moving between steps and has an expandable Fn / Globe guide for macOS keyboard conflicts. Keep a neutral startup view until the first native state arrives, then choose the initial page once. Route to Home when setup has been seen, or when the model is loading or ready and microphone, accessibility, and shortcut permissions are present. When those permissions are present but the model is still loading, Home says "Loading speech model" and shows no setup prompt. Native actions stay disabled in browser preview.
+The four steps are Welcome, Speech model, App permissions, and Your first words. A step title and count show progress; labeled Back and next buttons navigate the sequence. Blocked steps show their reason beside the progress indicator. Enter advances from a focused step heading when the next step is available. Setup highlights one speech model and puts alternatives in a disclosure. Downloads continue while the user grants permissions. Setup keeps an Explore the app link available once the selected model is ready. Practice explains unavailable dictation and links to the model or permission step. Its text field preserves words when moving between steps and has an expandable Fn / Globe guide for macOS keyboard conflicts. Keep a neutral startup view until the first native state arrives, then choose the initial page once. Route to Home when setup has been seen, or when the model is loading or ready and microphone, accessibility, and shortcut permissions are present. When those permissions are present but the model is still loading, Home says "Loading speech model" and shows no setup prompt. Native actions stay disabled in browser preview.
 
 ### Settings
 Speech model, Access, and Dictation appear as flat sections with divider lines. Dictation groups the shortcut and transcript preference. The optional transcript switch controls whether Home keeps the latest transcript in memory. Its 44px by 34px hit area surrounds the 34px by 20px track.

@@ -24,7 +24,6 @@ const verifyPermissionReturn = verificationDirectory !== null && process.argv.in
 type PermissionTarget = 'microphone' | 'accessibility';
 let permissionReturn: PermissionTarget | null = null;
 let windowMode: WindowMode = 'onboarding';
-let workspaceBounds: ReturnType<BrowserWindow['getBounds']> | null = null;
 app.setName('Voco');
 app.setPath('userData', verificationDirectory
   ? join(verificationDirectory, 'profile') : join(app.getPath('appData'), 'Voco'));
@@ -42,7 +41,8 @@ function loadWindow(window: BrowserWindow, route: 'settings' | 'pill'): void {
 function showSettings(): void {
   if (!settings) {
     settings = new BrowserWindow({
-      width: 900, height: 680, minWidth: 820, minHeight: 640,
+      width: 820, height: 620, minWidth: 720, minHeight: 520,
+      maxWidth: 960, maxHeight: 720, maximizable: false, fullscreenable: false,
       show: false, title: 'Voco', titleBarStyle: 'hiddenInset', backgroundColor: '#080808',
       webPreferences: { preload: join(__dirname, '../preload/index.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
     });
@@ -225,21 +225,7 @@ else {
       if (event.sender !== settings?.webContents || !settings) throw new Error('Only the workspace can change its window layout.');
       const mode = windowModeSchema.parse(value);
       if (mode === windowMode) return;
-      const previousMode = windowMode;
       windowMode = mode;
-      if (settings.isFullScreen() || settings.isMaximized()) return;
-      const bounds = settings.getBounds();
-      if (previousMode === 'workspace') workspaceBounds = bounds;
-      if (mode === 'workspace' && workspaceBounds) {
-        settings.setBounds(workspaceBounds, true);
-        return;
-      }
-      const size = mode === 'onboarding' ? { width: 900, height: 680 } : { width: 1120, height: 780 };
-      settings.setBounds({
-        x: Math.round(bounds.x + (bounds.width - size.width) / 2),
-        y: Math.round(bounds.y + (bounds.height - size.height) / 2),
-        ...size,
-      }, true);
     });
     ipcMain.handle('voco:command', async (event, value: unknown) => {
       trusted(event);
@@ -292,9 +278,10 @@ else {
           layoutSizes.push(settings.getSize());
         }
         const background = await pill.webContents.executeJavaScript('getComputedStyle(document.body).backgroundColor');
+        const windowConstraints = { minimum: settings.getMinimumSize(), maximum: settings.getMaximumSize(), maximizable: settings.isMaximizable(), fullscreenable: settings.isFullScreenable() };
         const capture = await settings.webContents.capturePage();
         await writeFile(join(directory, 'settings.png'), capture.toPNG());
-        await writeFile(join(directory, 'report.json'), JSON.stringify({ ...renderer, layoutSizes, background, helper: nativeSeen, model: state.model.kind, permissions: state.permissions, windowCount: BrowserWindow.getAllWindows().length, permissionReturn: permissionReturnReport }));
+        await writeFile(join(directory, 'report.json'), JSON.stringify({ ...renderer, layoutSizes, windowConstraints, background, helper: nativeSeen, model: state.model.kind, permissions: state.permissions, windowCount: BrowserWindow.getAllWindows().length, permissionReturn: permissionReturnReport }));
       };
       void verify().then(() => app.quit()).catch((error: unknown) => { process.stderr.write(`${error instanceof Error ? error.message : 'Desktop verification failed'}\n`); app.exit(1); });
     }
