@@ -28,3 +28,13 @@ export function isSetupComplete(state: AppState): boolean {
   return (state.model.kind === 'ready' || state.model.kind === 'loading') && state.permissions.microphone === 'granted'
     && state.permissions.accessibility && state.permissions.shortcut;
 }
+
+export function nativeFailureState(state: AppState, message: string): AppState {
+  return {
+    ...state,
+    model: { kind: 'error', message, recovery: 'restart' },
+    session: state.session.kind === 'idle'
+      ? { kind: 'idle' }
+      : { kind: 'recovery', message, text: state.session.kind === 'recovery' ? state.session.text : '' },
+  };
+}

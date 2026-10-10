@@ -5,7 +5,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { NativeBridge } from './native-bridge';
 import { z } from 'zod';
 import { commandSchema, windowModeSchema, type AppState, type Command, type NavigationPage, type WindowMode } from '../shared/protocol';
-import { initialState, isReady } from '../shared/state';
+import { initialState, isReady, nativeFailureState } from '../shared/state';
 
 let settings: BrowserWindow | null = null;
 let pill: BrowserWindow | null = null;
@@ -102,11 +102,8 @@ function permissionGranted(next: AppState, target: PermissionTarget): boolean {
 function handleNativeFailure(message: string): void {
   permissionReturn = null;
   const activeSession = state.session.kind !== 'idle';
-  const transcript = state.session.kind === 'recovery'
-    ? state.session.text : state.lastTranscript;
   if (settings?.isVisible() || activeSession) focusSettings();
-  publish({ ...state, model: { kind: 'error', message, recovery: 'restart' },
-    session: activeSession ? { kind: 'recovery', message, text: transcript } : { kind: 'idle' } });
+  publish(nativeFailureState(state, message));
 }
 
 async function verifyPermissionReturnFlow(window: BrowserWindow): Promise<Record<string, boolean>> {
