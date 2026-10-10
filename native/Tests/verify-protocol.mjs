@@ -64,7 +64,9 @@ try {
   const states = messages.filter((message) => message.type === 'state').map((message) => message.state);
   assert.ok(states.length > 0, 'helper emitted state updates');
   for (const state of states) {
-    assert.deepEqual(Object.keys(state).sort(), ['audioLevel', 'audioWaveform', 'lastTranscript', 'model', 'models', 'permissions', 'preferences', 'recommendedModel', 'selectedModel', 'session']);
+    assert.deepEqual(Object.keys(state).sort(), ['audioLevel', 'audioWaveform', 'lastTranscript', 'model', 'models', 'permissions', 'preferences', 'recommendedModel', 'selectedModel', 'session', 'usage', 'userName']);
+    assert.equal(typeof state.userName, 'string');
+    assert.deepEqual(state.usage, { days: {}, dailyGoal: 500, typingWpm: 40 });
     assert.ok(['moonshine', 'parakeet', 'whisper'].includes(state.selectedModel));
     assert.ok(state.recommendedModel === null || ['moonshine', 'parakeet', 'whisper'].includes(state.recommendedModel));
     assert.deepEqual(state.models.map((model) => model.id).sort(), ['moonshine', 'parakeet', 'whisper']);
@@ -72,7 +74,7 @@ try {
     assert.equal(state.audioLevel, 0, 'the idle helper starts with a silent waveform');
     assert.deepEqual(state.audioWaveform, Array(11).fill(0), 'idle microphone measurements are silent');
     assert.equal(typeof state.lastTranscript, 'string');
-    assert.ok(['missing', 'downloading', 'loading', 'ready', 'error'].includes(state.model.kind));
+    assert.ok(['missing', 'installed', 'downloading', 'loading', 'ready', 'error'].includes(state.model.kind));
     assert.ok(['idle', 'starting', 'listening', 'finishing', 'recovery'].includes(state.session.kind));
     assert.deepEqual(Object.keys(state.permissions).sort(), ['accessibility', 'microphone', 'shortcut']);
     assert.ok(['required', 'denied', 'granted'].includes(state.permissions.microphone));
