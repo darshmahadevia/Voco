@@ -9,7 +9,7 @@ assert.ok(executable, 'native helper executable path is required');
 
 const temporaryDirectory = await mkdtemp(join(tmpdir(), 'voco-native-protocol-'));
 const processHandle = spawn(executable, ['--model-directory', join(temporaryDirectory, 'models')], {
-  env: { ...process.env, VOCO_SKIP_PREFERENCE_MIGRATION: '1' },
+  env: { ...process.env, VOCO_SKIP_PREFERENCE_MIGRATION: '1', VOCO_PREFERENCE_SUITE: `org.vocoapp.protocol-check.${process.pid}` },
   stdio: ['pipe', 'pipe', 'pipe'],
 });
 
@@ -34,14 +34,22 @@ const exited = new Promise((resolve, reject) => {
   });
 });
 
-processHandle.stdin.write(`${JSON.stringify({ id: 'refresh-1', command: { kind: 'refresh' } })}\n`);
-processHandle.stdin.write(`${JSON.stringify({
-  id: 'invalid-preferences-1',
-  command: { kind: 'setPreferences', preferences: { keepLastTranscript: 'yes' } },
-})}\n`);
-processHandle.stdin.end();
-
 try {
+  const startupDeadline = Date.now() + 5000;
+  while (!stdout.includes('\n')) {
+    if (Date.now() > startupDeadline) throw new Error('native helper did not publish its initial model inventory');
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  const initial = JSON.parse(stdout.slice(0, stdout.indexOf('\n')));
+  assert.equal(initial.type, 'state');
+  assert.equal(initial.state.model.kind, 'missing', 'initial inventory identifies absent weights');
+  processHandle.stdin.write(`${JSON.stringify({ id: 'refresh-1', command: { kind: 'refresh' } })}\n`);
+  processHandle.stdin.write(`${JSON.stringify({
+    id: 'invalid-preferences-1',
+    command: { kind: 'setPreferences', preferences: { keepLastTranscript: 'yes' } },
+  })}\n`);
+  processHandle.stdin.end();
+
   await exited;
   const messages = stdout.trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
   assert.ok(messages.length >= 4, 'helper emitted startup states and command replies');
@@ -56,8 +64,13 @@ try {
   const states = messages.filter((message) => message.type === 'state').map((message) => message.state);
   assert.ok(states.length > 0, 'helper emitted state updates');
   for (const state of states) {
-    assert.deepEqual(Object.keys(state).sort(), ['audioLevel', 'lastTranscript', 'model', 'permissions', 'preferences', 'session']);
+    assert.deepEqual(Object.keys(state).sort(), ['audioLevel', 'audioWaveform', 'lastTranscript', 'model', 'models', 'permissions', 'preferences', 'recommendedModel', 'selectedModel', 'session']);
+    assert.ok(['moonshine', 'parakeet', 'whisper'].includes(state.selectedModel));
+    assert.ok(state.recommendedModel === null || ['moonshine', 'parakeet', 'whisper'].includes(state.recommendedModel));
+    assert.deepEqual(state.models.map((model) => model.id).sort(), ['moonshine', 'parakeet', 'whisper']);
+    assert.ok(state.models.every((model) => model.state.kind === 'missing'), 'an empty model directory has no installed models');
     assert.equal(state.audioLevel, 0, 'the idle helper starts with a silent waveform');
+    assert.deepEqual(state.audioWaveform, Array(11).fill(0), 'idle microphone measurements are silent');
     assert.equal(typeof state.lastTranscript, 'string');
     assert.ok(['missing', 'downloading', 'loading', 'ready', 'error'].includes(state.model.kind));
     assert.ok(['idle', 'starting', 'listening', 'finishing', 'recovery'].includes(state.session.kind));
@@ -71,5 +84,6 @@ try {
   assert.equal(states.at(-1).lastTranscript, '', 'transcripts are not restored from preferences');
   console.log('PASS — native JSONL protocol');
 } finally {
+  if (processHandle.exitCode === null) processHandle.kill('SIGTERM');
   await rm(temporaryDirectory, { recursive: true, force: true });
 }

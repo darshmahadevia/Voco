@@ -1,6 +1,7 @@
 import AppKit
 import ApplicationServices
 import Foundation
+import VocoCore
 
 @MainActor
 func verifyEmptyRichEditor() async throws {
@@ -12,24 +13,24 @@ func verifyEmptyRichEditor() async throws {
     else { throw InsertionError.focusChanged }
     let clipboardCount = NSPasteboard.general.changeCount
     let writer = try LiveTextWriter(target: target)
-    for words in ["Hello", "Hello world.", "Hello there.", "", "Goodbye"] {
-        try await writer.updateInEditor(words)
+    var words = ""
+    for character in "Goodbye" {
+        try await writer.appendInEditor(String(character))
+        words.append(character)
         let actual = try LiveTextWriter.snapshot(element)
         guard actual.text == words || (words.isEmpty && actual.text == "\n"),
               actual.selection == NSRange(location: words.utf16.count, length: 0),
               NSPasteboard.general.changeCount == clipboardCount
         else { throw InsertionError.unavailable }
-        print("Verified empty rich editor revision: \(words.debugDescription)")
+        print("Verified empty rich editor append: \(words.debugDescription)")
     }
-    try writer.commit()
-    try await writer.updateInEditor(" again.")
+    for character in " again." { try await writer.appendInEditor(String(character)) }
     guard try LiveTextWriter.snapshot(element).text == "Goodbye again." else { throw InsertionError.unavailable }
-    try writer.commit()
     let document = try LiveTextWriter.snapshot(element).text
     try await writer.setEditorSelection(NSRange(location: 0, length: 0), document: document,
                                         previous: NSRange(location: document.utf16.count, length: 0))
     do {
-        try await writer.updateInEditor("Unsafe")
+        try await writer.appendInEditor("Unsafe")
         throw InsertionError.unavailable
     } catch InsertionError.focusChanged {}
     guard try LiveTextWriter.snapshot(element).text == document,
@@ -38,7 +39,7 @@ func verifyEmptyRichEditor() async throws {
 }
 
 @MainActor
-func verifyLiveInsertion(expected: String, audioFixture: URL? = nil, engine: MoonshineEngine? = nil) async throws {
+func verifyLiveInsertion(expected: String, audioFixture: URL? = nil, engine: (any SpeechEngine)? = nil) async throws {
     guard let captured = FocusTarget.capture() else { throw InsertionError.focusUnavailable }
     let target = try await captured.resolved()
     let element = try target.validate()
@@ -78,50 +79,67 @@ func verifyLiveInsertion(expected: String, audioFixture: URL? = nil, engine: Moo
     }
     let writer = try LiveTextWriter(target: target)
     let start = selection.location + selection.length
-    var final = ""
-    for words in [" I scream", " Ice cream. 🍦", " Ice cream. 🍦 and coffee.", " Ice cream. 🍦", "", " " + String(repeating: "Long 🍦 phrase. ", count: 8)] {
-        try await writer.updateInEditor(words)
-        let (actual, caret) = try snapshot()
-        let document = (baseline as NSString).replacingCharacters(in: NSRange(location: start, length: 0), with: words)
-        guard sameEditorText(actual, document),
-              caret == (selection.length > 0 ? selection : NSRange(location: start + words.utf16.count, length: 0))
-        else { throw InsertionError.unavailable }
-        try checkClipboard()
-        final = document
-        print("Verified live revision: \(words.debugDescription)")
+    var inserted = ""
+    func appendRapidly(_ desired: String) async throws {
+        guard desired.utf16.starts(with: inserted.utf16) else { throw InsertionError.unavailable }
+        while inserted != desired {
+            let started = ContinuousClock.now
+            let chunk = LiveTextDelivery.nextChunk(in: String(desired.dropFirst(inserted.count)))
+            try await writer.appendInEditor(chunk)
+            inserted += chunk
+            let (actual, caret) = try snapshot()
+            let document = (baseline as NSString).replacingCharacters(in: NSRange(location: start, length: 0), with: inserted)
+            guard sameEditorText(actual, document),
+                  caret == (selection.length > 0 ? selection : NSRange(location: start + inserted.utf16.count, length: 0))
+            else { throw InsertionError.unavailable }
+            try checkClipboard()
+            let pause = LiveTextDelivery.interval - started.duration(to: .now)
+            if pause > .zero { try await Task.sleep(for: pause) }
+        }
     }
-    try writer.commit()
-    try await writer.updateInEditor(" Next phrase.")
-    let continued = (final as NSString).replacingCharacters(in: NSRange(location: start + final.utf16.count - baseline.utf16.count, length: 0), with: " Next phrase.")
-    guard sameEditorText(try snapshot().0, continued) else { throw InsertionError.unavailable }
-    try checkClipboard()
+    var stable = StableText()
+    let long = String(repeating: "Long 🍦 phrase. ", count: 8)
+    let hypotheses = ["I scream", "Ice cream. 🍦", "Ice cream. 🍦 and coffee.", "Ice cream. 🍦", "", long, long, long]
+    for (index, words) in hypotheses.enumerated() {
+        let final = index == hypotheses.count - 1
+        let time = index < 6 ? Double(index) * 0.03 : 0.36 + Double(index - 6) * 0.03
+        stable.update(words, final: final, now: time)
+        let desired = stable.text.isEmpty ? "" : " " + stable.text + (final ? " " : "")
+        try await appendRapidly(desired)
+        print("Verified buffered hypothesis and append-only input: \(words.debugDescription)")
+    }
+    try await appendRapidly(inserted + " Next phrase.")
+    let continued = (baseline as NSString).replacingCharacters(in: NSRange(location: start, length: 0), with: inserted)
+    var final = continued
     if let audioFixture, let engine {
-        try writer.commit()
         var partials = 0
         var ledger = TranscriptLedger()
-        var lastText = ""
+        var speech = StableText()
+        let previous = inserted
         let finalLines = try await transcribeStreamingFile(audioFixture, engine: engine) { lines in
             ledger.update(lines)
-            guard !ledger.text.isEmpty, ledger.text != lastText else { return }
-            try await writer.updateInEditor(" " + ledger.text)
+            let confirmed = TranscriptLedger.join(ledger.committablePrefix.map(\.text))
+                .split(whereSeparator: \.isWhitespace).count
+            speech.update(ledger.text, confirmedWordCount: confirmed, now: ProcessInfo.processInfo.systemUptime)
+            if !speech.text.isEmpty { try await appendRapidly(previous + " " + speech.text) }
             if lines.contains(where: { !$0.complete }) { partials += 1 }
-            lastText = ledger.text
             try checkClipboard()
         }
         ledger.update(finalLines)
-        try await writer.updateInEditor(" " + ledger.text)
+        speech.update(ledger.text, final: true, now: ProcessInfo.processInfo.systemUptime)
+        try await appendRapidly(previous + " " + speech.text)
         let (actual, _) = try snapshot()
         let insertion = " " + ledger.text
         let position = start + continued.utf16.count - baseline.utf16.count
         final = (continued as NSString).replacingCharacters(in: NSRange(location: position, length: 0), with: insertion)
         guard partials > 0, sameEditorText(actual, final) else { throw InsertionError.unavailable }
-        print("Verified Moonshine stream: \(partials) partial revisions and exact final transcript")
+        print("Verified speech stream: \(partials) partial revisions, append-only input, and exact final transcript")
     } else { final = continued }
     final = try snapshot().0
     let previousSelection = try snapshot().1
     try await writer.setEditorSelection(NSRange(location: 0, length: 0), document: final, previous: previousSelection)
     do {
-        try await writer.updateInEditor(" Unsafe revision")
+        try await writer.appendInEditor(" Unsafe revision")
         throw InsertionError.unavailable
     } catch InsertionError.focusChanged {}
     guard try snapshot().0.utf16.elementsEqual(final.utf16), try snapshot().1 == NSRange(location: 0, length: 0)

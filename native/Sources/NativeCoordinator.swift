@@ -3,46 +3,41 @@ import AppKit
 import AVFoundation
 import Darwin
 import Foundation
-import VocoCore
 
 @MainActor
 final class NativeCoordinator {
     private final class Dictation {
         let id: UUID
-        let stream: Int32
+        let engine: any SpeechEngine
+        let stream: SpeechStreamID
         let target: FocusTarget
-        let bufferedWriter: BufferedTextWriter
+        let startedAt = ContinuousClock.now
         var ledger = TranscriptLedger()
-        var liveWriter: LiveTextWriter?
-        var pollTask: Task<Void, Never>?
-        var commitTask: Task<Void, Never>?
-        var updateTask: Task<Void, Never>?
-        var polling = false
-        var commitInFlight = false
+        var insertionTask: Task<Void, Never>?
 
-        init(id: UUID, stream: Int32, target: FocusTarget, bufferedWriter: BufferedTextWriter, liveWriter: LiveTextWriter?) {
+        init(id: UUID, engine: any SpeechEngine, stream: SpeechStreamID, target: FocusTarget) {
             self.id = id
+            self.engine = engine
             self.stream = stream
             self.target = target
-            self.bufferedWriter = bufferedWriter
-            self.liveWriter = liveWriter
         }
 
-        var buffered: Bool { liveWriter == nil }
-        var pendingLines: [MoonshineLine] { ledger.pendingLines }
-        var pendingText: String { ledger.pendingText }
         var fullText: String { ledger.text }
     }
 
     private let state = NativeStateStore()
-    private let engine = MoonshineEngine()
+    private var engine: any SpeechEngine
     private let audio = NativeAudioInput()
     private var lastLevelPublication = ContinuousClock.now
-    private let modelDirectory: URL
-    private let installer: ModelInstaller
+    private let moonshineModelDirectory: URL
+    private let modelsRoot: URL
+    private let hadSavedModelSelection: Bool
     private let shortcutMonitor = ShortcutMonitor()
     private var downloadTask: Task<Void, Never>?
     private var downloadGeneration: UUID?
+    private var downloadModelID: SpeechModelID?
+    private var activationGeneration: UUID?
+    private var hasInspectedModels = false
     private var holdTask: Task<Void, Never>?
     private var targetResolutionTask: Task<Void, Never>?
     private var startingSessionID: UUID?
@@ -53,17 +48,24 @@ final class NativeCoordinator {
     private var outputLock = NSLock()
 
     init(modelDirectory: URL) {
-        self.modelDirectory = modelDirectory.standardizedFileURL
-        installer = ModelInstaller(modelDirectory: modelDirectory)
+        let legacyDirectory = modelDirectory.standardizedFileURL
+        moonshineModelDirectory = legacyDirectory
+        modelsRoot = SpeechModelCatalog.modelsRoot(from: legacyDirectory)
+        let defaults = NativePreferences.defaults
+        hadSavedModelSelection = defaults.object(forKey: "selectedSpeechModel") != nil
+        let storedModel = defaults.string(forKey: "selectedSpeechModel").flatMap(SpeechModelID.init(rawValue:)) ?? .moonshine
+        state.selectedModel = storedModel
+        state.recommendedModel = SpeechModelCatalog.recommendedModel
+        engine = SpeechModelCatalog.makeEngine(for: storedModel)
         shortcutMonitor.onAction = { [weak self] action in
             switch action {
             case .pressed: self?.armHold()
             case .released: self?.releaseHold()
-            case .cancelled: self?.cancelDictation(message: "Dictation canceled. Your words are saved here.", clearRecovery: true)
+            case .cancelled: self?.cancelDictation(message: "Dictation canceled.", clearRecovery: true)
             }
         }
         shortcutMonitor.onEscape = { [weak self] in
-            self?.cancelDictation(message: "Dictation canceled. Your words are saved here.", clearRecovery: true)
+            self?.cancelDictation(message: "Dictation canceled.", clearRecovery: true)
         }
         permissionTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshPermissions(publish: true) }
@@ -72,29 +74,135 @@ final class NativeCoordinator {
 
     func start() {
         refreshPermissions(publish: false)
-        do {
-            if try installer.verifyCachedModel() {
-                state.model = .loading
-                publishState()
-                engine.warm(modelDirectory: modelDirectory) { [weak self] result in
-                    guard let self else { return }
-                    switch result {
-                    case .success: self.state.model = .ready
-                    case let .failure(error): self.state.model = .error(error.localizedDescription)
-                    }
-                    self.publishState()
-                }
-            } else {
-                state.model = .missing
-                publishState()
-            }
-        } catch {
-            state.model = .error(error.localizedDescription)
-            publishState()
-        }
+        Task { await loadInitialModels() }
         readInput(onLine: { [weak self] line in self?.receive(line) }, onEnd: { [weak self] in
             self?.shutdown()
         })
+    }
+
+    private func loadInitialModels() async {
+        for modelID in SpeechModelID.allCases {
+            let installer = ModelInstaller(modelDirectory: modelDirectory(for: modelID), modelID: modelID)
+            let result = await Task.detached {
+                Result { try installer.verifyCachedModel(verifyChecksums: false) }
+            }.value
+            guard case .missing = state.models[modelID] ?? .missing else { continue }
+            switch result {
+            case .success(true): state.models[modelID] = .installed
+            case .success(false): state.models[modelID] = .missing
+            case let .failure(error): state.models[modelID] = .error(error.localizedDescription)
+            }
+        }
+        if !hadSavedModelSelection,
+           case .missing = state.models[state.selectedModel] ?? .missing,
+           let firstInstalled = SpeechModelCatalog.recommendedModel.flatMap({ candidate in
+               if case .installed = state.models[candidate] { return candidate }
+               return nil
+           }) ?? SpeechModelID.allCases.first(where: { candidate in
+               if case .installed = state.models[candidate] { return true }
+               return false
+           }) {
+            state.selectedModel = firstInstalled
+            engine = SpeechModelCatalog.makeEngine(for: firstInstalled)
+        }
+        hasInspectedModels = true
+        syncSelectedModelState()
+        if case .installed = state.models[state.selectedModel] {
+            activateModel(state.selectedModel)
+        } else {
+            publishState()
+        }
+    }
+
+    private func selectModel(_ modelID: SpeechModelID) throws {
+        guard active == nil, startingSessionID == nil, !finishing, activationGeneration == nil else {
+            throw NativeError.unavailable("Finish dictation before changing the speech model.")
+        }
+        switch state.models[modelID] ?? .missing {
+        case .ready where modelID == state.selectedModel: return
+        case .installed, .ready: activateModel(modelID)
+        case .missing, .downloading, .loading:
+            throw NativeError.unavailable("Install this speech model before selecting it.")
+        case let .error(message):
+            throw NativeError.unavailable("This speech model is unavailable. Download it again to repair it. \(message)")
+        }
+    }
+
+    private func activateModel(_ modelID: SpeechModelID) {
+        guard activationGeneration == nil, active == nil, startingSessionID == nil, !finishing else { return }
+        if modelID == state.selectedModel, case .ready = state.models[modelID] { return }
+        let generation = UUID()
+        activationGeneration = generation
+        let previousID = state.selectedModel
+        let previousEngine = engine
+        let candidate = SpeechModelCatalog.makeEngine(for: modelID)
+        let targetDirectory = modelDirectory(for: modelID)
+        state.selectedModel = modelID
+        state.models[modelID] = .loading
+        if previousID != modelID { state.models[previousID] = .installed }
+        syncSelectedModelState()
+        publishState()
+
+        Task { [weak self] in
+            await Task.detached(priority: .userInitiated) { previousEngine.unload() }.value
+            guard let self, self.activationGeneration == generation else { return }
+            candidate.warm(modelDirectory: targetDirectory) { [weak self] result in
+                guard let self, self.activationGeneration == generation else {
+                    candidate.unload()
+                    return
+                }
+                switch result {
+                case .success:
+                    self.engine = candidate
+                    self.state.selectedModel = modelID
+                    self.state.models[modelID] = .ready
+                    if previousID != modelID { self.state.models[previousID] = .installed }
+                    NativePreferences.defaults.set(modelID.rawValue, forKey: "selectedSpeechModel")
+                    self.activationGeneration = nil
+                    self.syncSelectedModelState()
+                    self.publishState()
+                case let .failure(error):
+                    candidate.unload()
+                    self.state.models[modelID] = .error(error.localizedDescription)
+                    guard previousID != modelID else {
+                        self.activationGeneration = nil
+                        self.syncSelectedModelState()
+                        self.publishState()
+                        return
+                    }
+                    self.state.models[previousID] = .loading
+                    self.state.selectedModel = previousID
+                    self.syncSelectedModelState()
+                    self.publishState()
+                    previousEngine.warm(modelDirectory: self.modelDirectory(for: previousID)) { [weak self] restoreResult in
+                        guard let self, self.activationGeneration == generation else { return }
+                        switch restoreResult {
+                        case .success:
+                            self.engine = previousEngine
+                            self.state.models[previousID] = .ready
+                        case let .failure(restoreError):
+                            self.state.models[previousID] = .error(restoreError.localizedDescription)
+                        }
+                        self.activationGeneration = nil
+                        self.syncSelectedModelState()
+                        self.publishState()
+                    }
+                }
+            }
+        }
+    }
+
+    private func modelDirectory(for modelID: SpeechModelID) -> URL {
+        if modelID == .moonshine { return moonshineModelDirectory }
+        return SpeechModelCatalog.directory(for: modelID, in: modelsRoot)
+    }
+
+    private var hasReadyModel: Bool {
+        state.models.values.contains { if case .ready = $0 { return true }; return false }
+    }
+
+    private func syncSelectedModelState() {
+        state.model = state.models[state.selectedModel] ?? .missing
     }
 
     func receive(_ line: String) {
@@ -118,7 +226,16 @@ final class NativeCoordinator {
 
     private func dispatch(kind: String, command: [String: Any]) throws {
         switch kind {
-        case "downloadModel": beginDownload()
+        case "downloadModel":
+            guard let raw = command["modelId"] as? String, let modelID = SpeechModelID(rawValue: raw) else {
+                throw NativeError.invalidCommand("Choose a supported speech model to download.")
+            }
+            try beginDownload(modelID)
+        case "selectModel":
+            guard let raw = command["modelId"] as? String, let modelID = SpeechModelID(rawValue: raw) else {
+                throw NativeError.invalidCommand("Choose a supported speech model.")
+            }
+            try selectModel(modelID)
         case "cancelDownload": cancelDownload()
         case "requestMicrophone": requestMicrophone()
         case "requestAccessibility": requestAccessibility()
@@ -128,8 +245,15 @@ final class NativeCoordinator {
             }
             openPrivacy(pane)
         case "setPreferences": try setPreferences(command["preferences"])
+        case "setUsagePreferences":
+            guard let goal = command["dailyGoal"] as? Int, (100...10000).contains(goal),
+                  let wpm = command["typingWpm"] as? Int, (10...200).contains(wpm) else {
+                throw NativeError.invalidCommand("Choose a valid word goal and typing speed.")
+            }
+            state.usage.dailyGoal = goal
+            state.usage.typingWpm = wpm
         case "stop": stopDictation()
-        case "cancel": cancelDictation(message: "Dictation canceled. Your words are saved here.", clearRecovery: true)
+        case "cancel": cancelDictation(message: "Dictation canceled.", clearRecovery: true)
         case "copyRecovery": copyRecovery()
         case "copyLast": copyLastTranscript()
         case "refresh": refreshPermissions(publish: false)
@@ -148,51 +272,64 @@ final class NativeCoordinator {
         refreshPermissions(publish: false)
     }
 
-    private func beginDownload() {
-        guard downloadTask == nil else { return }
-        switch state.model {
-        case .ready, .loading: return
-        case .missing, .downloading, .error: break
+    private func beginDownload(_ modelID: SpeechModelID) throws {
+        guard downloadTask == nil else {
+            throw NativeError.unavailable("Another speech model is already downloading.")
         }
+        switch state.models[modelID] ?? .missing {
+        case .ready, .installed:
+            return
+        case .loading:
+            throw NativeError.unavailable("This speech model is already loading.")
+        case .downloading:
+            throw NativeError.unavailable("This speech model is already downloading.")
+        case .missing, .error:
+            break
+        }
+        let installer = ModelInstaller(modelDirectory: modelDirectory(for: modelID), modelID: modelID)
         let generation = UUID()
         downloadGeneration = generation
-        state.model = .downloading(progress: 0, file: "Starting download…")
+        downloadModelID = modelID
+        state.models[modelID] = .downloading(progress: 0, file: "Starting download…")
+        syncSelectedModelState()
         publishState()
-        let installer = self.installer
         downloadTask = Task { [weak self] in
             do {
                 try await installer.download { [weak self] file, progress in
                     Task { @MainActor in
                         guard let self, self.downloadGeneration == generation else { return }
-                        guard case .downloading = self.state.model else { return }
-                        self.state.model = .downloading(progress: progress, file: file)
+                        guard case .downloading = self.state.models[modelID] else { return }
+                        self.state.models[modelID] = .downloading(progress: progress, file: file)
+                        self.syncSelectedModelState()
                         self.publishState()
                     }
                 }
                 guard let self, self.downloadGeneration == generation, !Task.isCancelled else { return }
                 self.downloadTask = nil
-                self.state.model = .loading
+                self.downloadGeneration = nil
+                self.downloadModelID = nil
+                self.state.models[modelID] = .installed
+                self.syncSelectedModelState()
                 self.publishState()
-                self.engine.warm(modelDirectory: self.modelDirectory) { [weak self] result in
-                    guard let self, self.downloadGeneration == generation else { return }
-                    self.downloadGeneration = nil
-                    switch result {
-                    case .success: self.state.model = .ready
-                    case let .failure(error): self.state.model = .error(error.localizedDescription)
-                    }
-                    self.publishState()
+                if self.active == nil, self.startingSessionID == nil, !self.finishing,
+                   self.state.selectedModel == modelID || !self.hasReadyModel {
+                    self.activateModel(modelID)
                 }
             } catch is CancellationError {
                 guard let self, self.downloadGeneration == generation else { return }
                 self.downloadTask = nil
                 self.downloadGeneration = nil
-                self.state.model = .missing
+                self.downloadModelID = nil
+                self.state.models[modelID] = .missing
+                self.syncSelectedModelState()
                 self.publishState()
             } catch {
                 guard let self, self.downloadGeneration == generation else { return }
                 self.downloadTask = nil
                 self.downloadGeneration = nil
-                self.state.model = .error(error.localizedDescription)
+                self.downloadModelID = nil
+                self.state.models[modelID] = .error(error.localizedDescription)
+                self.syncSelectedModelState()
                 self.publishState()
             }
         }
@@ -200,10 +337,13 @@ final class NativeCoordinator {
 
     private func cancelDownload() {
         guard let downloadTask else { return }
+        let modelID = downloadModelID
         downloadGeneration = nil
         self.downloadTask = nil
+        downloadModelID = nil
         downloadTask.cancel()
-        state.model = .missing
+        if let modelID { state.models[modelID] = .missing }
+        syncSelectedModelState()
         publishState()
     }
 
@@ -320,23 +460,19 @@ final class NativeCoordinator {
             return
         }
         do {
-            let bufferedWriter = try BufferedTextWriter(target: target)
-            let stream = try engine.openStream()
-            var writer: LiveTextWriter?
-            do { writer = try LiveTextWriter(target: target, allowedModifiers: []) }
-            catch InsertionError.liveUnsupported { writer = nil }
-            catch {
-                engine.cancel(stream: stream)
-                throw error
-            }
-            let session = Dictation(id: id, stream: stream, target: target, bufferedWriter: bufferedWriter, liveWriter: writer)
+            _ = try target.validate()
+            let sessionEngine = engine
+            let stream = try sessionEngine.openStream()
+            let session = Dictation(id: id, engine: sessionEngine, stream: stream, target: target)
             active = session
             state.audioLevel = 0
-            try audio.start(moonshine: engine, stream: stream, onSpeech: {}, onLevel: { [weak self] level in
+            state.audioWaveform = Array(repeating: 0, count: AudioMeter.barCount)
+            try audio.start(engine: sessionEngine, stream: stream, onSpeech: {}, onLevel: { [weak self] level, waveform in
                 guard let self, self.active?.id == id, case .listening = self.state.session else { return }
                 self.state.audioLevel = level
+                self.state.audioWaveform = waveform
                 let now = ContinuousClock.now
-                if now - self.lastLevelPublication >= .milliseconds(80) {
+                if now - self.lastLevelPublication >= .milliseconds(40) {
                     self.lastLevelPublication = now
                     self.publishState()
                 }
@@ -344,13 +480,12 @@ final class NativeCoordinator {
                 guard let self else { return }
                 self.failDictation(message, id: id)
             })
-            state.session = .listening(buffered: session.buffered, text: session.fullText)
-            session.pollTask = Task { [weak self] in await self?.poll(id: id) }
+            state.session = .listening
             publishState()
         } catch {
             if let session = active, session.id == id {
                 audio.stop()
-                engine.cancel(stream: session.stream)
+                session.engine.cancel(stream: session.stream)
                 active = nil
             }
             sessionGate.invalidate()
@@ -369,81 +504,6 @@ final class NativeCoordinator {
         }
     }
 
-    private func poll(id: UUID) async {
-        while !Task.isCancelled, active?.id == id {
-            do { try await Task.sleep(for: .milliseconds(240)) } catch { return }
-            guard let session = active, session.id == id, !session.polling, !session.commitInFlight, !finishing else { continue }
-            session.polling = true
-            engine.transcribe(stream: session.stream) { [weak self] result in
-                guard let self, self.sessionGate.accepts(id), let current = self.active, current.id == id else { return }
-                self.receiveTranscript(result, session: current)
-            }
-        }
-    }
-
-    private func receiveTranscript(_ result: Result<[MoonshineLine], Error>, session: Dictation) {
-        session.updateTask = Task { [weak self] in
-            guard let self else { return }
-            switch result {
-            case let .success(lines): await self.didTranscribe(lines, session: session)
-            case let .failure(error): self.failDictation(error.localizedDescription, id: session.id)
-            }
-            session.polling = false
-            session.updateTask = nil
-        }
-    }
-
-    private func didTranscribe(_ lines: [MoonshineLine], session: Dictation) async {
-        guard sessionGate.accepts(session.id), active?.id == session.id, !finishing else { return }
-        if !lines.isEmpty { session.ledger.update(lines) }
-        let fullText = session.fullText
-        if !state.preferences.keepLastTranscript { state.lastTranscript = "" }
-        else if !fullText.isEmpty { state.lastTranscript = fullText }
-
-        if let writer = session.liveWriter {
-            do { try await writer.updateInEditor(session.ledger.livePendingText) }
-            catch InsertionError.liveUnsupported { session.liveWriter = nil }
-            catch { failDictation(error.localizedDescription, id: session.id); return }
-        }
-
-        guard sessionGate.accepts(session.id), active?.id == session.id, !finishing else { return }
-        state.session = .listening(buffered: session.buffered, text: session.fullText)
-        publishState()
-    }
-
-    private func commitBuffered(_ lines: [MoonshineLine], session: Dictation) {
-        guard !session.commitInFlight else { return }
-        session.commitInFlight = true
-        let task = Task { [weak self] in
-            guard let self else { return }
-            do {
-                try await self.commit(lines, session: session)
-                guard self.active?.id == session.id else { return }
-                session.commitInFlight = false
-                session.commitTask = nil
-                self.publishState()
-            } catch { self.failDictation(error.localizedDescription, id: session.id) }
-        }
-        session.commitTask = task
-    }
-
-    private func commit(_ lines: [MoonshineLine], session: Dictation) async throws {
-        guard sessionGate.accepts(session.id), active?.id == session.id else { return }
-        let selected = lines.filter(\.complete)
-        guard !selected.isEmpty else { return }
-        if session.liveWriter != nil, !session.pendingLines.allSatisfy(\.complete) { return }
-        let insertion = session.ledger.insertion(for: lines)
-        guard !insertion.isEmpty else { return }
-        if let writer = session.liveWriter {
-            try await writer.updateInEditor(session.ledger.livePendingText)
-            try writer.commit()
-        } else {
-            try await session.bufferedWriter.insert(insertion)
-        }
-        guard sessionGate.accepts(session.id), active?.id == session.id else { return }
-        session.ledger.markCommitted(lines)
-    }
-
     private func stopDictation() {
         holdTask?.cancel()
         holdTask = nil
@@ -457,74 +517,39 @@ final class NativeCoordinator {
         }
         guard !finishing else { return }
         finishing = true
-        session.pollTask?.cancel()
         audio.stop()
         state.session = .finishing
         publishState()
-        Task { [weak self] in
-            await session.updateTask?.value
-            await session.commitTask?.value
-            guard let self, self.sessionGate.accepts(session.id), self.active?.id == session.id else { return }
-            self.finishEngine(session)
-        }
-    }
-
-    private func finishEngine(_ session: Dictation) {
-        engine.finish(stream: session.stream) { [weak self] result in
+        session.engine.finish(stream: session.stream) { [weak self] result in
             guard let self, self.sessionGate.accepts(session.id), self.active?.id == session.id else { return }
             switch result {
             case let .success(lines):
-                session.updateTask = Task { await self.finishDictation(lines, session: session) }
+                session.insertionTask = Task { await self.finishDictation(lines, session: session) }
             case let .failure(error): self.failDictation(error.localizedDescription, id: session.id)
             }
         }
     }
 
-    private func finishDictation(_ lines: [MoonshineLine], session: Dictation) async {
+    private func finishDictation(_ lines: [SpeechLine], session: Dictation) async {
         guard sessionGate.accepts(session.id), active?.id == session.id else { return }
-        if !lines.isEmpty { session.ledger.update(lines) }
+        session.ledger.update(lines)
         if !state.preferences.keepLastTranscript { state.lastTranscript = "" }
         else if !session.fullText.isEmpty { state.lastTranscript = session.fullText }
-        let pending = session.pendingLines
-        if let writer = session.liveWriter {
-            do {
-                if !lines.isEmpty { try await writer.updateInEditor(session.ledger.livePendingText) }
-                guard !pending.isEmpty, pending.allSatisfy(\.complete) else {
-                    completeDictation(session)
-                    return
-                }
-                try writer.commit()
-                session.ledger.markCommitted(pending)
-                completeDictation(session)
-            } catch InsertionError.liveUnsupported {
-                session.liveWriter = nil
-                finishBuffered(session)
-            } catch { failDictation(error.localizedDescription, id: session.id) }
-        } else {
-            finishBuffered(session)
-        }
-    }
-
-    private func finishBuffered(_ session: Dictation) {
-        let pending = session.ledger.committablePrefix
-        guard !pending.isEmpty else {
-            if session.pendingLines.isEmpty { completeDictation(session) }
-            else { recoverUncommitted(session) }
+        guard !session.fullText.isEmpty else { completeDictation(session); return }
+        guard lines.allSatisfy(\.complete) else { recoverUncommitted(session); return }
+        do {
+            try await session.target.insert(session.fullText)
+            guard sessionGate.accepts(session.id), active?.id == session.id else { return }
+            completeDictation(session)
+        } catch is CancellationError {
             return
-        }
-        commitBuffered(pending, session: session)
-        let task = session.commitTask
-        guard let task else { return }
-        Task { [weak self] in
-            await task.value
-            guard let self, self.sessionGate.accepts(session.id), self.active?.id == session.id else { return }
-            if session.pendingLines.isEmpty { self.completeDictation(session) }
-            else { self.recoverUncommitted(session) }
+        } catch {
+            failDictation(error.localizedDescription, id: session.id)
         }
     }
 
     private func recoverUncommitted(_ session: Dictation) {
-        let text = session.pendingText
+        let text = session.fullText
         guard !text.isEmpty else {
             completeDictation(session)
             return
@@ -532,12 +557,14 @@ final class NativeCoordinator {
         active = nil
         sessionGate.invalidate()
         finishing = false
-        state.session = .recovery(message: "Moonshine could not finish the last phrase. Copy it below to keep it.", text: text)
+        state.session = .recovery(message: "Voco could not finish the last phrase. Copy it below to keep it.", text: text)
         publishState()
     }
 
     private func completeDictation(_ session: Dictation) {
         let text = session.fullText
+        let elapsed = (ContinuousClock.now - session.startedAt).components
+        state.usage.record(text: text, seconds: Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18)
         if !state.preferences.keepLastTranscript { state.lastTranscript = "" }
         else if !text.isEmpty { state.lastTranscript = text }
         active = nil
@@ -558,28 +585,24 @@ final class NativeCoordinator {
             publishState()
             return
         }
-        session.updateTask?.cancel()
-        session.commitTask?.cancel()
-        session.pollTask?.cancel()
+        session.insertionTask?.cancel()
         audio.stop()
-        engine.cancel(stream: session.stream)
+        session.engine.cancel(stream: session.stream)
         let text = session.fullText
         if !state.preferences.keepLastTranscript { state.lastTranscript = "" }
         else if !text.isEmpty { state.lastTranscript = text }
         active = nil
         sessionGate.invalidate()
         finishing = false
-        state.session = .recovery(message: message, text: text)
+        state.session = text.isEmpty ? .idle : .recovery(message: message, text: text)
         publishState()
     }
 
     private func failDictation(_ message: String, id: UUID) {
         guard let session = active, session.id == id else { return }
-        session.updateTask?.cancel()
-        session.commitTask?.cancel()
-        session.pollTask?.cancel()
+        session.insertionTask?.cancel()
         audio.stop()
-        engine.cancel(stream: session.stream)
+        session.engine.cancel(stream: session.stream)
         let text = session.fullText
         if !state.preferences.keepLastTranscript { state.lastTranscript = "" }
         else if !text.isEmpty { state.lastTranscript = text }
@@ -609,11 +632,15 @@ final class NativeCoordinator {
         downloadTask?.cancel()
         downloadTask = nil
         cancelDictation(message: "Voco closed during dictation. Your words are saved here.")
+        engine.unload()
         shortcutMonitor.stop()
         NSApp.terminate(nil)
     }
 
-    private func publishState() { writeMessage(["type": "state", "state": state.snapshot()]) }
+    private func publishState() {
+        guard hasInspectedModels else { return }
+        writeMessage(["type": "state", "state": state.snapshot()])
+    }
     private func writeShowSettings() { writeMessage(["type": "showSettings"]) }
 
     private func writeError(_ message: String) {

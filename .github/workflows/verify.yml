@@ -30,17 +30,15 @@ jobs:
       - name: Check scripts and app metadata
         run: |
           bash -n scripts/*.sh
-          plutil -lint Resources/Info.plist
+          plutil -lint native/Info.plist Resources/entitlements.mac.plist
       - name: Test dictation behavior
         run: ./scripts/test.sh
-      - name: Check transcript recovery lifecycle
-        run: ./scripts/check-recovery.sh
-      - name: Check keyboard permission lifecycle
-        run: ./scripts/check-permissions.sh
       - name: Check Electron cursor resolution
         run: ./scripts/check-focus.sh
       - name: Check editor insertion and buffered fallback
         run: ./scripts/check-insertion.sh
+      - name: Check release-to-paste dictation for every model
+        run: ./scripts/check-deferred-dictation.sh
       - name: Build and verify the signed release app
         run: ./scripts/build.sh
       - name: Check native model catalog and process protocol

@@ -36,8 +36,8 @@ app.whenReady().then(async () => {
         })()`);
         app.focus({ steal: true });
         window.focus();
-        const output = join(logs, 'output.log');
-        const errors = join(logs, 'error.log');
+        const output = join(logs, `output-${field}-${selected}.log`);
+        const errors = join(logs, `error-${field}-${selected}.log`);
         const speechArguments = field === 'textarea' && selected && process.env.VOCO_VERIFY_AUDIO_FIXTURE
           ? ['--audio-fixture', process.env.VOCO_VERIFY_AUDIO_FIXTURE, '--model-directory', process.env.VOCO_VERIFY_MODEL_DIRECTORY] : [];
         await run('open', ['-W', '-g', '-n', process.env.VOCO_VERIFY_DESKTOP_APP || resolve(__dirname, '../build/VocoNative.app'), '--stdout', output, '--stderr', errors,
@@ -50,15 +50,25 @@ app.whenReady().then(async () => {
         const result = await window.webContents.executeJavaScript(`(() => {
           const field = document.querySelector(${JSON.stringify(field)});
           const events = (window.vocoEditorEvents ?? []).filter(event => event.field === field.getAttribute('aria-label'));
-          return { value: field.value ?? field.textContent, lastInput: events.at(-1)?.value, inputCount: events.length };
+          const values = events.map(event => event.value.replaceAll('\u00a0', ' '));
+          const additions = values.map(value => value.slice(15, -6));
+          return { value: field.value ?? field.textContent, lastInput: events.at(-1)?.value, inputCount: events.length,
+            typingMs: Math.round(events.at(-1).time - events[0].time), firstBatchCharacters: [...additions[0]].length,
+            appendOnly: values.every((value, index) => value.startsWith('Before selected') && value.endsWith(' after')
+              && (index === 0 || additions[index].startsWith(additions[index - 1]) && additions[index].length > additions[index - 1].length)) };
         })()`);
-        assert.ok(result.inputCount >= 6, 'The editor must receive input events for live revisions');
+        assert.ok(result.inputCount >= 6, 'The editor must receive paced input events');
+        assert.ok(result.appendOnly, 'Every input event must append text without rewriting earlier input');
         assert.equal(result.lastInput, result.value, 'The application state must match the final editor value');
+        assert.ok(result.firstBatchCharacters >= 8, 'Queued text must start with a visible burst');
+        if (speechArguments.length === 0) {
+          assert.ok(result.inputCount < 40, 'The fixture must avoid character-by-character delivery');
+        }
         if (speechArguments.length > 0 && process.env.VOCO_VERIFY_EXPECTED_TRANSCRIPT) {
           assert.ok(result.value.includes(process.env.VOCO_VERIFY_EXPECTED_TRANSCRIPT), 'The expected speech must appear exactly in the editor');
-          assert.match(transcript, /Verified Moonshine stream: [1-9][0-9]* partial revisions/);
+          assert.match(transcript, /Verified speech stream: [1-9][0-9]* partial revisions/);
         }
-        process.stdout.write(`PASS Electron ${field}, selected=${selected}, input events=${result.inputCount}, speech=${speechArguments.length > 0}\n`);
+        process.stdout.write(`PASS Electron ${field}, selected=${selected}, input events=${result.inputCount}, typing=${result.typingMs}ms, first batch=${result.firstBatchCharacters} characters, speech=${speechArguments.length > 0}\n`);
       }
     }
     for (const emptyRich of [true, false]) {
@@ -73,7 +83,7 @@ app.whenReady().then(async () => {
       })()`);
       app.focus({ steal: true }); window.focus();
       const output = join(logs, emptyRich ? 'empty-rich.log' : 'literal-newline.log');
-      const errors = join(logs, 'error.log');
+      const errors = join(logs, emptyRich ? 'empty-rich-error.log' : 'literal-newline-error.log');
       await run('open', ['-W', '-g', '-n', process.env.VOCO_VERIFY_DESKTOP_APP || resolve(__dirname, '../build/VocoNative.app'), '--stdout', output, '--stderr', errors,
         '--args', ...desktopArguments(logs), ...(emptyRich ? ['--verify-empty-rich-editor'] : ['--verify-live-insertion', '\n'])], { timeout: 20000 });
       const transcript = await readFile(output, 'utf8');

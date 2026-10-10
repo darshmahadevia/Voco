@@ -9,12 +9,12 @@ struct SessionIDGate {
 }
 
 struct TranscriptLedger {
-    private(set) var lines: [MoonshineLine] = []
+    private(set) var lines: [SpeechLine] = []
     private var committedIDs = Set<UInt64>()
     private(set) var committedText = ""
 
-    var pendingLines: [MoonshineLine] { lines.filter { !committedIDs.contains($0.id) } }
-    var committablePrefix: [MoonshineLine] {
+    var pendingLines: [SpeechLine] { lines.filter { !committedIDs.contains($0.id) } }
+    var committablePrefix: [SpeechLine] {
         pendingLines.prefix(while: \.complete).map { $0 }
     }
     var pendingText: String { Self.join(pendingLines.map(\.text)) }
@@ -23,17 +23,17 @@ struct TranscriptLedger {
     }
     var text: String { Self.join([committedText, pendingText]) }
 
-    mutating func update(_ next: [MoonshineLine]) {
+    mutating func update(_ next: [SpeechLine]) {
         if !next.isEmpty { lines = next }
     }
 
-    func insertion(for requested: [MoonshineLine]) -> String {
+    func insertion(for requested: [SpeechLine]) -> String {
         let selected = requested.filter { $0.complete && !committedIDs.contains($0.id) }
         let next = Self.join(selected.map(\.text))
         return Self.separate(committed: committedText, pending: next)
     }
 
-    mutating func markCommitted(_ requested: [MoonshineLine]) {
+    mutating func markCommitted(_ requested: [SpeechLine]) {
         let selected = requested.filter { $0.complete && !committedIDs.contains($0.id) }
         let next = Self.join(selected.map(\.text))
         guard !next.isEmpty else { return }

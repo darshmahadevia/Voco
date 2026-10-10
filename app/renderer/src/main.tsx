@@ -1,11 +1,14 @@
 import vocoMark from '../../../Resources/Brand/voco-mark.svg';
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AnimatePresence, motion, useReducedMotion, type Transition } from 'motion/react';
+import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useReducedMotion, type Transition } from 'motion/react';
 import {
   ArrowLeft,
   Home,
-  Download,
+  FileText,
+  ChartNoAxesColumn,
+  ChevronDown,
+  ChevronUp,
   Globe,
   LockKeyhole,
   ArrowRight,
@@ -27,7 +30,11 @@ import {
   type Command,
   type Preferences,
 } from '../../shared/protocol';
+import { speechModels } from '../../shared/models';
 import { initialState, isReady, isSetupComplete } from '../../shared/state';
+import { ProgressDashboard } from './ProgressDashboard';
+import { sampleUsage } from '../../shared/usage';
+import { retainTranscripts, type RecentTranscript } from './recent-transcripts';
 import './styles.css';
 
 type PreviewScenario = 'setup' | 'ready' | 'downloading' | 'recovery' | 'listening' | 'finishing' | 'silent';
@@ -72,7 +79,12 @@ function parsePreviewScenario(value: string | null): PreviewScenario {
 function createPreviewState(scenario: PreviewScenario): AppState {
   const ready = {
     ...initialState,
+    userName: 'Alex',
+    usage: query.get('progress') === 'empty' ? initialState.usage : sampleUsage(),
     model: { kind: 'ready' },
+    models: initialState.models.map((entry) => entry.id === initialState.selectedModel
+      ? { ...entry, state: { kind: 'ready' as const } }
+      : entry),
     permissions: { microphone: 'granted', accessibility: true, shortcut: true },
   } satisfies AppState;
 
@@ -83,6 +95,9 @@ function createPreviewState(scenario: PreviewScenario): AppState {
       return {
         ...initialState,
         model: { kind: 'downloading', progress: 0.42, file: 'encoder.bin' },
+        models: initialState.models.map((entry) => entry.id === initialState.selectedModel
+          ? { ...entry, state: { kind: 'downloading' as const, progress: 0.42, file: 'encoder.bin' } }
+          : entry),
         permissions: { microphone: 'granted', accessibility: true, shortcut: true },
       };
     case 'recovery':
@@ -97,21 +112,28 @@ function createPreviewState(scenario: PreviewScenario): AppState {
     case 'finishing':
       return { ...ready, session: { kind: 'finishing' } };
     case 'silent':
-      return { ...ready, session: { kind: 'listening', mode: 'hold', buffered: false, text: '' } };
+      return { ...ready, session: { kind: 'listening', mode: 'hold' } };
     case 'listening':
       return {
         ...ready,
-        session: { kind: 'listening', mode: 'hold', buffered: true, text: 'The quick brown fox' },
+        session: { kind: 'listening', mode: 'hold' },
         audioLevel: 0.65,
+        audioWaveform: [0.035, 0.09, 0.04, 0.16, 0.08, 0.28, 0.19, 0.12, 0.24, 0.06, 0.11],
       };
     case 'setup':
       return initialState;
   }
 }
 
-function useAppState(): { state: AppState | null; error: string } {
+function useAppState(): { state: AppState | null; transcripts: RecentTranscript[]; error: string } {
   const [state, setState] = useState<AppState | null>(preview ? previewState : null);
   const [error, setError] = useState('');
+  const [transcripts, setTranscripts] = useState<RecentTranscript[]>(() => preview && previewScenario !== 'setup' && query.get('progress') !== 'empty' ? [
+    'Could you send me the notes from our meeting? I would like to review them before tomorrow.',
+    'A quick reminder to update the project timeline and share the latest draft with the team.',
+    'Writing feels a little easier when I can just say what I am thinking.',
+    'Let’s find a time to catch up next week.',
+  ].map((text, index) => ({ id: 4 - index, text, createdAt: Date.now() - index * 3_600_000 })) : []);
 
   useEffect(() => {
     const api = window.voco;
@@ -119,14 +141,21 @@ function useAppState(): { state: AppState | null; error: string } {
 
     let active = true;
     let eventCount = 0;
+    let previous: AppState | null = null;
+    const receive = (nextState: AppState): void => {
+      const prior = previous;
+      previous = nextState;
+      setTranscripts(entries => retainTranscripts({ entries, previous: prior, next: nextState, now: Date.now() }));
+      setState(nextState);
+    };
     const unsubscribe = api.subscribe((nextState) => {
       eventCount += 1;
-      setState(nextState);
+      receive(nextState);
       setError('');
     });
     const eventCountAtRead = eventCount;
     void api.getState().then((nextState) => {
-      if (active && eventCount === eventCountAtRead) setState(nextState);
+      if (active && eventCount === eventCountAtRead && nextState) receive(nextState);
     }).catch((caught: unknown) => {
       if (!active || eventCount !== eventCountAtRead) return;
       setError(caught instanceof Error ? caught.message : 'Voco could not read its current state.');
@@ -138,7 +167,7 @@ function useAppState(): { state: AppState | null; error: string } {
     };
   }, []);
 
-  return { state, error };
+  return { state, transcripts, error };
 }
 
 function useCommands(): {
@@ -197,7 +226,7 @@ function AppSidebar({
   showSetup: boolean;
   onNavigate: (page: NavigationPage) => void;
 }): React.JSX.Element {
-  const navigationPages: NavigationPage[] = showSetup ? ['home', 'settings', 'onboarding'] : ['home', 'settings'];
+  const navigationPages: NavigationPage[] = showSetup ? ['home', 'onboarding'] : ['home'];
   return <aside className="app-sidebar" aria-label="Voco workspace">
     <div className="sidebar-titlebar window-drag" aria-hidden="true" />
     <div className="sidebar-brand" aria-label="Voco">
@@ -221,6 +250,11 @@ function AppSidebar({
           {page === 'onboarding' && <span className="nav-dot" aria-hidden="true" />}
         </button>;
       })}
+      <button className="nav-item" type="button" aria-label="Transcripts" title="Transcripts" onClick={() => { onNavigate('home'); window.requestAnimationFrame(() => document.getElementById('transcript-panel-heading')?.scrollIntoView({ block: 'center', behavior: 'instant' })); }}><FileText size={17} aria-hidden="true" /><span>Transcripts</span></button>
+      <button className="nav-item" type="button" aria-label="Stats" title="Stats" onClick={() => { onNavigate('home'); window.requestAnimationFrame(() => document.getElementById('activity-heading')?.scrollIntoView({ block: 'center', behavior: 'instant' })); }}><ChartNoAxesColumn size={17} aria-hidden="true" /><span>Stats</span></button>
+      <button className={currentPage === 'settings' ? 'nav-item active' : 'nav-item'} type="button" aria-label="Settings" title="Settings" aria-current={currentPage === 'settings' ? 'page' : undefined} onClick={() => onNavigate('settings')}>
+        {NAVIGATION_ITEMS.settings.icon}<span>Settings</span>
+      </button>
     </nav>
     <div className="sidebar-spacer" />
     <div className="sidebar-privacy"><LockKeyhole size={14} aria-hidden="true" /><span>Local by design</span></div>
@@ -256,20 +290,8 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
 
       <section className="settings-section" aria-labelledby="model-heading">
         <h2 className="section-heading" id="model-heading">Speech model</h2>
-        <div className="model-row">
-          <div className="model-copy">
-            <p className="row-title">Moonshine Medium Streaming</p>
-            <p className="row-description">English · downloads once, then works offline</p>
-            <ModelStatus model={state.model} />
-          </div>
-          <ModelAction model={state.model} pending={pending} run={run} />
-        </div>
-        {state.model.kind === 'downloading' && (
-          <div className="download-progress">
-            <progress value={state.model.progress} max={1} aria-label="Speech model download progress" />
-            <span>{Math.round(state.model.progress * 100)}%</span>
-          </div>
-        )}
+        <p className="row-description model-section-note">Choose which model Voco uses. Downloaded models stay available on this Mac.</p>
+        <ModelChoices state={state} pending={pending} run={run} />
       </section>
 
       <section className="settings-section" aria-labelledby="access-heading">
@@ -330,16 +352,16 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
 
       <section className="settings-section dictation-section" aria-labelledby="dictation-heading">
         <h2 className="section-heading" id="dictation-heading">Dictation</h2>
-        <SettingRow title="Dictation shortcut" description="Hold Fn / Globe to dictate, then release to finish.">
+        <SettingRow title="Dictation shortcut" description="Hold Fn / Globe to speak. Release to transcribe and paste.">
           <kbd>Fn / Globe</kbd>
         </SettingRow>
-        <SettingRow title="Keep last transcript" description="Keep your latest words in memory until you quit.">
+        <SettingRow title="Keep recent transcripts" description="Keep this session’s transcripts in memory until you quit. Turning this off clears them.">
           <button
             className="switch"
             type="button"
             role="switch"
             aria-checked={state.preferences.keepLastTranscript}
-            aria-label="Keep last transcript"
+            aria-label="Keep recent transcripts"
             disabled={preview || pending !== null}
             onClick={() => void updatePreferences(run, state.preferences, { keepLastTranscript: !state.preferences.keepLastTranscript })}
           >
@@ -393,45 +415,96 @@ function keyboardStatus(state: AppState): string {
   return 'Allowed';
 }
 
-function ModelStatus({ model }: { model: AppState['model'] }): React.JSX.Element {
+type SpeechModelState = AppState['models'][number]['state'];
+
+function ModelStatus({ model, selected }: { model: SpeechModelState | undefined; selected: boolean }): React.JSX.Element {
+  if (!model) return <p className="model-status">Status unavailable</p>;
   switch (model.kind) {
     case 'missing':
       return <p className="model-status">Not downloaded</p>;
+    case 'installed':
+      return <p className="model-status">{selected ? 'Selected · not loaded' : 'Downloaded'}</p>;
     case 'downloading':
       return <p className="model-status">Downloading speech model…</p>;
     case 'loading':
       return <p className="model-status"><LoaderCircle className="spin" size={13} aria-hidden="true" /> Loading model…</p>;
     case 'ready':
-      return <p className="model-status status-good">Downloaded and ready</p>;
+      return <p className="model-status status-good">{selected ? 'Active and ready' : 'Ready to use'}</p>;
     case 'error':
       return <p className="model-status status-error">{model.message}</p>;
   }
 }
 
-function ModelAction({
-  model,
+function ModelChoices({
+  state,
   pending,
   run,
+  onboarding = false,
 }: {
-  model: AppState['model'];
+  state: AppState;
   pending: Command['kind'] | null;
   run: (command: Command) => Promise<void>;
-}): React.JSX.Element | null {
-  if (model.kind === 'ready' || model.kind === 'loading') return null;
-  if (model.kind === 'downloading') {
-    return <Button kind="secondary" disabled={preview || pending !== null} onClick={() => void run({ kind: 'cancelDownload' })}>Cancel</Button>;
-  }
+  onboarding?: boolean;
+}): React.JSX.Element {
+  const downloading = state.model.kind === 'downloading' || state.models.some((entry) => entry.state.kind === 'downloading');
+  const loading = state.model.kind === 'loading' || state.models.some((entry) => entry.state.kind === 'loading');
+  const captureActive = state.session.kind === 'starting' || state.session.kind === 'listening' || state.session.kind === 'finishing';
+  const canSelect = !preview && pending === null && !loading && !captureActive;
+  const canDownload = !preview && pending === null && !downloading && !loading;
 
-  if (model.kind === 'error' && model.recovery === 'restart') {
-    return <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'restart' })}>Restart Voco</Button>;
-  }
+  const featuredId = state.models.find((entry) => entry.state.kind === 'downloading')?.id
+    ?? (state.model.kind !== 'missing' ? state.selectedModel : state.recommendedModel ?? state.selectedModel);
+  const rows = speechModels.map((definition) => {
+      const selected = definition.id === state.selectedModel;
+      const modelState = selected
+        ? state.model
+        : state.models.find((entry) => entry.id === definition.id)?.state;
+      const recommended = state.recommendedModel === definition.id;
+      const activeFailureNeedsRestart = selected && modelState?.kind === 'error' && modelState.recovery === 'restart';
 
-  const isRetry = model.kind === 'error';
-  return (
-    <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'downloadModel' })}>
-      {pending === 'downloadModel' ? 'Starting…' : isRetry ? 'Try again' : 'Download speech model'}
-    </Button>
-  );
+      let action: React.ReactNode = null;
+      if (modelState?.kind === 'downloading') {
+        action = <Button kind="secondary" disabled={preview || pending !== null} ariaLabel={`Cancel ${definition.name} download`} onClick={() => void run({ kind: 'cancelDownload' })}>Cancel</Button>;
+      } else if (activeFailureNeedsRestart) {
+        action = <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'restart' })}>Restart Voco</Button>;
+      } else if (selected && modelState?.kind === 'ready') {
+        action = <span className="model-current"><Check size={13} aria-hidden="true" /> In use</span>;
+      } else if (selected && modelState?.kind === 'installed') {
+        action = <Button disabled={!canSelect} onClick={() => void run({ kind: 'selectModel', modelId: definition.id })}>{pending === 'selectModel' ? 'Switching…' : 'Load model'}</Button>;
+      } else if (!selected && (modelState?.kind === 'installed' || modelState?.kind === 'ready')) {
+        action = <Button disabled={!canSelect} onClick={() => void run({ kind: 'selectModel', modelId: definition.id })}>{pending === 'selectModel' ? 'Switching…' : 'Use model'}</Button>;
+      } else if (modelState?.kind === 'missing' || modelState?.kind === 'error') {
+        action = <Button disabled={!canDownload} onClick={() => void run({ kind: 'downloadModel', modelId: definition.id })}>{pending === 'downloadModel' ? 'Starting…' : modelState.kind === 'error' ? 'Try again' : 'Download'}</Button>;
+      } else if (selected) {
+        action = <span className="model-current">Selected</span>;
+      }
+
+      return <div className="model-row" key={definition.id} data-model-id={definition.id}>
+        <div className="model-copy">
+          <div className="model-name-line">
+            <p className="row-title">{definition.name}</p>
+            <span className="model-version">{definition.version}</span>
+            {recommended && <span className="model-recommended">Recommended</span>}
+          </div>
+          <p className="row-description">{definition.description}</p>
+          <ModelStatus model={modelState} selected={selected} />
+        </div>
+        <div className="model-actions">{action}</div>
+        {modelState?.kind === 'downloading' && <div className="download-progress">
+          <progress value={modelState.progress} max={1} aria-label={`${definition.name} download progress`} />
+          <span>{Math.round(modelState.progress * 100)}%</span>
+        </div>}
+      </div>;
+    });
+  return <div className="model-list">
+    {onboarding ? <>
+      {rows.filter((_, index) => speechModels[index]?.id === featuredId)}
+      <details className="setup-model-options">
+        <summary>Compare other models</summary>
+        {rows.filter((_, index) => speechModels[index]?.id !== featuredId)}
+      </details>
+    </> : rows}
+  </div>;
 }
 
 function PermissionRow({
@@ -543,17 +616,55 @@ function PillView({ state, loadError }: { state: AppState; loadError: string }):
 }
 
 const WAVE_PROFILE = [0.28, 0.55, 0.82, 0.46, 1, 0.7, 0.92, 0.5, 0.76, 0.38, 0.6];
+const SILENT_WAVE = WAVE_PROFILE.map(() => 0);
 
-function Waveform({ level, large = false, active = false }: { level: number; large?: boolean; active?: boolean }): React.JSX.Element {
+function balancedWaveform(samples: readonly number[], gain: number): number[] {
+  const voices = [0, 1, 2, 3, 4].map(index => {
+    const high = index === 4
+      ? ((samples[9] ?? 0) + (samples[10] ?? 0)) / 2
+      : samples[index + 5] ?? 0;
+    return 0.65 * (samples[index] ?? 0) + 0.35 * high;
+  });
+  const peak = Math.max(...voices);
+  if (peak === 0) return SILENT_WAVE;
+  const amplitude = Math.sqrt(1 - Math.exp(-peak * gain));
+  const heights = voices.map(voice => amplitude * (0.38 + 0.62 * voice / peak));
+  return [0, 3, 1, 4, 2, 5, 3, 0, 4, 2, 1].map(index => index === 5 ? amplitude : heights[index] ?? 0);
+}
+
+function WaveformBar({ target, index, reducedMotion }: { target: number; index: number; reducedMotion: boolean }): React.JSX.Element {
+  const scaleY = useMotionValue(target);
+  useEffect(() => {
+    if (reducedMotion) scaleY.set(target);
+  }, [reducedMotion, scaleY, target]);
+  useAnimationFrame((_time, delta) => {
+    if (reducedMotion) return;
+    const current = scaleY.get();
+    if (current === target) return;
+    const response = target > current ? 40 + (index % 4) * 6 : 85 + (index % 3) * 7;
+    const next = current + (target - current) * (1 - Math.exp(-delta / response));
+    scaleY.set(Math.abs(next - target) < 0.001 ? target : next);
+  });
+  return <motion.span style={{ scaleY }}><span className="waveform-energy" /></motion.span>;
+}
+
+function Waveform({ level, size, active = false, state }: { level: number; size: 'pill' | 'large'; active?: boolean; state?: AppState }): React.JSX.Element {
   const reducedMotion = useReducedMotion();
-  const energy = Math.sqrt(level);
-  return <span className={`waveform ${large ? 'waveform-large' : ''} ${active && level > 0.015 ? 'waveform-active' : ''}`} aria-hidden="true">
-    {WAVE_PROFILE.map((height, index) => <motion.span
+  const pill = size === 'pill';
+  const samples = active ? state?.audioWaveform ?? SILENT_WAVE : SILENT_WAVE;
+  const moving = samples.some(sample => sample > 0);
+  const energies = active
+    ? balancedWaveform(samples, pill ? 5 : 3)
+    : WAVE_PROFILE.map(height => pill ? 0 : Math.sqrt(level) * height);
+  const fullHeight = pill ? 32 : 52;
+  const baseline = pill ? 1 : 3;
+  return <span className={`waveform waveform-${size} ${moving ? 'waveform-active' : ''}`} aria-hidden="true">
+    {energies.map((energy, index) => <WaveformBar
       key={index}
-      initial={false}
-      animate={{ scaleY: (3 + energy * height * (large ? 49 : 22)) / (large ? 52 : 25) }}
-      transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 32, mass: 0.35 }}
-    ><span className="waveform-energy" style={{ animationDelay: `${-index * 83}ms`, animationDuration: `${680 + (index % 4) * 115}ms` }} /></motion.span>)}
+      index={index}
+      target={(baseline + energy * (fullHeight - baseline)) / fullHeight}
+      reducedMotion={Boolean(reducedMotion)}
+    />)}
   </span>;
 }
 
@@ -569,16 +680,15 @@ function PillStatus({ state }: { state: AppState }): React.JSX.Element {
   }
   const processing = session.kind === 'starting' || session.kind === 'finishing';
   return <div className="pill-status" role="status" aria-live="polite">
-    {processing ? <LoaderCircle className="spin pill-loader" size={18} aria-hidden="true" /> : <Waveform level={session.kind === 'listening' ? state.audioLevel : 0} active={session.kind === 'listening'} />}
+    {processing ? <LoaderCircle className="spin pill-loader" size={18} aria-hidden="true" /> : <Waveform size="pill" state={state} level={session.kind === 'listening' ? state.audioLevel : 0} active={session.kind === 'listening'} />}
     <p className="pill-title">{title}</p>
   </div>;
 }
 
-function HomeView({ state, loadError, onSetup }: { state: AppState; loadError: string; onSetup: () => void }): React.JSX.Element {
+function HomeView({ state, transcripts, loadError, onSetup }: { state: AppState; transcripts: RecentTranscript[]; loadError: string; onSetup: () => void }): React.JSX.Element {
   const ready = isReady(state);
   const setupComplete = isSetupComplete(state);
   const { run, pending, error } = useCommands();
-  const listening = state.session.kind === 'listening';
   let status: string;
   switch (state.session.kind) {
     case 'listening': status = 'Listening'; break;
@@ -587,25 +697,19 @@ function HomeView({ state, loadError, onSetup }: { state: AppState; loadError: s
     case 'recovery': status = 'Transcript needs attention'; break;
     case 'idle': status = ready ? 'Ready to dictate' : setupComplete ? 'Loading speech model' : 'Setup needed'; break;
   }
-  const hasLastTranscript = state.preferences.keepLastTranscript && state.lastTranscript.length > 0;
   return <main className="dashboard">
+    <div className="dashboard-overview">
     <section className="home-hero" aria-labelledby="home-heading">
-      <div className={`voice-stage ${listening ? 'voice-stage-active' : ''}`}>
-        <div className="voice-orbit" aria-hidden="true"><div className="voice-core"><Waveform level={listening ? state.audioLevel : 0.62} large active={listening} /></div></div>
-        <span className="voice-caption" role="status" aria-live="polite">
-          <span className={`status-dot ${listening ? 'status-dot-listening' : ready && state.session.kind !== 'recovery' ? 'status-dot-ready' : ''}`} />
-          {status}
-        </span>
-      </div>
-      <h1 id="home-heading"><span className="headline-manrope">Less typing.</span><span className="headline-pixel">More You.</span></h1>
-      <p className="hero-description">Hold Fn / Globe to dictate into a text field.</p>
-      {setupComplete ? <div className="hero-shortcut"><kbd>Fn <Globe size={16} /></kbd><span>Hold to speak. Release to finish.</span></div> : <button className="button button-primary setup-button" type="button" onClick={onSetup}>Finish setting up <ArrowRight size={16} /></button>}
+      <h1 id="home-heading">Welcome{state.userName ? `, ${state.userName}` : ''}</h1>
+      <span className="dashboard-ready"><span className={`readiness-dot${ready ? ' is-ready' : ''}`} />{status}</span>
+      <p className="hero-shortcut"><span>Hold</span><kbd>Fn <Globe size={16} aria-hidden="true" /></kbd><span>to speak. Release to paste.</span></p>
+      {!setupComplete && <button className="button button-primary setup-button" type="button" onClick={onSetup}>Finish setting up <ArrowRight size={16} /></button>}
     </section>
+    {(!ready || state.session.kind !== 'idle') && <p className="home-status" role="status" aria-live="polite">{status}</p>}
     {state.session.kind === 'recovery' && <div className="home-recovery"><RecoveryContent session={state.session} preview={preview} pending={pending} run={run} error={error || loadError} /></div>}
-    <TranscriptPanel
-      text={hasLastTranscript ? state.lastTranscript : ''}
-      enabled={state.preferences.keepLastTranscript}
-    />
+    <ProgressDashboard usage={state.usage} preview={preview} run={run} pending={pending !== null} />
+    </div>
+    <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} />
     {state.session.kind !== 'recovery' && <ActionError message={error || loadError} />}
     <footer className="dashboard-footer"><ShieldCheck size={13} aria-hidden="true" /> Offline after setup. No account needed.</footer>
   </main>;
@@ -617,23 +721,37 @@ type TranscriptCopyState =
   | { kind: 'copied'; text: string }
   | { kind: 'error'; text: string; message: string };
 
-function TranscriptPanel({ text, enabled }: { text: string; enabled: boolean }): React.JSX.Element {
-  const status = text ? 'Available this session' : enabled ? 'Nothing yet' : 'Off in Settings';
+function TranscriptPanel({ entries, latestText, enabled }: { entries: RecentTranscript[]; latestText: string; enabled: boolean }): React.JSX.Element {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? entries : entries.slice(0, 3);
   return <section className="transcript-panel" aria-labelledby="transcript-panel-heading">
     <div className="transcript-panel-header">
       <div className="transcript-heading-copy">
-        <h2 id="transcript-panel-heading">Last transcript</h2>
-        <span className="transcript-panel-status">{status}</span>
+        <h2 id="transcript-panel-heading" tabIndex={-1}>Recent transcripts</h2>
+        <span className="transcript-panel-status">{preview ? 'Sample transcripts · preview' : enabled ? 'Kept in memory until you quit' : 'Off in Settings'}</span>
       </div>
-      <CopyTranscriptButton text={text} disabled={!enabled || text.length === 0} />
+      <span className="transcript-count">{entries.length} {entries.length === 1 ? 'transcript' : 'transcripts'}</span>
     </div>
-    <div className={`transcript-body${text ? ' has-transcript' : ''}`}>
-      {text ? <p className="last-transcript">{text}</p> : <p className="transcript-empty-copy">{enabled ? 'Your latest dictation will appear here until you quit.' : 'Turn on Keep last transcript in Settings to see it here.'}</p>}
-    </div>
+    {entries.length ? <ol className="recent-transcript-list" id="recent-transcript-list">
+      {visible.map((entry, index) => <li className="recent-transcript-row" key={entry.id}>
+        <div className="recent-transcript-copy">
+          <p className="last-transcript">{entry.text}</p>
+          <div className="transcript-metadata"><span>{index === 0 ? 'Latest' : new Date(entry.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span><span>{entry.text.trim().split(/\s+/).length} words</span></div>
+        </div>
+        <CopyTranscriptButton text={entry.text} disabled={false} latest={index === 0 && entry.text === latestText} />
+      </li>)}
+    </ol> : <div className="transcript-body transcript-empty">
+      <FileText size={24} strokeWidth={1.4} aria-hidden="true" />
+      <p className="transcript-empty-copy">{enabled ? 'Your dictations will appear here. Hold Fn / Globe to start.' : 'Turn on Keep recent transcripts in Settings to see them here.'}</p>
+      <CopyTranscriptButton text="" disabled />
+    </div>}
+    {entries.length > 3 && <button type="button" className="show-transcripts" aria-expanded={expanded} aria-controls="recent-transcript-list" onClick={() => setExpanded(value => !value)}>
+      {expanded ? 'Show fewer transcripts' : 'Show more transcripts'}{expanded ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
+    </button>}
   </section>;
 }
 
-function CopyTranscriptButton({ text, disabled }: { text: string; disabled: boolean }): React.JSX.Element {
+function CopyTranscriptButton({ text, disabled, latest = true }: { text: string; disabled: boolean; latest?: boolean }): React.JSX.Element {
   const reducedMotion = useReducedMotion();
   const [state, setState] = useState<TranscriptCopyState>({ kind: 'idle' });
   const activeRef = useRef(false);
@@ -669,8 +787,10 @@ function CopyTranscriptButton({ text, disabled }: { text: string; disabled: bool
     activeRef.current = true;
     setState({ kind: 'copying', text });
     try {
-      if (window.voco) {
+      if (window.voco && latest) {
         await window.voco.command({ kind: 'copyLast' });
+      } else if (window.voco) {
+        await window.voco.copyTranscript(text);
       } else {
         await navigator.clipboard.writeText(text);
       }
@@ -731,20 +851,47 @@ const SETUP_STEPS: { id: SetupStep; title: string }[] = [{ id: 'welcome', title:
 function OnboardingView({ state, loadError, onDone }: { state: AppState; loadError: string; onDone: () => void }): React.JSX.Element {
   const [step, updateStep] = useState<SetupStep>(() => {
     if (preview) return 'welcome';
-    try { const saved = localStorage.getItem('voco.setup.step.v1'); return saved === 'model' || saved === 'access' || saved === 'practice' ? saved : 'welcome'; } catch { return 'welcome'; }
+    try {
+      const saved = localStorage.getItem('voco.setup.step.v1');
+      return saved === 'model' || saved === 'access' || saved === 'practice' ? saved : 'welcome';
+    } catch { return 'welcome'; }
   });
-  function setStep(next: SetupStep): void {
-    updateStep(next);
-    if (!preview) { try { localStorage.setItem('voco.setup.step.v1', next); } catch { return; } }
-  }
+  const [direction, setDirection] = useState(1);
+  const practiceText = useRef('');
+  const practiceFieldRef = useRef<HTMLTextAreaElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const hasNavigated = useRef(false);
+  const reducedMotion = useReducedMotion();
   const { run, pending, error } = useCommands();
+  const stepIndex = SETUP_STEPS.findIndex(item => item.id === step);
+
+  function setStep(next: SetupStep): void {
+    if (next === step) return;
+    if (step === 'practice' && practiceFieldRef.current) practiceText.current = practiceFieldRef.current.value;
+    setDirection(SETUP_STEPS.findIndex(item => item.id === next) > stepIndex ? 1 : -1);
+    hasNavigated.current = true;
+    updateStep(next);
+    if (!preview) {
+      try { localStorage.setItem('voco.setup.step.v1', next); } catch { return; }
+    }
+  }
+
+  useEffect(() => {
+    if (hasNavigated.current) headingRef.current?.focus({ preventScroll: true });
+  }, [step]);
+
   const modelReady = state.model.kind === 'ready';
+  const downloadingModel = state.models.find(entry => entry.state.kind === 'downloading');
+  const modelInProgress = state.model.kind === 'downloading' || state.model.kind === 'loading' || downloadingModel !== undefined;
   const accessReady = state.permissions.microphone === 'granted' && state.permissions.accessibility && state.permissions.shortcut;
+  const keyboardReady = state.permissions.accessibility && state.permissions.shortcut;
+  const ready = isReady(state);
   let modelBlockerMessage: string | null;
   switch (state.model.kind) {
-    case 'missing': modelBlockerMessage = 'Download the speech model before trying dictation.'; break;
-    case 'downloading': modelBlockerMessage = 'The speech model is downloading. Wait for it to finish before trying dictation.'; break;
-    case 'loading': modelBlockerMessage = 'The speech model is loading. Wait for it to finish before trying dictation.'; break;
+    case 'missing': modelBlockerMessage = downloadingModel ? 'The speech model is downloading. You can try dictation when it finishes.' : 'Download the speech model before trying dictation.'; break;
+    case 'installed': modelBlockerMessage = 'Load the selected speech model before trying dictation.'; break;
+    case 'downloading': modelBlockerMessage = 'The speech model is downloading. You can try dictation when it finishes.'; break;
+    case 'loading': modelBlockerMessage = 'The speech model is loading. Your practice field will be ready in a moment.'; break;
     case 'error': modelBlockerMessage = 'The speech model needs attention. Go to the model step to try again or restart Voco.'; break;
     case 'ready': modelBlockerMessage = null; break;
   }
@@ -753,22 +900,130 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
     : !accessReady
       ? { step: 'access', message: 'Allow microphone and keyboard access before trying dictation.', action: 'Go to app permissions' } satisfies { step: SetupStep; message: string; action: string }
       : null;
-  const stepIndex = SETUP_STEPS.findIndex(item => item.id === step);
-  const headings = { welcome: 'A little setup.\nA lot less typing.', model: 'Give your voice\na place to land.', access: 'A few permissions.\nYou are in control.', practice: 'Meet your new\nway to write.' };
-  return <main className="onboarding">
-    <header className="page-heading"><h1>Set up Voco</h1><button className="text-link" onClick={onDone}>Explore the app <ArrowRight size={14} /></button></header>
-    <nav className="setup-steps" aria-label="Setup progress">{SETUP_STEPS.map((item, index) => <button key={item.id} onClick={() => setStep(item.id)} aria-current={step === item.id ? 'step' : undefined}><span>{(item.id === 'model' ? modelReady : item.id === 'access' ? accessReady : item.id === 'welcome' && step !== 'welcome') ? <Check size={14} /> : index + 1}</span>{item.title}</button>)}</nav>
-    <div className="onboarding-layout">
-      <div className="onboarding-copy"><h2>{headings[step].split('\n').map((line, index) => <span key={line} className={index ? 'serif-line' : ''}>{line}</span>)}</h2><p>{step === 'welcome' ? 'Voco turns your voice into text, right where you are working. Dictation runs on your Mac, without an account.' : step === 'model' ? 'Download the English speech model once. After that, your dictation works entirely offline.' : step === 'access' ? 'Voco needs to hear you and write into your apps. macOS asks for your approval for each permission.' : 'Click the field and hold Fn / Globe to speak. Release to finish.'}</p><span className="onboarding-privacy"><ShieldCheck size={17} /> Audio and transcripts are never saved to disk.</span></div>
-      <div className="setup-workspace">
-        {step === 'welcome' && <><div className="welcome-wave"><Waveform level={0.8} large /></div><h3>Your voice, wherever you write.</h3><p>Emails, notes, messages. Keep your attention on what you want to say.</p><div className="welcome-shortcut"><kbd>fn <Globe size={16} /></kbd><span>One key. Your own words.</span></div><Button onClick={() => setStep('model')}>Get started <ArrowRight size={16} /></Button></>}
-        {step === 'model' && <><Download size={28} className="setup-symbol" /><h3>English speech model</h3><p>Moonshine Medium Streaming</p><ModelStatus model={state.model} />{state.model.kind === 'downloading' && <div className="download-progress"><progress value={state.model.progress} max={1} aria-label="Speech model download progress" /><span>{Math.round(state.model.progress * 100)}%</span></div>}<ModelAction model={state.model} pending={pending} run={run} /><p className="setup-note">Keep Voco open while the model downloads. You can cancel and try again.</p><Button kind={modelReady ? 'primary' : 'secondary'} disabled={!modelReady} onClick={() => setStep('access')}>Continue <ArrowRight size={15} /></Button></>}
-        {step === 'access' && <><h3>Allow access</h3><PermissionRow icon={<Mic size={18} />} title="Microphone" description="To hear your words." status={microphoneStatus(state.permissions.microphone)} statusKind={state.permissions.microphone === 'granted' ? 'good' : 'neutral'}>{state.permissions.microphone !== 'granted' && <Button disabled={preview || pending !== null} onClick={() => void run(state.permissions.microphone === 'denied' ? { kind: 'openPrivacy', pane: 'microphone' } : { kind: 'requestMicrophone' })}>{state.permissions.microphone === 'denied' ? 'Open Settings' : 'Allow'}</Button>}</PermissionRow><PermissionRow icon={<Keyboard size={18} />} title="Keyboard access" description="To use your shortcut and insert text." status={keyboardStatus(state)} statusKind={accessReady ? 'good' : 'neutral'}>{!state.permissions.accessibility ? <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'requestAccessibility' })}>Allow</Button> : !state.permissions.shortcut ? <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'restart' })}>Restart Voco</Button> : null}</PermissionRow>{!state.permissions.accessibility && <div className="access-help"><p>Enable Voco in System Settings → Privacy &amp; Security → Accessibility. If it is missing, add the app shown in Finder.</p><Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'showApp' })}><FolderOpen size={14} /> Show app in Finder</Button><Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'refresh' })}><RotateCw size={14} /> Check again</Button></div>}<Button disabled={!accessReady || !modelReady} onClick={() => setStep('practice')}>Try dictation <ArrowRight size={15} /></Button></>}
-        {step === 'practice' && <>{practiceBlocker && <div className="practice-blocker" role="status"><p>{practiceBlocker.message}</p><Button kind="secondary" onClick={() => setStep(practiceBlocker.step)}>{practiceBlocker.action} <ArrowRight size={15} /></Button></div>}<div className="practice-heading"><kbd>fn <Globe size={16} /></kbd><span>Hold to speak, release to finish</span></div><label className="visually-hidden" htmlFor="practice-text">Try your first dictation</label><textarea id="practice-text" placeholder="Click here and say something…" disabled={!isReady(state)} /><p className="setup-note">{preview ? 'Dictation is available in the desktop app.' : 'Try: “My best ideas start with a conversation.”'}</p><details className="practice-help"><summary>Set up your Fn / Globe key</summary><p>In macOS System Settings → Keyboard, set “Press Globe key to” to “Do Nothing”. Turn off any Apple Dictation shortcut that uses the same key.</p></details><Button disabled={!isReady(state)} onClick={onDone}>Open Voco <ArrowRight size={15} /></Button></>}
-        <ActionError message={error || loadError} />
+  const headings = {
+    welcome: 'A little setup.\nA lot less typing.',
+    model: 'Give your voice\na place to land.',
+    access: 'A few permissions.\nYou are in control.',
+    practice: 'Meet your new\nway to write.',
+  };
+  const descriptions = {
+    welcome: 'Voco turns your voice into text, right where you are working. Dictation runs on your Mac, without an account.',
+    model: 'Download one speech model to get started. You can change models anytime in Settings.',
+    access: 'Voco needs to hear you and write into your apps. macOS asks for your approval for each permission.',
+    practice: 'Click the field and hold Fn / Globe to speak. Release to transcribe and paste.',
+  };
+  const nextLabel = step === 'welcome' ? 'Get started' : step === 'model' ? 'Continue' : step === 'access' ? 'Try dictation' : 'Open Voco';
+  const canContinue = step === 'welcome' || (step === 'model' && (modelReady || modelInProgress)) || (step === 'access' && accessReady) || (step === 'practice' && ready);
+  const footerMessage = step === 'welcome' ? 'One model, two permissions, your first words.'
+    : step === 'model' ? modelReady ? 'Speech model ready.' : modelInProgress ? 'Keep setting up while the model finishes.' : 'Download a model to continue.'
+    : step === 'access' ? accessReady ? 'Access is all set.' : 'Allow both permissions to continue.'
+    : ready ? 'Ready to use in your apps.' : 'Finish the steps above to start dictating.';
+
+  function goForward(): void {
+    if (!canContinue) return;
+    if (step === 'practice') onDone();
+    else setStep(SETUP_STEPS[stepIndex + 1]?.id ?? 'practice');
+  }
+
+  return <main className="onboarding" onKeyDown={event => {
+    if (event.key === 'Enter' && event.target === headingRef.current) {
+      event.preventDefault();
+      goForward();
+    }
+  }}>
+    <header className="page-heading">
+      <div className="setup-heading-group">
+        <div className="setup-brand" aria-label="Voco">
+          <img className="brand-icon" src={vocoMark} alt="" aria-hidden="true" />
+          <span className="wordmark">voco<span className="wordmark-dot">.</span></span>
+        </div>
+        <h1>Set up Voco <span className="setup-count" aria-label={`Step ${stepIndex + 1} of ${SETUP_STEPS.length}: ${SETUP_STEPS[stepIndex]?.title}`}>{stepIndex + 1} of {SETUP_STEPS.length}</span></h1>
+      </div>
+      <button className="text-link" disabled={!modelReady} onClick={onDone}>Explore the app <ArrowRight size={14} /></button>
+    </header>
+    <ol className="setup-progress" aria-label="Setup steps">
+      {SETUP_STEPS.map((item, index) => {
+        const complete = item.id === 'welcome' ? stepIndex > 0 : item.id === 'model' ? modelReady : item.id === 'access' ? accessReady : false;
+        return <li key={item.id} aria-current={item.id === step ? 'step' : undefined} className={complete ? 'step-complete' : ''}>
+          <span className="setup-step-number" aria-hidden="true">{complete && item.id !== step ? <Check size={12} /> : index + 1}</span>
+          <span>{item.title}</span>
+          {complete && <span className="visually-hidden">Complete</span>}
+        </li>;
+      })}
+    </ol>
+    <div className="setup-stage">
+      <div className="setup-direction setup-previous">
+        <button className="setup-arrow" type="button" aria-label="Previous step" title="Previous step" disabled={step === 'welcome'} onClick={() => setStep(SETUP_STEPS[Math.max(0, stepIndex - 1)]?.id ?? 'welcome')}><ArrowLeft size={22} aria-hidden="true" /></button>
+        <span>Back</span>
+      </div>
+      <motion.div
+        key={step}
+        className="onboarding-layout"
+        initial={hasNavigated.current && !reducedMotion ? { opacity: 0.45, x: direction * 8 } : false}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: reducedMotion ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="onboarding-copy">
+          <h2 ref={headingRef} tabIndex={-1}>{headings[step].split('\n').map((line, index) => <span key={line} className={index ? 'serif-line' : ''}>{line}</span>)}</h2>
+          <p>{descriptions[step]}</p>
+          <span className="onboarding-privacy"><ShieldCheck size={17} aria-hidden="true" /> Audio and transcripts are never saved to disk.</span>
+        </div>
+        <section className={`setup-workspace setup-workspace-${step}`} aria-label={SETUP_STEPS[stepIndex]?.title}>
+          {step === 'welcome' && <>
+            <div className="welcome-wave"><Waveform level={0.8} size="large" /></div>
+            <h3>Your voice, wherever you write.</h3>
+            <p>Emails, notes, messages. Keep your attention on what you want to say.</p>
+            <div className="welcome-shortcut"><kbd>fn <Globe size={16} /></kbd><span>Hold to speak.<br />Release to paste.</span></div>
+            <p className="setup-note">We’ll help you download a model, allow access, and try your first dictation.</p>
+          </>}
+          {step === 'model' && <>
+            <h3>Choose a speech model</h3>
+            <p>Start with the recommended model, or compare the alternatives.</p>
+            <ModelChoices state={state} pending={pending} run={run} onboarding />
+            <p className="setup-note">{modelInProgress ? 'The download and loading continue as you move through setup.' : 'After download, dictation works offline on your Mac.'}</p>
+          </>}
+          {step === 'access' && <>
+            <h3>Allow access</h3>
+            <PermissionRow icon={<Mic size={18} />} title="Microphone" description="To hear your words." status={microphoneStatus(state.permissions.microphone)} statusKind={state.permissions.microphone === 'granted' ? 'good' : 'neutral'}>
+              {state.permissions.microphone !== 'granted' && <Button disabled={preview || pending !== null} onClick={() => void run(state.permissions.microphone === 'denied' ? { kind: 'openPrivacy', pane: 'microphone' } : { kind: 'requestMicrophone' })}>{pending === 'requestMicrophone' ? 'Requesting…' : state.permissions.microphone === 'denied' ? 'Open Settings' : 'Allow'}</Button>}
+            </PermissionRow>
+            <PermissionRow icon={<Keyboard size={18} />} title="Keyboard access" description="To use your shortcut and insert text." status={keyboardStatus(state)} statusKind={keyboardReady ? 'good' : 'neutral'}>
+              {!state.permissions.accessibility ? <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'requestAccessibility' })}>Allow</Button> : !state.permissions.shortcut ? <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'restart' })}>Restart Voco</Button> : null}
+            </PermissionRow>
+            {!state.permissions.accessibility && <p className="setup-note">Turn on Voco in macOS Accessibility settings, then return here.</p>}
+            {!state.permissions.accessibility && <details className="access-help">
+              <summary>Can’t find Voco in System Settings?</summary>
+              <p>Enable Voco in System Settings → Privacy &amp; Security → Accessibility. If it is missing, add the app shown in Finder.</p>
+              <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'showApp' })}><FolderOpen size={14} /> Show app in Finder</Button>
+              <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'refresh' })}><RotateCw size={14} /> Check again</Button>
+            </details>}
+            {accessReady && <p className="setup-access-ready" role="status"><Check size={16} /> Both permissions are allowed.</p>}
+          </>}
+          {step === 'practice' && <>
+            {practiceBlocker && <div className="practice-blocker" role="status">
+              <p>{practiceBlocker.message}</p>
+              <Button kind="secondary" onClick={() => setStep(practiceBlocker.step)}>{practiceBlocker.action} <ArrowRight size={15} /></Button>
+            </div>}
+            <div className="practice-heading"><kbd>fn <Globe size={16} /></kbd><span>Hold to speak, release to paste</span></div>
+            <label className="visually-hidden" htmlFor="practice-text">Try your first dictation</label>
+            <textarea ref={practiceFieldRef} id="practice-text" defaultValue={practiceText.current} placeholder="Click here and say something…" disabled={!ready} />
+            <p className="setup-note">{preview ? 'Dictation is available in the desktop app.' : 'Try: “My best ideas start with a conversation.”'}</p>
+            <details className="practice-help">
+              <summary>Set up your Fn / Globe key</summary>
+              <p>In macOS System Settings → Keyboard, set “Press Globe key to” to “Do Nothing”. Turn off any Apple Dictation shortcut that uses the same key.</p>
+            </details>
+          </>}
+          <ActionError message={error || loadError} />
+        </section>
+      </motion.div>
+      <div className="setup-direction setup-next">
+        <button className="setup-arrow setup-arrow-next" type="button" aria-label={nextLabel} aria-describedby="setup-hint" title={canContinue ? nextLabel : footerMessage} disabled={!canContinue} onClick={goForward}><ArrowRight size={22} aria-hidden="true" /></button>
+        <span>{nextLabel}</span>
       </div>
     </div>
-    {step !== 'welcome' && <button className="text-link onboarding-back" onClick={() => setStep(SETUP_STEPS[Math.max(0, stepIndex - 1)]?.id ?? 'welcome')}><ArrowLeft size={15} /> Back</button>}
+    <footer className="setup-footer">
+      <p id="setup-hint" className={((step === 'model' && modelReady) || (step === 'access' && accessReady) || (step === 'practice' && ready)) ? 'status-good' : ''} role="status">{footerMessage}</p>
+    </footer>
   </main>;
 }
 
@@ -823,32 +1078,45 @@ function StartupView({ error }: { error: string }): React.JSX.Element {
   </main>;
 }
 
+function canResumeHome(state: AppState, setupSeen: boolean): boolean {
+  const hasActiveModel = state.model.kind === 'ready' || state.model.kind === 'loading';
+  return hasActiveModel && (setupSeen || isSetupComplete(state));
+}
+
 function App(): React.JSX.Element {
-  const { state, error } = useAppState();
+  const { state, transcripts, error } = useAppState();
   const [page, setPage] = useState<AppPage>(() => query.get('page') === 'settings' ? 'settings' : query.get('page') === 'onboarding' ? 'onboarding' : query.get('page') === 'home' ? 'home' : 'auto');
   const [setupSeen, setSetupSeen] = useState(() => { try { return localStorage.getItem('voco.setup.v1') === 'seen'; } catch { return false; } });
   useEffect(() => {
-    if (state && page === 'auto') setPage(setupSeen || isSetupComplete(state) ? 'home' : 'onboarding');
+    if (state && page === 'auto') setPage(canResumeHome(state, setupSeen) ? 'home' : 'onboarding');
   }, [state, page, setupSeen]);
+  const windowMode = page === 'auto' ? null : page === 'onboarding' ? 'onboarding' : 'workspace';
+  useEffect(() => {
+    if (view === 'pill' || !windowMode) return;
+    void window.voco?.setWindowMode(windowMode).catch(() => {
+      // The renderer remains usable at the current window size.
+    });
+  }, [windowMode]);
   if (!state) return view === 'pill' ? <main className="pill-shell" /> : <StartupView error={error} />;
   if (view === 'pill') return <PillView state={state} loadError={error} />;
-  const currentPage: NavigationPage = page === 'auto' ? setupSeen || isSetupComplete(state) ? 'home' : 'onboarding' : page;
+  const currentPage: NavigationPage = page === 'auto' ? canResumeHome(state, setupSeen) ? 'home' : 'onboarding' : page;
   function finishSetup(): void {
+    if (!state || state.model.kind !== 'ready') return;
     try { localStorage.setItem('voco.setup.v1', 'seen'); } catch { /* Setup remains accessible without local storage. */ }
     setSetupSeen(true);
     setPage('home');
   }
-  return <div className="desktop-shell">
-    <AppSidebar
+  return <div className={`desktop-shell${currentPage === 'onboarding' ? ' desktop-shell-onboarding' : ' desktop-shell-workspace'}`}>
+    {currentPage !== 'onboarding' && <AppSidebar
       currentPage={currentPage}
-      showSetup={!isSetupComplete(state) || currentPage === 'onboarding'}
+      showSetup={!isSetupComplete(state)}
       onNavigate={setPage}
-    />
+    />}
     <div className="app-content">
       <div className="titlebar window-drag" aria-hidden="true" />
       <div className="workspace-main">
         <PreviewNotice />
-        {currentPage === 'settings' ? <SettingsView state={state} loadError={error} /> : currentPage === 'onboarding' ? <OnboardingView state={state} loadError={error} onDone={finishSetup} /> : <HomeView state={state} loadError={error} onSetup={() => setPage('onboarding')} />}
+        {currentPage === 'settings' ? <SettingsView state={state} loadError={error} /> : currentPage === 'onboarding' ? <OnboardingView state={state} loadError={error} onDone={finishSetup} /> : <HomeView state={state} transcripts={transcripts} loadError={error} onSetup={() => setPage('onboarding')} />}
       </div>
     </div>
   </div>;

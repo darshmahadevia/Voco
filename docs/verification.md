@@ -1,4 +1,24 @@
-# Electron migration verification
+# Voco verification
+
+## Rapid insertion, October 9, 2026
+
+The installed desktop now favors a fast first response and rapid text bursts. Words with following context become eligible after 180 milliseconds, down from 550 milliseconds. Recognition polling runs every 120 milliseconds, with the engine's normal analysis cache intact. Delivery uses four, eight, or sixteen whole graphemes and an eight-millisecond minimum interval. Browser acknowledgement governs the actual interval when it takes longer. Capture and finalization use the same delivery path, and finalization adds no extra pacing delay.
+
+The real Electron fixture measures the interval between its first and last input events, excluding app launch and recognition before the first input. Before this change, the three unselected fields took 3126 to 3154 milliseconds and 95 events. Preserved selections took 9334 to 9383 milliseconds. The updated unselected fields take 678 to 683 milliseconds, and the selected input and contenteditable take 2054 to 2066 milliseconds. Each uses 22 events and begins with 16 characters instead of four. Delivery is about 4.6 times faster in these cases. The selected speech textarea takes 5437 milliseconds across 44 events, including recognition during replay. Repeat the measurement with `VOCO_VERIFY_DESKTOP_APP="$HOME/Applications/Voco.app" node scripts/verify-electron-insertion.mjs`.
+
+A stable standalone word can appear before release after 360 milliseconds. Final punctuation appends without replacing that word. The speech fixture exposed premature commitment of the last word in a longer phrase, preserving `record` before the recognizer produced `recognition`. That trailing word now waits for following context or phrase completion. Early words still use the shorter delay, and queued text remains fixed through later corrections.
+
+All 24 Swift tests, seven TypeScript tests, type checking, the insertion lifecycle fixture, native process protocol, and the signed production build pass. Both real AppKit speech cases, all six WebKit cases, and all eight Electron cases pass with the literal expected speech, append-only input events, selection preservation, clipboard preservation, Unicode, empty rich-text placeholders, and literal newlines. One earlier WebKit replay stopped at the existing field-change guard. A standalone replay of all six cases passed without changing that guard. The speed assertion requires a visible first burst and fewer than 40 events for the synthetic fixture, while wall-clock timing is reported without a brittle time limit. The packaged startup and permission-return checks pass with the cached model ready. The installed app and bundled helper are running after reopening through LaunchServices.
+
+## Smooth append-only insertion, October 9, 2026
+
+The installed desktop now buffers provisional words for 550 milliseconds, retains the newest word for context, and inserts stable text in one to four whole-character batches. Completed phrases bypass the wait. Queued text remains fixed through later recognition corrections and finalization. Recognition polling and insertion run independently, and the insertion task exits when no text is waiting. Release waits for the posted batch to settle before draining the final queue. The retained transcript keeps the recognizer's latest wording, which can differ from an earlier committed recognition error.
+
+`scripts/test.sh` passes 20 portable Swift tests. The new cases cover early and late corrections, stability during growing hypotheses, insertions and deletions before the commit boundary, empty and shorter hypotheses, completed phrases, final flush, Unicode, and queue-dependent batching. The direct insertion fixture exercises append-only native and web writes, initial selections, clipboard preservation, changed-caret refusal, and cancellation after one posted character. Focus fixtures, seven TypeScript tests, type checking, native ledger and JSONL protocol checks, and the signed production build pass.
+
+All 16 real AppKit, WebKit, and Electron editor cases pass through the installed desktop identity. The speech fixture produces the literal expected final sentence in both AppKit cases and the selected textarea in each browser engine. WebKit and Electron check every input event for increasing text without rewriting earlier words. The comparison accounts for the rich editor's automatic conversion of spaces to nonbreaking spaces. Empty rich-text placeholders and literal textarea newlines remain supported. The clipboard remains unchanged throughout live insertion.
+
+Repeat the matrix with `VOCO_VERIFY_DESKTOP_APP="$HOME/Applications/Voco.app" ./scripts/verify-live-editors.sh`, adding the speech fixture variables documented below. The standalone helper lacks an Accessibility grant on this Mac. These checks use disposable editors and recorded speech, and do not prove physical Fn delivery or a microphone-to-editor session. Installed bundle contents match the current build and strict deep signature verification passes. The packaged runtime check passes with the cached model ready, preload and helper communication, two windows, and permission-return behavior. The normal app is reopened through LaunchServices after verification.
 
 ## UI refinement, October 9, 2026
 
@@ -12,7 +32,17 @@ The updated packaged Electron runtime passes its preload, two-window, transparen
 
 The manual design detector reports font and design-token advisories. Instrument Serif is an intentional setup font. Canonical design documents describe the new layout; generated `.impeccable/design.json` remains stale and can be refreshed separately from `DESIGN.md`.
 
-## Current verification, October 9, 2026
+## Project simplification, October 9, 2026
+
+Three independent source reviews agreed that the unused SwiftUI app and Apple speech pipeline duplicated the current helper without verifying it. Those sources, their exclusive transcript/pause/continuous-shortcut types, and their old permission/recovery fixtures were removed. The shared shortcut and insertion implementations and their direct focus/insertion fixtures now live under `native`. Fn/Globe is the only shortcut implementation; the unused modifier allowance and buffered commit's unreachable live-writer branch were removed. Final buffered insertion now runs in the finalization task without a separate commit task or in-flight flag.
+
+The retained suite has 11 portable Swift tests and seven TypeScript tests. Focus and insertion fixtures, the native ledger and process protocol, audio callback isolation, production renderer regressions, and the Electron runtime's permission-return routing check pass. The full app builds and its signed package passes the runtime check with the cached model. The focus assertion now waits for macOS activation. Editor fixtures use separate logs per case so an earlier success cannot hide a later helper failure. Counts and predecessor checks below describe earlier revisions.
+
+The rebuilt package passed both real AppKit insertion cases. The WebKit and Electron matrices stopped with focus/selection validation errors. Both browser checks also failed against the previously installed build. This pass does not establish a clean browser-editor matrix.
+
+The documented fallback now matches the current helper: buffered text is inserted on release. The pill shows status during capture and transcript text during recovery. The process and synthetic desktop checks do not prove native permission transitions, physical Fn delivery, or a full microphone-to-editor session.
+
+## Earlier installed verification, October 9, 2026
 
 The installed `~/Applications/Voco.app` and bundled helper are both version 0.2.1 and use the persistent Voco Local Development certificate. Production builds, strict deep signature validation, installed-content comparison, repeated installation, and the generated `Voco-0.2.1-arm64.dmg` checksum pass. Node 22.20.0, Swift 6.4, the Xcode Command Line Tools, and macOS 27.0.1 on Apple Silicon are available. Public Developer ID signing and notarization remain unconfigured.
 
@@ -42,7 +72,7 @@ The migration is verified on an Apple Silicon Mac running macOS 27.0.1 with Node
 - The official English Medium Streaming architecture-5 model downloaded successfully. Every downloaded file passed size and CRC32C validation, and the native runtime loaded the resulting model.
 - All 17 portable Swift core tests and the existing focus, insertion, permission, recovery, and installer checks pass. The focus fixture now supplies its text-area role to reflect the stricter target validation. The insertion checks cover Unicode, clipboard ownership, rejected live writes, safe buffered fallback, caret changes, non-text-control rejection, and nonduplicating completion.
 
-The original SwiftUI coordinator remains only in regression fixtures. Its lifecycle checks protect predecessor behavior but do not by themselves verify the new native coordinator. New native integration checks and fixture transcription provide the migration-specific evidence.
+The predecessor checks described in this historical record have since been removed. Current focus and insertion fixtures compile the helper's code from `native/Sources`; `verify-native.sh` and `verify-desktop.mjs --permission-return` exercise the current process and desktop behavior.
 
 ## Repeat the checks
 
@@ -135,3 +165,39 @@ After installing the certificate-signed build, the existing desktop Accessibilit
 After building, run `npm run verify:renderer`. This check loads the production renderer in Electron with a controlled native API. It verifies that unknown startup state does not show onboarding, model warmup opens Home without setup prompts, and a late initial read cannot overwrite a newer state. Genuine first-run setup stays open until the user finishes it.
 
 The same check verifies independently animated waveform bars during steady input, a three-pixel baseline in silence, the floating pill, and reduced-motion behavior. It uses synthetic microphone levels; it does not verify physical microphone capture. CI runs this check after building the app.
+
+## Three local speech models
+
+The October 9, 2026 build offers Moonshine Medium Streaming English, Parakeet TDT 0.6B v2, and Whisper Large v3 Turbo. Parakeet is marked Recommended based on the [completed local comparison](../benchmarks/README.md). Setup cannot finish through Continue, practice, or Explore until a model is loaded. Settings supports downloading additional models and selecting an installed model.
+
+The [integration verification record](../benchmarks/results/model-integration-verification.txt) includes nine TypeScript tests, 24 Swift tests, renderer checks, native JSONL protocol checks, and the signed packaged desktop runtime check. The real native IPC test verifies byte-receiving download cancellation and staging cleanup, concurrent-download refusal, incomplete-model rejection, failed activation restoring the previous model, and selection persistence after an independent restart for each of the three families. Installed-model startup must first publish loading or ready; an empty cache first publishes missing.
+
+The renderer check exercises three model choices, per-model download and selection commands, cancellation, disabled switching during dictation, the recommendation badge, and blocked setup completion without a ready model. A browser inspection at 820 pixels confirmed three rows, the Parakeet badge, disabled Explore, and no horizontal overflow.
+
+The baseline benchmark completed 88 measurements and 44 native invocations without failures. A separate [12-measurement Whisper check](../benchmarks/results/2026-10-09-whisper-zero-fix.md) confirmed that the final exact-zero guard suppresses digital-silence text while preserving normal and attenuated speech. Its timings are incidental because other integration checks overlapped.
+
+`npm run pack` passed, strict deep signature verification passed, bundle contents matched the build, and `scripts/install.sh --built` installed the updated app under `~/Applications/Voco.app`. Existing model and preference data were preserved. Verified Parakeet and Whisper weights are installed locally alongside Moonshine. The normal app was reopened through LaunchServices.
+
+These checks use recorded audio and controlled editor-facing state. They do not prove a physical Fn and microphone-to-editor session with the new models. The comparison uses a small English sample; multilingual quality and background-noise suppression remain outside its scope.
+
+
+## Deferred insertion, October 9, 2026
+
+Normal dictation now records while Fn / Globe is held, finalizes the selected model after release, and inserts the whole transcript once at the current cursor or selection in the original field. No provisional recognition polling or character insertion runs during capture. The listening waveform and finishing spinner remain visible in their respective states.
+
+`./scripts/check-deferred-dictation.sh` compiles the production coordinator and insertion boundary with isolated engine, microphone, shortcut, and editor fixtures. All three model IDs pass capture without writes or polling, delayed finalization after release, duplicate-release prevention, one paste, cursor movement, clipboard restoration, cancellation and stale-result rejection, incomplete-result recovery, recognition errors, changed-field recovery with retention disabled, silence, and short taps. These checks also cancel an insertion waiting for Fn to clear before a paste is posted.
+
+The local Moonshine, Parakeet, and Whisper models each transcribed `/tmp/voco-moonshine-fixture.aiff` through their final-only CLI path. Moonshine and Parakeet returned "The quick brown fox jumps over the lazy dog. This is a local speech recognition test." Whisper returned the same words with a lowercase first letter. This checks actual inference without provisional polling, using recorded fixture audio.
+
+TypeScript checks, nine Vitest tests, 24 Swift core tests, focus and insertion fixtures, native JSONL protocol, audio callback isolation, and the Electron renderer regression check pass. The renderer check covers recording waveform, finishing spinner, release-to-paste guidance, reduced motion, responsive layout, and recovery. The finishing pill also fits a 400-pixel-wide collaborative browser preview. Physical microphone capture and Fn key delivery remain a manual check on the installed app.
+
+The signed bundle was installed at `~/Applications/Voco.app`, and `node scripts/verify-installed-version.cjs` confirms that its contents match the current build. Both the development and installed Electron runtimes passed model loading, helper/preload integration, and permission-return checks. Their isolated verification profiles reported microphone permission required, Accessibility granted, and the shortcut available.
+
+
+## Amplified pill waveform, October 9, 2026
+
+The listening pill now uses eleven 32px rounded bars, a smooth 1260ms phased wave, stronger microphone gain, and an artificial motion floor while capture is active. Home keeps its existing waveform behavior. Release replaces the waveform with the transcription spinner; reduced motion disables the wave loop.
+
+Type checking, all nine Vitest tests, the production renderer build, and `npm run verify:renderer` pass. The Electron regression samples quiet and zero-level capture over complete wave cycles. It verifies quiet peaks above 24px, an amplitude range above 12px, zero-level peaks above 18px with an amplitude range above 9px, smooth successive samples, a 46px capsule at a 400px by 220px viewport, stopping outside capture, and reduced motion. These use synthetic microphone levels. A collaborative browser inspection confirms the fuller waveform at a 400px viewport.
+
+The signed waveform update is installed at `~/Applications/Voco.app`; the installed-version check confirms the bundle matches the current renderer build.

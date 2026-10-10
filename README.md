@@ -1,12 +1,12 @@
 # Voco
 
-Local English dictation for macOS. Hold Fn or Globe to write into the active text field. Release to finish.
+Local English dictation for macOS. Hold Fn or Globe to speak. Release to transcribe and paste the completed text at the cursor.
 
-The interface uses Electron, React, TypeScript, and Motion. A bundled native helper runs Moonshine Medium Streaming and handles macOS microphone capture, shortcuts, and safe text insertion. The app needs no account or transcription API key.
+The interface uses Electron, React, TypeScript, and Motion. A bundled native helper runs your selected Moonshine, Parakeet, or Whisper model and handles macOS microphone capture, shortcuts, and safe text insertion. The app needs no account or transcription API key.
 
 ## Run the app
 
-The first release targets Apple Silicon Macs running macOS 26 or newer. Development requires Node.js 22 or newer and the Xcode Command Line Tools. The native build downloads a pinned Moonshine runtime library, but never downloads a speech model.
+The first release targets Apple Silicon Macs running macOS 26 or newer. Development requires Node.js 22 or newer, the Xcode Command Line Tools, and CMake. The native build downloads pinned Moonshine, FluidAudio, and whisper.cpp runtimes, but never downloads a speech model. It uses Swift Package Manager and CMake.
 
 ```sh
 npm install
@@ -24,23 +24,31 @@ To create the disk image installer, run `npm run dist`. Build artifacts live in 
 
 ## Set up dictation
 
-1. Open Voco. First launch opens guided setup. Click **Get started**, then **Download speech model**. You can also open **Set up Voco** from the sidebar. Setup shows progress and supports cancellation or retry. The English Moonshine Medium Streaming model downloads into Voco's Application Support directory, outside the app bundle.
+1. Open Voco. First launch opens guided setup. Click **Get started**, then choose Moonshine, Parakeet, or Whisper and click **Download**. You can also open **Set up Voco** from the sidebar. Setup shows progress and supports cancellation or retry. Models download into Voco's Application Support directory, outside the app bundle. At least one model must finish downloading and load successfully before setup can finish.
 2. Click **Allow** next to Microphone. Grant microphone access to Voco.
 3. Click **Allow** next to Keyboard access. Enable Voco in macOS **Privacy & Security**. The page is called **Accessibility** on macOS 26 and **Device Control and Data Access** on macOS 27. If approval for an earlier Voco build is still listed, remove it, then add the current app shown in Finder and enable it. If access is granted but the shortcut is unavailable, use **Restart Voco**.
 4. In macOS Keyboard settings, set **Press Globe key to** to **Do Nothing**. Disable any Apple Dictation shortcut that uses the same key.
 5. Continue to **Your first words** and try dictation in the practice field. Click **Open Voco** to reach Home. To dictate elsewhere, focus a text field in another app, hold Fn or Globe, and speak.
 
+In Settings, use **Speech model** to download another model or choose **Use model** for an installed one. The active choice persists across restarts. Switch models while dictation is idle.
+
+Parakeet is recommended based on the [benchmark on this laptop](benchmarks/README.md). All three choices currently use English dictation. Whisper uses multilingual weights in English mode.
+
 Once the model is downloaded, recognition runs offline. App updates preserve the model. A missing or damaged model returns setup to a repairable state instead of starting a hidden download.
 
-Fn / Globe is the only dictation shortcut. Escape stops capture and leaves words already written intact.
+Fn / Globe is the only dictation shortcut. The waveform shows microphone input while you speak. After release, the pill shows Transcribing until the selected model finishes, then Voco inserts the complete transcript once. Escape cancels capture or pending transcription. If the focused field changes before insertion, Voco keeps the transcript for copying.
 
 ## Text insertion and recovery
 
-Voco revises only the text it inserted into a supported native field. A changed caret, document, app, or field stops automatic writing. Password fields are rejected.
+Voco leaves inserted words unchanged. A changed caret, document, app, or field stops automatic writing. Password fields are rejected.
 
-Voco shows Moonshine's partial words while you speak. Native fields use Accessibility text replacement; readable web and Electron fields with writable selection ranges use keyboard input events so their application state updates too. Live corrections revise only text inserted by the current session and leave the clipboard untouched. Existing selections remain selected, with dictation inserted after them. A document edit, caret movement, or focus change stops further writing.
+Live dictation checks recognition updates every 120 milliseconds. Words with following context become eligible after 180 milliseconds without a change. A standalone word can appear after 360 milliseconds without waiting for release. The last word of a longer phrase waits for following context or completion. Completed phrases bypass the wait. Text arrives in rapid bursts of four, eight, or sixteen characters, with larger bursts when more text is waiting. Emoji and combined characters stay intact. Final punctuation can append after a word without replacing it.
 
-Fields that reject live correction use buffered insertion after a pause or release. During capture, the pill shows a waveform and status only. It does not show a Buffered badge or partial transcript. Buffered insertion checks the original document and selection and preserves selected text. Paste restores the previous clipboard if another app has not changed it. Voco never presses Return or submits a form.
+Recognition corrections affect the buffer, while words already queued for insertion stay fixed, including after release. The shorter wait favors responsiveness and can preserve an earlier recognition error if a correction arrives late. The retained transcript contains the recognizer's latest wording.
+
+Native fields receive Accessibility insertion. Readable web and Electron fields with writable selection ranges receive keyboard input events so their application state updates too. Live insertion leaves the clipboard untouched. Existing selections remain selected, with dictation inserted after them.
+
+Fields that reject live insertion use buffered insertion on release. During capture, the pill shows a waveform and status only. It does not show a Buffered badge or partial transcript. Buffered insertion checks the original document and selection and preserves selected text. Paste restores the previous clipboard if another app has not changed it. Voco never presses Return or submits a form.
 
 If insertion fails, the pill offers the retained transcript for copying. **Keep last transcript** holds one transcript in memory until you quit. Turning it off clears that saved transcript. Audio and transcript history are not written to disk.
 
@@ -70,25 +78,25 @@ Native inference can be checked with a local audio fixture:
 ```sh
 native/build/VocoNative.app/Contents/MacOS/VocoNative \
   --model-directory /absolute/path/to/model-directory \
-  --download-model
+  --model moonshine --download-model
 native/build/VocoNative.app/Contents/MacOS/VocoNative \
   --model-directory /absolute/path/to/model-directory \
-  --transcribe-file /absolute/path/to/audio.aiff
+  --model moonshine --transcribe-file /absolute/path/to/audio.aiff
 ```
 
-The first command is an explicit download. The second uses the cached model without microphone or keyboard permission. This does not prove physical microphone capture or shortcut delivery.
+Use `--model parakeet` or `--model whisper` with the corresponding model directory to check the other models. The first command is an explicit download. The second uses the cached model without microphone or keyboard permission. This does not prove physical microphone capture or shortcut delivery.
 
 `npm run dev:ui` opens a renderer-only preview. Its named example states are labeled **Interface preview**. Native actions are inactive, while Home, Settings, and onboarding navigation remain active. Use the Electron app for model downloads, permissions, and dictation.
 
-The predecessor SwiftUI sources remain as regression fixtures for the existing lifecycle and insertion checks. They are not packaged or launched by the Electron app. See [the migration architecture](docs/migration/architecture.md) and [verification](docs/verification.md).
+The native helper and its focus and insertion fixtures live in `native`. `Sources/VocoCore` contains the hold gesture and text-range logic used by the helper. See [the architecture](docs/architecture.md) and [verification](docs/verification.md).
 
 ## Scope
 
 macOS ships first. Windows support follows after macOS dictation is stable. The Electron interface and typed helper contract can be reused with a Windows adapter.
 
-Moonshine code and English streaming models are MIT licensed. See [Moonshine's model catalog](https://moonshine-voice.readthedocs.io/en/stable/models/available-models/).
+Moonshine Medium Streaming and Whisper Large v3 Turbo models are MIT licensed. Parakeet TDT 0.6B v2 model weights use CC BY 4.0. FluidAudio uses Apache 2.0, and whisper.cpp uses MIT. Bundled license notices live in `Resources/licenses`. The model comparison protocol and local results are in [the benchmark record](docs/model-benchmark.md).
 
-For real native, WebKit browser, and Electron live insertion checks, install the app and run `VOCO_VERIFY_DESKTOP_APP="$HOME/Applications/Voco.app" ./scripts/verify-live-editors.sh`. This uses the desktop app’s existing keyboard permission. Standalone helper checks need their own grant. The fixtures exercise selections, Unicode revisions, deletion, clipboard preservation, and caret-change refusal. See [the verification record](docs/verification.md#live-dictation-updates) for speech fixture options.
+For real native, WebKit browser, and Electron live insertion checks, install the app and run `VOCO_VERIFY_DESKTOP_APP="$HOME/Applications/Voco.app" ./scripts/verify-live-editors.sh`. This uses the desktop app's existing keyboard permission. Standalone helper checks need their own grant. The fixtures exercise buffered revisions, smooth append-only input, Unicode, selections, clipboard preservation, and caret-change refusal. See [the verification record](docs/verification.md#live-dictation-updates) for speech fixture options.
 
 ### Keep permissions across local updates
 

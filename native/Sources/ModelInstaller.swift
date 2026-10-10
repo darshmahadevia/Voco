@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Moonshine
 
@@ -18,16 +19,8 @@ private struct ModelDependencyManifest: Decodable {
     let groups: [Group]
 }
 
-struct ModelFile: Sendable {
-    let name: String
-    let url: URL
-    let size: Int64?
-    let checksum: String
-    let checksumType: String
-}
-
 enum MoonshineCatalog {
-    static func englishMediumStreamingFiles() throws -> [ModelFile] {
+    static func englishMediumStreamingFiles() throws -> [ModelAsset] {
         var output: UnsafeMutablePointer<CChar>?
         let result = "en".withCString { language in
             "model_arch".withCString { optionName in
@@ -53,8 +46,8 @@ enum MoonshineCatalog {
                   file.url.scheme == "https", file.url.host == "download.moonshine.ai" else {
                 throw NativeError.unavailable("Moonshine returned an unsafe model file location.")
             }
-            return ModelFile(
-                name: file.name, url: file.url, size: file.size,
+            return ModelAsset(
+                name: file.name, url: file.url.absoluteString, size: file.size,
                 checksum: file.checksum, checksumType: file.checksumType
             )
         }
@@ -64,20 +57,24 @@ enum MoonshineCatalog {
 final class ModelInstaller: @unchecked Sendable {
     private static let installLock = NSLock()
     let modelDirectory: URL
+    private let modelID: SpeechModelID
+    private let whisperVariant: WhisperModelVariant
     private let fileManager = FileManager.default
 
-    init(modelDirectory: URL) {
+    init(modelDirectory: URL, modelID: SpeechModelID = .moonshine, whisperVariant: WhisperModelVariant = .largeV3Turbo) {
         self.modelDirectory = modelDirectory.standardizedFileURL
+        self.modelID = modelID
+        self.whisperVariant = whisperVariant
     }
 
-    func verifyCachedModel() throws -> Bool {
-        let files = try MoonshineCatalog.englishMediumStreamingFiles()
-        if fileManager.fileExists(atPath: modelDirectory.path), (try? Self.verify(files, in: modelDirectory)) != nil {
+    func verifyCachedModel(verifyChecksums: Bool = true) throws -> Bool {
+        let files = try SpeechModelCatalog.assets(for: modelID, whisperVariant: whisperVariant)
+        if fileManager.fileExists(atPath: modelDirectory.path), (try? Self.verify(files, in: modelDirectory, verifyChecksums: verifyChecksums)) != nil {
             Self.removeStaleBackups(for: modelDirectory, fileManager: fileManager)
             return true
         }
         guard let backup = Self.previousDirectories(for: modelDirectory, fileManager: fileManager)
-            .first(where: { (try? Self.verify(files, in: $0)) != nil }) else {
+            .first(where: { (try? Self.verify(files, in: $0, verifyChecksums: verifyChecksums)) != nil }) else {
             if fileManager.fileExists(atPath: modelDirectory.path) {
                 throw NativeError.unavailable("The speech model download is incomplete or damaged. Download it again to repair it.")
             }
@@ -92,8 +89,8 @@ final class ModelInstaller: @unchecked Sendable {
     func download(
         onProgress: @escaping @Sendable (_ file: String, _ fraction: Double) -> Void
     ) async throws {
-        let files = try MoonshineCatalog.englishMediumStreamingFiles()
-        guard !files.isEmpty else { throw NativeError.unavailable("Moonshine returned no model files.") }
+        let files = try SpeechModelCatalog.assets(for: modelID, whisperVariant: whisperVariant)
+        guard !files.isEmpty else { throw NativeError.unavailable("The selected speech model has no downloadable files.") }
 
         let parent = modelDirectory.deletingLastPathComponent()
         try fileManager.createDirectory(at: parent, withIntermediateDirectories: true)
@@ -107,14 +104,23 @@ final class ModelInstaller: @unchecked Sendable {
             var completedSize: Int64 = 0
             for file in files {
                 try Task.checkCancellation()
-                let destination = staging.appendingPathComponent(file.name)
+                guard Self.isSafeRelativePath(file.name),
+                      let url = URL(string: file.urlString), url.scheme == "https",
+                      let host = url.host,
+                      ["download.moonshine.ai", "huggingface.co"].contains(host) else {
+                    throw NativeError.unavailable("The model catalog contains an unsafe download location.")
+                }
+                let destination = file.name.split(separator: "/").reduce(staging) {
+                    $0.appendingPathComponent(String($1), isDirectory: false)
+                }
+                try fileManager.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
                 let completedBeforeFile = completedSize
                 let fileSize = file.size ?? 1
                 let downloader = ModelFileDownload { fraction in
                     let currentSize = Int64(Double(fileSize) * fraction)
                     onProgress(file.name, min(0.99, Double(completedBeforeFile + currentSize) / Double(totalSize)))
                 }
-                try await downloader.download(file.url, to: destination)
+                try await downloader.download(url, to: destination)
                 try Self.verify(file, at: destination)
                 completedSize += fileSize
                 onProgress(file.name, min(0.99, Double(completedSize) / Double(totalSize)))
@@ -128,24 +134,39 @@ final class ModelInstaller: @unchecked Sendable {
         }
     }
 
-    private static func verify(_ file: ModelFile, at url: URL) throws {
+    private static func verify(_ file: ModelAsset, at url: URL, verifyChecksum: Bool = true) throws {
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         let actualSize = (attributes[.size] as? NSNumber)?.int64Value
         if let expectedSize = file.size, actualSize != expectedSize {
             throw NativeError.unavailable("The downloaded model file \(file.name) has the wrong size.")
         }
-        guard !file.checksum.isEmpty else { return }
-        guard file.checksumType.lowercased() == "crc32c" else {
-            throw NativeError.unavailable("Moonshine returned an unsupported checksum for \(file.name).")
+        guard verifyChecksum, !file.checksum.isEmpty else { return }
+        let actual: String
+        switch file.checksumType.lowercased() {
+        case "crc32c": actual = try CRC32C.base64Digest(at: url)
+        case "sha256": actual = try SHA256Digest.hex(at: url)
+        default: throw NativeError.unavailable("The model catalog uses an unsupported checksum for \(file.name).")
         }
-        let actual = try CRC32C.base64Digest(at: url)
         guard actual == file.checksum else {
             throw NativeError.unavailable("The downloaded model file \(file.name) failed its integrity check.")
         }
     }
 
-    private static func verify(_ files: [ModelFile], in directory: URL) throws {
-        for file in files { try verify(file, at: directory.appendingPathComponent(file.name)) }
+    private static func verify(_ files: [ModelAsset], in directory: URL, verifyChecksums: Bool = true) throws {
+        for file in files {
+            guard isSafeRelativePath(file.name) else {
+                throw NativeError.unavailable("The model catalog contains an unsafe file path.")
+            }
+            let destination = file.name.split(separator: "/").reduce(directory) {
+                $0.appendingPathComponent(String($1), isDirectory: false)
+            }
+            try verify(file, at: destination, verifyChecksum: verifyChecksums)
+        }
+    }
+
+    private static func isSafeRelativePath(_ path: String) -> Bool {
+        !path.isEmpty && !path.hasPrefix("/") && path.split(separator: "/", omittingEmptySubsequences: false)
+            .allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
     }
 
     private static func install(staging: URL, destination: URL, backup: URL, fileManager: FileManager) throws {
@@ -238,7 +259,7 @@ private final class ModelFileDownload: NSObject, URLSessionDataDelegate, @unchec
         completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
     ) {
         if let response = response as? HTTPURLResponse, !(200...299).contains(response.statusCode) {
-            responseError = NativeError.unavailable("Moonshine model download failed with HTTP \(response.statusCode).")
+            responseError = NativeError.unavailable("Speech model download failed with HTTP \(response.statusCode).")
             completionHandler(.cancel)
             return
         }
@@ -262,7 +283,7 @@ private final class ModelFileDownload: NSObject, URLSessionDataDelegate, @unchec
         do { try output?.close() } catch {}
         output = nil
         if finalError == nil, received == 0 {
-            finish(NativeError.unavailable("Moonshine returned an empty model file."))
+            finish(NativeError.unavailable("The speech model server returned an empty file."))
         } else {
             finish(finalError)
         }
@@ -297,5 +318,17 @@ private enum CRC32C {
         var bigEndian = crc.bigEndian
         let bytes = withUnsafeBytes(of: &bigEndian) { Data($0) }
         return bytes.base64EncodedString()
+    }
+}
+
+private enum SHA256Digest {
+    static func hex(at url: URL) throws -> String {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while let data = try handle.read(upToCount: 1024 * 1024), !data.isEmpty {
+            hasher.update(data: data)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 }

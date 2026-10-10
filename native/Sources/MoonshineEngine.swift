@@ -2,15 +2,23 @@ import AVFoundation
 import Foundation
 import Moonshine
 
-final class MoonshineEngine: @unchecked Sendable {
+final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
+    let descriptor = SpeechModelDescriptor(
+        id: .moonshine,
+        name: "Moonshine Medium Streaming",
+        modelVersion: "moonshine-medium-streaming-en v0.1.5",
+        language: "English",
+        license: "MIT"
+    )
     private let queue = DispatchQueue(label: "org.vocoapp.Voco.moonshine", qos: .userInitiated)
     private let audioLock = NSLock()
     private var pendingAudio = 0
-    private var closingStreams = Set<Int32>()
+    private var closingStreams = Set<SpeechStreamID>()
     private let maximumQueuedAudioChunks = 128
     private var transcriber: Int32 = -1
     private var modelPath: String?
     private var liveStreams = Set<Int32>()
+    private var streamHandles: [SpeechStreamID: Int32] = [:]
 
     func warm(modelDirectory: URL, completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void) {
         queue.async {
@@ -27,6 +35,18 @@ final class MoonshineEngine: @unchecked Sendable {
         try queue.sync { try loadLocked(modelDirectory: modelDirectory) }
     }
 
+    func unload() {
+        queue.sync {
+            guard transcriber >= 0 else { return }
+            for stream in liveStreams { _ = moonshine_free_stream(transcriber, stream) }
+            liveStreams.removeAll()
+            streamHandles.removeAll()
+            moonshine_free_transcriber(transcriber)
+            transcriber = -1
+            modelPath = nil
+        }
+    }
+
     private func loadLocked(modelDirectory: URL) throws {
         if transcriber >= 0, modelPath == modelDirectory.path { return }
         if transcriber >= 0 {
@@ -41,35 +61,37 @@ final class MoonshineEngine: @unchecked Sendable {
         modelPath = modelDirectory.path
     }
 
-    func openStream() throws -> Int32 {
+    func openStream() throws -> SpeechStreamID {
         try queue.sync {
             guard transcriber >= 0 else { throw NativeError.unavailable("The Moonshine model is not ready.") }
             let stream = moonshine_create_stream(transcriber, 0)
             guard stream >= 0 else { throw Self.error(stream, prefix: "Moonshine could not start a dictation session.") }
+            let id = SpeechStreamID()
             audioLock.lock()
-            closingStreams.remove(stream)
+            closingStreams.remove(id)
             audioLock.unlock()
             let result = moonshine_start_stream(transcriber, stream)
             guard result == 0 else {
                 moonshine_free_stream(transcriber, stream)
                 audioLock.lock()
-                closingStreams.insert(stream)
+                closingStreams.insert(id)
                 audioLock.unlock()
                 throw Self.error(result, prefix: "Moonshine could not start a dictation session.")
             }
             liveStreams.insert(stream)
-            return stream
+            streamHandles[id] = stream
+            return id
         }
     }
 
-    func addAudio(_ samples: UnsafeBufferPointer<Float>, to stream: Int32) throws {
+    func addAudio(_ samples: UnsafeBufferPointer<Float>, to stream: SpeechStreamID) throws {
         guard let baseAddress = samples.baseAddress, !samples.isEmpty else { return }
         try queue.sync {
-            guard liveStreams.contains(stream), transcriber >= 0 else {
+            guard let handle = streamHandles[stream], liveStreams.contains(handle), transcriber >= 0 else {
                 throw NativeError.unavailable("The Moonshine session has already ended.")
             }
             let result = moonshine_transcribe_add_audio_to_stream(
-                transcriber, stream, baseAddress, UInt64(samples.count), 16_000, 0
+                transcriber, handle, baseAddress, UInt64(samples.count), 16_000, 0
             )
             guard result == 0 else { throw Self.error(result, prefix: "Moonshine could not accept microphone audio.") }
         }
@@ -77,7 +99,7 @@ final class MoonshineEngine: @unchecked Sendable {
 
     func enqueueAudio(
         _ samples: UnsafeBufferPointer<Float>,
-        to stream: Int32,
+        to stream: SpeechStreamID,
         onFailure: @escaping @Sendable (String) -> Void
     ) {
         guard !samples.isEmpty else { return }
@@ -97,11 +119,11 @@ final class MoonshineEngine: @unchecked Sendable {
                 self.pendingAudio -= 1
                 self.audioLock.unlock()
             }
-            guard self.transcriber >= 0, self.liveStreams.contains(stream) else { return }
+            guard self.transcriber >= 0, let handle = self.streamHandles[stream], self.liveStreams.contains(handle) else { return }
             let result = copy.withUnsafeBufferPointer { samples -> Int32 in
                 guard let baseAddress = samples.baseAddress else { return 0 }
                 return moonshine_transcribe_add_audio_to_stream(
-                    self.transcriber, stream, baseAddress, UInt64(samples.count), 16_000, 0
+                    self.transcriber, handle, baseAddress, UInt64(samples.count), 16_000, 0
                 )
             }
             if result != 0 {
@@ -112,73 +134,73 @@ final class MoonshineEngine: @unchecked Sendable {
     }
 
     func transcribe(
-        stream: Int32,
-        forceUpdate: Bool = false,
-        completion: @escaping @MainActor @Sendable (Result<[MoonshineLine], Error>) -> Void
+        stream: SpeechStreamID,
+        completion: @escaping @MainActor @Sendable (Result<[SpeechLine], Error>) -> Void
     ) {
         queue.async {
             let result = Result {
-                guard self.liveStreams.contains(stream) else {
+                guard let handle = self.streamHandles[stream], self.liveStreams.contains(handle) else {
                     throw NativeError.unavailable("The Moonshine session has already ended.")
                 }
-                return try self.transcribeLocked(stream: stream, forceUpdate: forceUpdate)
+                return try self.transcribeLocked(stream: handle, forceUpdate: false)
             }
             DispatchQueue.main.async { completion(result) }
         }
     }
 
     func finish(
-        stream: Int32,
-        completion: @escaping @MainActor @Sendable (Result<[MoonshineLine], Error>) -> Void
+        stream: SpeechStreamID,
+        completion: @escaping @MainActor @Sendable (Result<[SpeechLine], Error>) -> Void
     ) {
         audioLock.lock()
         closingStreams.insert(stream)
         audioLock.unlock()
         queue.async {
             let result = Result {
-                guard self.liveStreams.remove(stream) != nil else {
+                guard let handle = self.streamHandles.removeValue(forKey: stream), self.liveStreams.remove(handle) != nil else {
                     throw NativeError.unavailable("The Moonshine session has already ended.")
                 }
-                let stopped = moonshine_stop_stream(self.transcriber, stream)
-                defer { moonshine_free_stream(self.transcriber, stream) }
+                let stopped = moonshine_stop_stream(self.transcriber, handle)
+                defer { _ = moonshine_free_stream(self.transcriber, handle) }
                 guard stopped == 0 else {
                     throw Self.error(stopped, prefix: "Moonshine could not finish the current phrase.")
                 }
-                return try self.transcribeLocked(stream: stream, forceUpdate: true)
+                return try self.transcribeLocked(stream: handle, forceUpdate: true)
             }
             DispatchQueue.main.async { completion(result) }
         }
     }
 
-    func finishSynchronously(stream: Int32) throws -> [MoonshineLine] {
+    func finishSynchronously(stream: SpeechStreamID) throws -> [SpeechLine] {
         audioLock.lock()
         closingStreams.insert(stream)
         audioLock.unlock()
         return try queue.sync {
-            guard liveStreams.remove(stream) != nil else {
+            guard let handle = streamHandles.removeValue(forKey: stream), liveStreams.remove(handle) != nil else {
                 throw NativeError.unavailable("The Moonshine session has already ended.")
             }
-            let stopped = moonshine_stop_stream(transcriber, stream)
-            defer { moonshine_free_stream(transcriber, stream) }
+            let stopped = moonshine_stop_stream(transcriber, handle)
+            defer { _ = moonshine_free_stream(transcriber, handle) }
             guard stopped == 0 else {
                 throw Self.error(stopped, prefix: "Moonshine could not finish the current phrase.")
             }
-            return try transcribeLocked(stream: stream, forceUpdate: true)
+            return try transcribeLocked(stream: handle, forceUpdate: true)
         }
     }
 
-    func cancel(stream: Int32) {
+    func cancel(stream: SpeechStreamID) {
         audioLock.lock()
         closingStreams.insert(stream)
         audioLock.unlock()
         queue.async {
-            guard self.liveStreams.remove(stream) != nil, self.transcriber >= 0 else { return }
-            _ = moonshine_stop_stream(self.transcriber, stream)
-            _ = moonshine_free_stream(self.transcriber, stream)
+            guard let handle = self.streamHandles.removeValue(forKey: stream), self.liveStreams.remove(handle) != nil,
+                  self.transcriber >= 0 else { return }
+            _ = moonshine_stop_stream(self.transcriber, handle)
+            _ = moonshine_free_stream(self.transcriber, handle)
         }
     }
 
-    private func transcribeLocked(stream: Int32, forceUpdate: Bool) throws -> [MoonshineLine] {
+    private func transcribeLocked(stream: Int32, forceUpdate: Bool) throws -> [SpeechLine] {
         guard transcriber >= 0 else { throw NativeError.unavailable("The Moonshine model is not ready.") }
         var transcript: UnsafeMutablePointer<transcript_t>?
         let flags: UInt32 = forceUpdate ? UInt32(MOONSHINE_FLAG_FORCE_UPDATE) : 0
@@ -193,7 +215,7 @@ final class MoonshineEngine: @unchecked Sendable {
         guard let lines = transcript.pointee.lines else { return [] }
         return (0..<lineCount).map { index in
             let line = lines[index]
-            return MoonshineLine(
+            return SpeechLine(
                 id: line.id,
                 start: Double(line.start_time),
                 end: Double(line.start_time + line.duration),
@@ -218,13 +240,13 @@ final class NativeAudioInput {
     init() { engine = AVAudioEngine() }
 
     func start(
-        moonshine: MoonshineEngine,
-        stream: Int32,
+        engine: any SpeechEngine,
+        stream: SpeechStreamID,
         onSpeech: @escaping @MainActor () -> Void,
-        onLevel: @escaping @MainActor @Sendable (Double) -> Void = { _ in },
+        onLevel: @escaping @MainActor @Sendable (Double, [Double]) -> Void = { _, _ in },
         onFailure: @escaping @MainActor (String) -> Void
     ) throws {
-        let input = engine.inputNode
+        let input = self.engine.inputNode
         let sourceFormat = input.outputFormat(forBus: 0)
         guard sourceFormat.sampleRate > 0, sourceFormat.channelCount > 0,
               let targetFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false),
@@ -234,7 +256,7 @@ final class NativeAudioInput {
         let callback = NativeAudioTapProcessor(
             converter: converter,
             targetFormat: targetFormat,
-            moonshine: moonshine,
+            engine: engine,
             stream: stream,
             callbacks: callbacks,
             onSpeech: onSpeech,
@@ -243,10 +265,10 @@ final class NativeAudioInput {
         )
         input.installTap(onBus: 0, bufferSize: 1024, format: sourceFormat, block: callback.tapBlock)
         hasTap = true
-        engine.prepare()
-        do { try engine.start() }
+        self.engine.prepare()
+        do { try self.engine.start() }
         catch {
-            engine.inputNode.removeTap(onBus: 0)
+            self.engine.inputNode.removeTap(onBus: 0)
             hasTap = false
             throw NativeError.unavailable("Voco could not start the microphone. \(error.localizedDescription)")
         }
@@ -266,26 +288,26 @@ final class NativeAudioInput {
 final class NativeAudioTapProcessor {
     private let converter: AVAudioConverter
     private let targetFormat: AVAudioFormat
-    private let moonshine: MoonshineEngine
-    private let stream: Int32
+    private let engine: any SpeechEngine
+    private let stream: SpeechStreamID
     private let callbacks: DispatchGroup
     private let onSpeech: @MainActor @Sendable () -> Void
-    private let onLevel: @MainActor @Sendable (Double) -> Void
+    private let onLevel: @MainActor @Sendable (Double, [Double]) -> Void
     private let onFailure: @MainActor @Sendable (String) -> Void
 
     init(
         converter: AVAudioConverter,
         targetFormat: AVAudioFormat,
-        moonshine: MoonshineEngine,
-        stream: Int32,
+        engine: any SpeechEngine,
+        stream: SpeechStreamID,
         callbacks: DispatchGroup,
         onSpeech: @escaping @MainActor @Sendable () -> Void,
-        onLevel: @escaping @MainActor @Sendable (Double) -> Void = { _ in },
+        onLevel: @escaping @MainActor @Sendable (Double, [Double]) -> Void = { _, _ in },
         onFailure: @escaping @MainActor @Sendable (String) -> Void
     ) {
         self.converter = converter
         self.targetFormat = targetFormat
-        self.moonshine = moonshine
+        self.engine = engine
         self.stream = stream
         self.callbacks = callbacks
         self.onSpeech = onSpeech
@@ -303,18 +325,15 @@ final class NativeAudioTapProcessor {
             guard let samples = converted.floatChannelData?[0] else {
                 throw NativeError.unavailable("Voco could not read microphone audio.")
             }
-            var energy: Float = 0
-            for index in 0..<Int(converted.frameLength) { energy += samples[index] * samples[index] }
-            let rms = converted.frameLength > 0 ? sqrt(Double(energy) / Double(converted.frameLength)) : 0
-            let level = min(1, max(0, (rms - 0.008) * 12))
+            let input = UnsafeBufferPointer(start: samples, count: Int(converted.frameLength))
+            let meter = AudioMeter.measure(input, sampleRate: targetFormat.sampleRate)
             let onLevel = self.onLevel
-            Task { @MainActor in onLevel(level) }
-            if converted.frameLength > 0, energy / Float(converted.frameLength) > 0.000064 {
+            Task { @MainActor in onLevel(meter.level, meter.waveform) }
+            if meter.rms > 0.008 {
                 let onSpeech = self.onSpeech
                 Task { @MainActor in onSpeech() }
             }
-            let input = UnsafeBufferPointer(start: samples, count: Int(converted.frameLength))
-            moonshine.enqueueAudio(input, to: stream) { [onFailure] message in
+            engine.enqueueAudio(input, to: stream) { [onFailure] message in
                 Task { @MainActor in onFailure(message) }
             }
         } catch {
@@ -346,7 +365,7 @@ final class NativeAudioTapProcessor {
 
 enum NativeAudioFile {
     @MainActor
-    static func feed(_ url: URL, to engine: MoonshineEngine, stream: Int32,
+    static func feed(_ url: URL, to engine: any SpeechEngine, stream: SpeechStreamID,
                      onChunk: () async throws -> Void = {}) async throws {
         let file = try AVAudioFile(forReading: url)
         let sourceFormat = file.processingFormat
@@ -387,8 +406,8 @@ enum NativeAudioFile {
 }
 
 @MainActor
-func transcribeStreamingFile(_ url: URL, engine: MoonshineEngine,
-                             onTranscript: ([MoonshineLine]) async throws -> Void) async throws -> [MoonshineLine] {
+func transcribeStreamingFile(_ url: URL, engine: any SpeechEngine,
+                             onTranscript: ([SpeechLine]) async throws -> Void) async throws -> [SpeechLine] {
     let stream = try engine.openStream()
     var chunks = 0
     do {

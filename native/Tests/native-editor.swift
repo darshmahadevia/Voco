@@ -19,8 +19,8 @@ final class NativeEditorFixture {
         for selected in [false, true] {
             editor.string = "Before selected after"
             editor.setSelectedRange(NSRange(location: selected ? 7 : 15, length: selected ? 8 : 0))
-            let output = directory.appendingPathComponent("output.log")
-            let errors = directory.appendingPathComponent("error.log")
+            let output = directory.appendingPathComponent("output-\(selected).log")
+            let errors = directory.appendingPathComponent("error-\(selected).log")
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
             process.environment = ProcessInfo.processInfo.environment.filter { $0.key != "ELECTRON_RUN_AS_NODE" }

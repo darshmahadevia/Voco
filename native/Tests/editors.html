@@ -17,7 +17,7 @@ window.vocoKeys = [];
 document.addEventListener('keydown', event => window.vocoKeys.push({key:event.key,code:event.code,keyCode:event.keyCode}));
 for (const editor of document.querySelectorAll('input, textarea, [contenteditable]')) {
   editor.addEventListener('input', event => {
-    events.push({ field: editor.getAttribute('aria-label'), type: event.inputType, value: editor.value ?? editor.textContent });
+    events.push({ field: editor.getAttribute('aria-label'), type: event.inputType, value: editor.value ?? editor.textContent, time: performance.now() });
     document.querySelector('output').textContent = JSON.stringify(events.slice(-3), null, 2);
     window.vocoEditorEvents = events;
   });

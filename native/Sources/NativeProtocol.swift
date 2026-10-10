@@ -6,8 +6,16 @@ import Foundation
 struct NativePreferences: Codable, Equatable {
     var keepLastTranscript = true
 
+    static var defaults: UserDefaults {
+        if let suite = ProcessInfo.processInfo.environment["VOCO_PREFERENCE_SUITE"],
+           let defaults = UserDefaults(suiteName: suite) {
+            return defaults
+        }
+        return .standard
+    }
+
     static func load() -> NativePreferences {
-        let defaults = UserDefaults.standard
+        let defaults = Self.defaults
         let legacy = UserDefaults(suiteName: "org.vocoapp.Voco")
         if ProcessInfo.processInfo.environment["VOCO_SKIP_PREFERENCE_MIGRATION"] != "1" {
             for key in ["keepLastTranscript"] {
@@ -23,13 +31,14 @@ struct NativePreferences: Codable, Equatable {
     }
 
     func save() {
-        let defaults = UserDefaults.standard
+        let defaults = Self.defaults
         defaults.set(keepLastTranscript, forKey: "keepLastTranscript")
     }
 }
 
 enum NativeModelState {
     case missing
+    case installed
     case downloading(progress: Double, file: String)
     case loading
     case ready
@@ -38,6 +47,7 @@ enum NativeModelState {
     var json: [String: Any] {
         switch self {
         case .missing: ["kind": "missing"]
+        case .installed: ["kind": "installed"]
         case let .downloading(progress, file): ["kind": "downloading", "progress": progress, "file": file]
         case .loading: ["kind": "loading"]
         case .ready: ["kind": "ready"]
@@ -49,7 +59,7 @@ enum NativeModelState {
 enum NativeSessionState {
     case idle
     case starting
-    case listening(buffered: Bool, text: String)
+    case listening
     case finishing
     case recovery(message: String, text: String)
 
@@ -57,7 +67,7 @@ enum NativeSessionState {
         switch self {
         case .idle: ["kind": "idle"]
         case .starting: ["kind": "starting"]
-        case let .listening(buffered, text): ["kind": "listening", "mode": "hold", "buffered": buffered, "text": text]
+        case .listening: ["kind": "listening", "mode": "hold"]
         case .finishing: ["kind": "finishing"]
         case let .recovery(message, text): ["kind": "recovery", "message": message, "text": text]
         }
@@ -67,11 +77,20 @@ enum NativeSessionState {
 @MainActor
 final class NativeStateStore {
     var model: NativeModelState = .missing
+    var selectedModel: SpeechModelID = .moonshine
+    var recommendedModel: SpeechModelID? = nil
+    var models: [SpeechModelID: NativeModelState] = Dictionary(
+        uniqueKeysWithValues: SpeechModelID.allCases.map { ($0, NativeModelState.missing) }
+    )
     var session: NativeSessionState = .idle
     var preferences = NativePreferences.load() {
         didSet { preferences.save() }
     }
     var audioLevel: Double = 0
+    var audioWaveform = Array(repeating: 0.0, count: 11)
+    var usage = UsageStats.load(defaults: NativePreferences.defaults) {
+        didSet { usage.save(defaults: NativePreferences.defaults) }
+    }
     var lastTranscript = ""
     var microphone: String = "required"
     var accessibility = false
@@ -80,7 +99,13 @@ final class NativeStateStore {
     func snapshot() -> [String: Any] {
         [
             "audioLevel": { if case .listening = session { return audioLevel }; return 0.0 }(),
+            "audioWaveform": { if case .listening = session { return audioWaveform }; return Array(repeating: 0.0, count: 11) }(),
             "model": model.json,
+            "selectedModel": selectedModel.rawValue,
+            "recommendedModel": recommendedModel?.rawValue as Any? ?? NSNull(),
+            "models": SpeechModelID.allCases.map { id in
+                ["id": id.rawValue, "state": (models[id] ?? .missing).json]
+            },
             "permissions": [
                 "microphone": microphone,
                 "accessibility": accessibility,
@@ -91,6 +116,8 @@ final class NativeStateStore {
                 "keepLastTranscript": preferences.keepLastTranscript,
             ],
             "lastTranscript": lastTranscript,
+            "userName": NSFullUserName(),
+            "usage": usage.json,
         ]
     }
 }

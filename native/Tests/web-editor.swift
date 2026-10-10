@@ -47,8 +47,8 @@ final class WebEditorFixture {
                   return 'ready';
                 })()
                 """)
-                let output = directory.appendingPathComponent("output.log")
-                let errors = directory.appendingPathComponent("error.log")
+                let output = directory.appendingPathComponent("output-\(field)-\(selected).log")
+                let errors = directory.appendingPathComponent("error-\(field)-\(selected).log")
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
                 process.environment = ProcessInfo.processInfo.environment.filter { $0.key != "ELECTRON_RUN_AS_NODE" }
@@ -74,16 +74,21 @@ final class WebEditorFixture {
                 (() => {
                   const field = document.querySelector('\(field)');
                   const events = window.vocoEditorEvents.filter(event => event.field === field.getAttribute('aria-label'));
-                  return JSON.stringify({value:field.value??field.textContent,lastInput:events.at(-1)?.value,inputCount:events.length});
+                  const values = events.map(event => event.value.replaceAll('\u{00a0}', ' '));
+                  const additions = values.map(value => value.slice(15, -6));
+                  const appendOnly = values.every((value, index) => value.startsWith('Before selected') && value.endsWith(' after')
+                    && (index === 0 || additions[index].startsWith(additions[index - 1]) && additions[index].length > additions[index - 1].length));
+                  return JSON.stringify({value:field.value??field.textContent,lastInput:events.at(-1)?.value,inputCount:events.length,appendOnly});
                 })()
                 """)
                 guard report.contains("Live insertion checks: PASS") else { throw NSError(domain: report + error + "\nEditor state: " + state, code: 1) }
                 let parsed = try JSONSerialization.jsonObject(with: Data(state.utf8)) as? [String: Any]
                 guard let count = parsed?["inputCount"] as? Int, count >= 6,
+                      parsed?["appendOnly"] as? Bool == true,
                       let value = parsed?["value"] as? String, value == parsed?["lastInput"] as? String
                 else { throw NSError(domain: "WebKit application state differs from editor: " + state, code: 1) }
                 if speech, let expected = environment["VOCO_VERIFY_EXPECTED_TRANSCRIPT"] {
-                    guard value.contains(expected), report.contains("Verified Moonshine stream:") else { throw NSError(domain: "Missing expected streaming speech", code: 1) }
+                    guard value.contains(expected), report.contains("Verified speech stream:") else { throw NSError(domain: "Missing expected streaming speech", code: 1) }
                 }
                 print("PASS WebKit browser \(field), selected=\(selected), input events=\(count), speech=\(speech)")
             }
