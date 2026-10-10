@@ -98,6 +98,7 @@ struct FocusTarget {
         else { throw InsertionError.modifiers }
         let before = Self.textValue(of: element)
         let selectionBefore = Self.selectedRange(of: element)
+        let isWebEditor = Self.isWebEditor(element)
         let expected: String? = before.flatMap { value in
             selectionBefore.flatMap { selection in
                 guard selection.location >= 0, selection.length >= 0,
@@ -109,7 +110,7 @@ struct FocusTarget {
         }
         var writable = DarwinBoolean(false)
         // Web editors need input/paste events to update their application state.
-        if !Self.isWebEditor(element),
+        if !isWebEditor,
            AXUIElementIsAttributeSettable(element, kAXSelectedTextAttribute as CFString, &writable) == .success,
            writable.boolValue,
            AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success {
@@ -165,12 +166,31 @@ struct FocusTarget {
         // Let the destination consume the paste before restoring the clipboard.
         for _ in 0..<40 {
             try await Task.sleep(for: .milliseconds(25))
-            if let before, let after = Self.textValue(of: element),
-               after != before || Self.didReplaceIdenticalText(
-                   text, before: before, after: after, selection: selectionBefore, element: element
-               ) { return }
+            if let before, let after = Self.textValue(of: element) {
+                if let expected {
+                    let replacedEmptyParagraph = isWebEditor && before == "\n"
+                        && selectionBefore?.location == 0 && selectionBefore?.length == 0
+                    let matches = Self.matchesPastedText(after, expected: expected, web: isWebEditor)
+                        || (replacedEmptyParagraph && Self.matchesPastedText(after, expected: text, web: true))
+                    if matches && (after != before || Self.didReplaceIdenticalText(
+                        text, before: before, after: after, selection: selectionBefore, element: element
+                    )) { return }
+                } else if after != before || Self.didReplaceIdenticalText(
+                    text, before: before, after: after, selection: selectionBefore, element: element
+                ) { return }
+            }
         }
+        // A posted paste must never be retried when a field accepts only a prefix.
+        if expected != nil { throw InsertionError.unavailable }
         if let before, Self.textValue(of: element) == before { throw InsertionError.unavailable }
+    }
+
+    private static func matchesPastedText(_ actual: String, expected: String, web: Bool) -> Bool {
+        guard web else { return actual.utf16.elementsEqual(expected.utf16) }
+        guard actual.utf16.count == expected.utf16.count else { return false }
+        return zip(actual.utf16, expected.utf16).allSatisfy { observed, intended in
+            observed == intended || (observed == 0x00A0 && intended == 0x0020)
+        }
     }
 
     private static func textValue(of element: AXUIElement) -> String? {

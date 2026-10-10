@@ -18,6 +18,7 @@
     static var pastes = 0
     static var trusted = true
     static var pasteWorks = true
+    static var pasteLimit: Int?
     static var clipboardChanged = false
     static var unreadableAfterWrite = false
     static var rejectsSelection = false
@@ -49,6 +50,7 @@
         pastes = 0
         trusted = true
         pasteWorks = true
+        pasteLimit = nil
         clipboardChanged = false
         unreadableAfterWrite = false
         rejectsSelection = false
@@ -180,7 +182,7 @@ func AXUIElementSetAttributeValue(_ element: AXUIElement, _ attribute: CFString,
         }
         InsertionFixture.pastes += 1
         if InsertionFixture.pasteWorks, let text = NSPasteboard.general.string(forType: .string) {
-            InsertionFixture.replace(text)
+            InsertionFixture.replace(InsertionFixture.pasteLimit.map { String(text.prefix($0)) } ?? text)
         }
         if InsertionFixture.clipboardChanged {
             NSPasteboard.general.clearContents()
@@ -368,6 +370,29 @@ func AXUIElementSetAttributeValue(_ element: AXUIElement, _ attribute: CFString,
         precondition(InsertionFixture.text == "Before. Hello. 🍦 Next phrase." && InsertionFixture.pastes == 2)
         precondition(InsertionFixture.syntheticFlags.intersection(.maskCommand).isEmpty)
         print("Consecutive buffered phrases: paste releases its synthetic Command modifier")
+
+        InsertionFixture.reset(web: true)
+        InsertionFixture.pasteLimit = 4
+        do {
+            try await target().insert("Keep the whole transcript.")
+            preconditionFailure("A truncated paste must report failure rather than discard the transcript")
+        } catch InsertionError.unavailable {}
+        precondition(InsertionFixture.text == "Before. Keep" && InsertionFixture.pastes == 1)
+        precondition(NSPasteboard.general.string(forType: .string) == "Original clipboard")
+        print("Truncated buffered paste: reported failure, one paste, clipboard restored")
+
+        InsertionFixture.reset(web: true)
+        InsertionFixture.normalizesSpaces = true
+        try await target().insert("Hello world. 🍦")
+        precondition(InsertionFixture.text == "Before.\u{00A0}Hello\u{00A0}world.\u{00A0}🍦" && InsertionFixture.pastes == 1)
+        InsertionFixture.reset(web: true)
+        InsertionFixture.normalizesSpaces = true
+        InsertionFixture.usesEmptyParagraphPlaceholder = true
+        InsertionFixture.text = "\n"
+        InsertionFixture.selection = CFRange(location: 0, length: 0)
+        try await target().insert("Hello world. 🍦")
+        precondition(InsertionFixture.text == "Hello\u{00A0}world.\u{00A0}🍦" && InsertionFixture.pastes == 1)
+        print("Buffered rich-text paste: space normalization and empty paragraph placeholder accepted")
 
         for web in [false, true] {
             InsertionFixture.reset(web: web)
