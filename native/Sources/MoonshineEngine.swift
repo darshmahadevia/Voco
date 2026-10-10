@@ -13,7 +13,7 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
     private let queue = DispatchQueue(label: "org.vocoapp.Voco.moonshine", qos: .userInitiated)
     private let audioLock = NSLock()
     private var pendingAudio = 0
-    private var closingStreams = Set<SpeechStreamID>()
+    private var acceptingAudioStreams = Set<SpeechStreamID>()
     private let maximumQueuedAudioChunks = 128
     private var transcriber: Int32 = -1
     private var modelPath: String?
@@ -41,6 +41,9 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
             for stream in liveStreams { _ = moonshine_free_stream(transcriber, stream) }
             liveStreams.removeAll()
             streamHandles.removeAll()
+            audioLock.lock()
+            acceptingAudioStreams.removeAll()
+            audioLock.unlock()
             moonshine_free_transcriber(transcriber)
             transcriber = -1
             modelPath = nil
@@ -67,19 +70,16 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
             let stream = moonshine_create_stream(transcriber, 0)
             guard stream >= 0 else { throw Self.error(stream, prefix: "Moonshine could not start a dictation session.") }
             let id = SpeechStreamID()
-            audioLock.lock()
-            closingStreams.remove(id)
-            audioLock.unlock()
             let result = moonshine_start_stream(transcriber, stream)
             guard result == 0 else {
                 moonshine_free_stream(transcriber, stream)
-                audioLock.lock()
-                closingStreams.insert(id)
-                audioLock.unlock()
                 throw Self.error(result, prefix: "Moonshine could not start a dictation session.")
             }
             liveStreams.insert(stream)
             streamHandles[id] = stream
+            audioLock.lock()
+            acceptingAudioStreams.insert(id)
+            audioLock.unlock()
             return id
         }
     }
@@ -104,7 +104,7 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
     ) {
         guard !samples.isEmpty else { return }
         audioLock.lock()
-        guard !closingStreams.contains(stream), pendingAudio < maximumQueuedAudioChunks else {
+        guard acceptingAudioStreams.contains(stream), pendingAudio < maximumQueuedAudioChunks else {
             audioLock.unlock()
             onFailure("Microphone audio is arriving faster than the speech engine can process it. Stop dictation and try again.")
             return
@@ -153,7 +153,7 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
         completion: @escaping @MainActor @Sendable (Result<[SpeechLine], Error>) -> Void
     ) {
         audioLock.lock()
-        closingStreams.insert(stream)
+        acceptingAudioStreams.remove(stream)
         audioLock.unlock()
         queue.async {
             let result = Result {
@@ -173,7 +173,7 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
 
     func finishSynchronously(stream: SpeechStreamID) throws -> [SpeechLine] {
         audioLock.lock()
-        closingStreams.insert(stream)
+        acceptingAudioStreams.remove(stream)
         audioLock.unlock()
         return try queue.sync {
             guard let handle = streamHandles.removeValue(forKey: stream), liveStreams.remove(handle) != nil else {
@@ -190,7 +190,7 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
 
     func cancel(stream: SpeechStreamID) {
         audioLock.lock()
-        closingStreams.insert(stream)
+        acceptingAudioStreams.remove(stream)
         audioLock.unlock()
         queue.async {
             guard let handle = self.streamHandles.removeValue(forKey: stream), self.liveStreams.remove(handle) != nil,
