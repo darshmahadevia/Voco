@@ -216,9 +216,6 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
         return (0..<lineCount).map { index in
             let line = lines[index]
             return SpeechLine(
-                id: line.id,
-                start: Double(line.start_time),
-                end: Double(line.start_time + line.duration),
                 text: line.text.map(String.init(cString:)) ?? "",
                 complete: line.is_complete != 0
             )

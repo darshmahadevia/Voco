@@ -31,9 +31,6 @@ struct SpeechStreamID: Hashable, Sendable {
 }
 
 struct SpeechLine: Sendable {
-    let id: UInt64
-    let start: Double
-    let end: Double
     let text: String
     let complete: Bool
 }

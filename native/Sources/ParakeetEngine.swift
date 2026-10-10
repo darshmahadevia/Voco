@@ -107,7 +107,7 @@ private struct ParakeetStream {
 
     var lines: [SpeechLine] {
         guard !latestText.isEmpty else { return [] }
-        return [SpeechLine(id: 1, start: 0, end: Double(samples.count) / 16_000, text: latestText, complete: false)]
+        return [SpeechLine(text: latestText, complete: false)]
     }
 }
 
@@ -252,7 +252,7 @@ final class ParakeetEngine: SpeechEngine, @unchecked Sendable {
                 DispatchQueue.main.async {
                     guard case let .success(text) = result else { completion(result.map { _ in [] }); return }
                     completion(.success(text.isEmpty ? [] : [SpeechLine(
-                        id: 1, start: 0, end: Double(state.samples.count) / 16_000, text: text, complete: true
+                        text: text, complete: true
                     )]))
                 }
             }
@@ -276,7 +276,7 @@ final class ParakeetEngine: SpeechEngine, @unchecked Sendable {
         semaphore.wait()
         let text = try result.value()
         guard !text.isEmpty else { return [] }
-        return [SpeechLine(id: 1, start: 0, end: Double(state.samples.count) / 16_000, text: text, complete: true)]
+        return [SpeechLine(text: text, complete: true)]
     }
 
     func cancel(stream: SpeechStreamID) {

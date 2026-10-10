@@ -10,9 +10,6 @@ private struct WhisperStream {
     func lines(complete: Bool = false) -> [SpeechLine] {
         guard !latestText.isEmpty else { return [] }
         return [SpeechLine(
-            id: 1,
-            start: 0,
-            end: Double(samples.count) / 16_000,
             text: latestText,
             complete: complete
         )]
@@ -172,7 +169,7 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
             let result = Result { try self.transcribeLocked(context: context, samples: state.samples) }
             DispatchQueue.main.async { completion(result.map { text in
                 text.isEmpty ? [] : [SpeechLine(
-                    id: 1, start: 0, end: Double(state.samples.count) / 16_000, text: text, complete: true
+                    text: text, complete: true
                 )]
             }) }
         }
@@ -190,7 +187,7 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
             let text = try transcribeLocked(context: context, samples: state.samples)
             guard !text.isEmpty else { return [] }
             return [SpeechLine(
-                id: 1, start: 0, end: Double(state.samples.count) / 16_000, text: text, complete: true
+                text: text, complete: true
             )]
         }
     }

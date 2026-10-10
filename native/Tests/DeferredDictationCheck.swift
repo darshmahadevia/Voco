@@ -104,6 +104,7 @@ extension NativeCoordinator {
         cancelDictation(message: "Microphone access was turned off.")
     }
     fileprivate func restoreMicrophone() { state.microphone = "granted" }
+    fileprivate func enableRetention() { state.preferences.keepLastTranscript = true }
     fileprivate func disableRetention() { state.preferences.keepLastTranscript = false }
 }
 
@@ -116,8 +117,8 @@ extension NativeCoordinator {
         defer {
             UserDefaults.standard.removePersistentDomain(forName: suite)
         }
-        func final(_ text: String, id: UInt64 = 1, complete: Bool = true) -> SpeechLine {
-            SpeechLine(id: id, start: 0, end: 1, text: text, complete: complete)
+        func final(_ text: String, complete: Bool = true) -> SpeechLine {
+            SpeechLine(text: text, complete: complete)
         }
         func settle() async throws { try await Task.sleep(for: .milliseconds(220)) }
 
@@ -137,7 +138,13 @@ extension NativeCoordinator {
             precondition(coordinator.snapshot["kind"] as? String == "finishing" && !coordinator.recording)
             precondition(engine.finishes == 1 && InsertionFixture.pastes == 0)
             InsertionFixture.selection = CFRange(location: 0, length: 0)
-            engine.deliver([final("Final words."), final("Another phrase.", id: 2)])
+            InsertionFixture.flags = .maskSecondaryFn
+            engine.deliver([final("Final words."), final("Another phrase.")])
+            try await Task.sleep(for: .milliseconds(35))
+            precondition(coordinator.snapshot["kind"] as? String == "finishing")
+            precondition(coordinator.retainedText.isEmpty, "A pending insertion must not publish a completed transcript")
+            precondition(coordinator.usageTotals == (words: 0, sessions: 0))
+            InsertionFixture.flags = []
             try await settle()
             precondition(InsertionFixture.text == "Final words. Another phrase.Before. " && InsertionFixture.pastes == 1)
             precondition(coordinator.snapshot["kind"] as? String == "idle")
@@ -204,10 +211,13 @@ extension NativeCoordinator {
             coordinator.press()
             try await settle()
             coordinator.release()
-            engine.deliver([final("Complete prefix."), final("Unfinished suffix", id: 2, complete: false)])
+            coordinator.enableRetention()
+            engine.deliver([final("Complete prefix."), final("Unfinished suffix", complete: false)])
             try await settle()
             precondition(InsertionFixture.pastes == 0 && InsertionFixture.text == "Before. ")
             precondition(coordinator.snapshot["text"] as? String == "Complete prefix. Unfinished suffix")
+            precondition(coordinator.retainedText == "Complete prefix. Unfinished suffix")
+            coordinator.disableRetention()
 
             InsertionFixture.reset(web: true)
             coordinator.press()

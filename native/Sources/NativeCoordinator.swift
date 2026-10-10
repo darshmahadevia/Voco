@@ -51,7 +51,6 @@ final class NativeCoordinator {
     private var active: Dictation?
     private var sessionGate = SessionIDGate()
     private var finishing = false
-    private var outputLock = NSLock()
 
     init(modelDirectory: URL) {
         let legacyDirectory = modelDirectory.standardizedFileURL
@@ -414,7 +413,7 @@ final class NativeCoordinator {
     }
 
     private func captureRequest() -> PendingCapture? {
-        guard canDictate, let target = captureTarget() else { writeShowSettings(); return nil }
+        guard canDictate, let target = FocusTarget.capture() else { writeShowSettings(); return nil }
         return PendingCapture(id: UUID(), target: target)
     }
 
@@ -456,10 +455,6 @@ final class NativeCoordinator {
             return state.microphone == "granted" && state.accessibility && state.shortcut
         }
         return false
-    }
-
-    private func captureTarget() -> FocusTarget? {
-        FocusTarget.capture()
     }
 
     private func startDictation(id: UUID, target: FocusTarget) {
@@ -573,8 +568,6 @@ final class NativeCoordinator {
     private func finishDictation(_ lines: [SpeechLine], session: Dictation) async {
         guard sessionGate.accepts(session.id), active?.id == session.id else { return }
         session.fullText = TranscriptLedger.join(lines.map(\.text))
-        if !state.preferences.keepLastTranscript { state.lastTranscript = "" }
-        else if !session.fullText.isEmpty { state.lastTranscript = session.fullText }
         guard !session.fullText.isEmpty else { completeDictation(session); return }
         guard lines.allSatisfy(\.complete) else { recoverUncommitted(session); return }
         do {
@@ -598,6 +591,7 @@ final class NativeCoordinator {
         sessionGate.invalidate()
         finishing = false
         clearCaptureIntent()
+        state.lastTranscript = state.preferences.keepLastTranscript ? text : ""
         state.session = .recovery(message: "Voco could not finish the last phrase. Copy it below to keep it.", text: text)
         publishState()
     }
@@ -695,10 +689,8 @@ final class NativeCoordinator {
             writeError("Could not encode a native protocol message.")
             return
         }
-        outputLock.lock()
         FileHandle.standardOutput.write(data)
         FileHandle.standardOutput.write(Data([0x0a]))
-        outputLock.unlock()
     }
 
     private func readInput(

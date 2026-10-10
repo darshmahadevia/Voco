@@ -9,24 +9,24 @@ enum SessionLedgerSmoke {
         check(gate.accepts(originalSession), "current session accepts its transcript")
 
         var ledger = TranscriptLedger()
-        let partial = SpeechLine(id: 1, start: 0, end: 1, text: "The quick brow", complete: false)
+        let partial = SpeechLine(text: "The quick brow", complete: false)
         ledger.update([partial])
         check(ledger.text == "The quick brow", "partial transcript remains visible")
 
-        let correction = SpeechLine(id: 1, start: 0, end: 1.4, text: "The quick brown fox.", complete: false)
+        let correction = SpeechLine(text: "The quick brown fox.", complete: false)
         ledger.update([correction])
-        check(ledger.text == "The quick brown fox.", "same line ID revises without duplication")
+        check(ledger.text == "The quick brown fox.", "latest snapshot replaces the partial transcript")
         ledger.update([])
         check(ledger.text == "The quick brown fox.", "empty final update retains the last partial")
 
-        let firstFinal = SpeechLine(id: 1, start: 0, end: 1.4, text: "The quick brown fox.", complete: true)
+        let firstFinal = SpeechLine(text: "The quick brown fox.", complete: true)
         ledger.update([firstFinal])
 
-        let secondPartial = SpeechLine(id: 2, start: 1.5, end: 2.2, text: "This is a local", complete: false)
+        let secondPartial = SpeechLine(text: "This is a local", complete: false)
         ledger.update([firstFinal, secondPartial])
         check(ledger.text == "The quick brown fox. This is a local", "pause continuation keeps both lines")
 
-        let secondFinal = SpeechLine(id: 2, start: 1.5, end: 2.5, text: "This is a local test.", complete: true)
+        let secondFinal = SpeechLine(text: "This is a local test.", complete: true)
         ledger.update([firstFinal, secondFinal])
 
         check(ledger.text == "The quick brown fox. This is a local test.", "final transcript contains both phrases")
