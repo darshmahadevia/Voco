@@ -38,6 +38,13 @@ final class NativeCoordinator {
     private var downloadModelID: SpeechModelID?
     private var activationGeneration: UUID?
     private var hasInspectedModels = false
+    private enum CaptureMode { case hold, continuous }
+    private struct PendingCapture {
+        let id: UUID
+        let target: FocusTarget
+    }
+    private var captureMode: CaptureMode?
+    private var pendingCapture: PendingCapture?
     private var holdTask: Task<Void, Never>?
     private var targetResolutionTask: Task<Void, Never>?
     private var startingSessionID: UUID?
@@ -61,7 +68,11 @@ final class NativeCoordinator {
             switch action {
             case .pressed: self?.armHold()
             case .released: self?.releaseHold()
-            case .cancelled: self?.cancelDictation(message: "Dictation canceled.", clearRecovery: true)
+            case .cancelled:
+                if self?.captureMode == .hold {
+                    self?.cancelDictation(message: "Dictation canceled.", clearRecovery: true)
+                }
+            case .toggleContinuous: self?.toggleContinuous()
             }
         }
         shortcutMonitor.onEscape = { [weak self] in
@@ -383,35 +394,62 @@ final class NativeCoordinator {
         if !state.accessibility {
             if shortcutMonitor.isRunning { shortcutMonitor.stop() }
             cancelDictation(message: "Accessibility access was turned off. Your words are saved here.")
-        } else if state.microphone != "granted", active != nil || startingSessionID != nil {
+        } else if state.microphone != "granted", captureMode != nil || active != nil || startingSessionID != nil {
             cancelDictation(message: "Microphone access was turned off. Your words are saved here.")
         }
         if publish { publishState() }
     }
 
     private func armHold() {
-        guard active == nil, holdTask == nil, !finishing else { return }
-        guard canDictate else { writeShowSettings(); return }
-        guard let target = captureTarget() else { writeShowSettings(); return }
-        let id = UUID()
+        guard captureMode == nil, active == nil, startingSessionID == nil, !finishing else { return }
+        guard let request = captureRequest() else { return }
+        captureMode = .hold
+        pendingCapture = request
         holdTask = Task { [weak self] in
             do { try await Task.sleep(for: .milliseconds(140)) } catch { return }
-            guard let self, self.holdTask != nil else { return }
+            guard let self, self.pendingCapture?.id == request.id else { return }
             self.holdTask = nil
-            self.startDictation(id: id, target: target)
+            self.pendingCapture = nil
+            self.startDictation(id: request.id, target: request.target)
         }
     }
 
+    private func captureRequest() -> PendingCapture? {
+        guard canDictate, let target = captureTarget() else { writeShowSettings(); return nil }
+        return PendingCapture(id: UUID(), target: target)
+    }
+
+    private func toggleContinuous() {
+        guard !finishing else { return }
+        if captureMode == .continuous {
+            stopDictation()
+            return
+        }
+        if captureMode == .hold {
+            captureMode = .continuous
+            if let request = pendingCapture {
+                holdTask?.cancel()
+                holdTask = nil
+                pendingCapture = nil
+                startDictation(id: request.id, target: request.target)
+            }
+            return
+        }
+        guard active == nil, startingSessionID == nil, let request = captureRequest() else { return }
+        captureMode = .continuous
+        startDictation(id: request.id, target: request.target)
+    }
+
     private func releaseHold() {
+        guard captureMode == .hold else { return }
+        stopDictation()
+    }
+
+    private func clearCaptureIntent() {
         holdTask?.cancel()
         holdTask = nil
-        if active != nil {
-            stopDictation()
-        } else if startingSessionID != nil {
-            cancelTargetResolution()
-            state.session = .idle
-            publishState()
-        }
+        pendingCapture = nil
+        captureMode = nil
     }
 
     private var canDictate: Bool {
@@ -426,7 +464,7 @@ final class NativeCoordinator {
     }
 
     private func startDictation(id: UUID, target: FocusTarget) {
-        guard canDictate, active == nil, !finishing else { writeShowSettings(); return }
+        guard canDictate, active == nil, !finishing else { clearCaptureIntent(); writeShowSettings(); return }
         sessionGate.begin(id)
         startingSessionID = id
         state.session = .starting
@@ -444,6 +482,7 @@ final class NativeCoordinator {
                 self.startingSessionID = nil
                 self.targetResolutionTask = nil
                 self.sessionGate.invalidate()
+                self.clearCaptureIntent()
                 self.state.session = .recovery(message: error.localizedDescription, text: "")
                 self.publishState()
             }
@@ -454,6 +493,7 @@ final class NativeCoordinator {
         guard sessionGate.accepts(id) else { return }
         guard canDictate, active == nil, !finishing else {
             sessionGate.invalidate()
+            clearCaptureIntent()
             state.session = .idle
             writeShowSettings()
             publishState()
@@ -489,6 +529,7 @@ final class NativeCoordinator {
                 active = nil
             }
             sessionGate.invalidate()
+            clearCaptureIntent()
             state.session = .recovery(message: error.localizedDescription, text: "")
             publishState()
         }
@@ -500,13 +541,13 @@ final class NativeCoordinator {
         startingSessionID = nil
         if active == nil, case .starting = state.session {
             sessionGate.invalidate()
+            clearCaptureIntent()
             state.session = .idle
         }
     }
 
     private func stopDictation() {
-        holdTask?.cancel()
-        holdTask = nil
+        clearCaptureIntent()
         guard let session = active else {
             if startingSessionID != nil {
                 cancelTargetResolution()
@@ -557,6 +598,7 @@ final class NativeCoordinator {
         active = nil
         sessionGate.invalidate()
         finishing = false
+        clearCaptureIntent()
         state.session = .recovery(message: "Voco could not finish the last phrase. Copy it below to keep it.", text: text)
         publishState()
     }
@@ -570,13 +612,13 @@ final class NativeCoordinator {
         active = nil
         sessionGate.invalidate()
         finishing = false
+        clearCaptureIntent()
         state.session = .idle
         publishState()
     }
 
     private func cancelDictation(message: String, clearRecovery: Bool = false) {
-        holdTask?.cancel()
-        holdTask = nil
+        clearCaptureIntent()
         cancelTargetResolution()
         guard let session = active else {
             finishing = false
@@ -594,6 +636,7 @@ final class NativeCoordinator {
         active = nil
         sessionGate.invalidate()
         finishing = false
+        clearCaptureIntent()
         state.session = text.isEmpty ? .idle : .recovery(message: message, text: text)
         publishState()
     }
@@ -609,6 +652,7 @@ final class NativeCoordinator {
         active = nil
         sessionGate.invalidate()
         finishing = false
+        clearCaptureIntent()
         state.session = .recovery(message: message, text: text)
         publishState()
     }

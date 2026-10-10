@@ -4,6 +4,7 @@ final class FixtureSpeechEngine: SpeechEngine, @unchecked Sendable {
     var polls = 0
     var finishes = 0
     var cancellations = 0
+    var failOpening = false
     var completion: (@MainActor @Sendable (Result<[SpeechLine], Error>) -> Void)?
 
     init(_ id: SpeechModelID) {
@@ -13,7 +14,10 @@ final class FixtureSpeechEngine: SpeechEngine, @unchecked Sendable {
     func warm(modelDirectory: URL, completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void) {}
     func loadIfNeeded(modelDirectory: URL) throws {}
     func unload() {}
-    func openStream() throws -> SpeechStreamID { SpeechStreamID() }
+    func openStream() throws -> SpeechStreamID {
+        if failOpening { throw NativeError.unavailable("Opening failed.") }
+        return SpeechStreamID()
+    }
     func addAudio(_ samples: UnsafeBufferPointer<Float>, to stream: SpeechStreamID) throws { audioSamples += samples.count }
     func enqueueAudio(_ samples: UnsafeBufferPointer<Float>, to stream: SpeechStreamID, onFailure: @escaping @Sendable (String) -> Void) {
         audioSamples += samples.count
@@ -61,7 +65,7 @@ final class ModelInstaller: Sendable {
 }
 
 @MainActor final class ShortcutMonitor {
-    enum Action { case pressed, released, cancelled }
+    enum Action { case pressed, released, cancelled, toggleContinuous }
     var onAction: ((Action) -> Void)?
     var onEscape: (() -> Void)?
     var isRunning = false
@@ -85,6 +89,8 @@ extension NativeCoordinator {
     }
 
     fileprivate func press() { shortcutMonitor.onAction?(.pressed) }
+    fileprivate func toggle() { shortcutMonitor.onAction?(.toggleContinuous) }
+    fileprivate func combination() { shortcutMonitor.onAction?(.cancelled) }
     fileprivate func release() { shortcutMonitor.onAction?(.released) }
     fileprivate func escape() { shortcutMonitor.onEscape?() }
     fileprivate var snapshot: [String: Any] { state.session.json }
@@ -93,6 +99,11 @@ extension NativeCoordinator {
     fileprivate var usageTotals: (words: Int, sessions: Int) {
         state.usage.days.values.reduce((words: 0, sessions: 0)) { ($0.words + $1.words, $0.sessions + $1.sessions) }
     }
+    fileprivate func revokeMicrophone() {
+        state.microphone = "denied"
+        cancelDictation(message: "Microphone access was turned off.")
+    }
+    fileprivate func restoreMicrophone() { state.microphone = "granted" }
     fileprivate func disableRetention() { state.preferences.keepLastTranscript = false }
 }
 
@@ -223,7 +234,72 @@ extension NativeCoordinator {
             coordinator.escape()
             precondition(coordinator.snapshot["kind"] as? String == "idle" && !coordinator.recording)
             precondition(engine.polls == 0 && InsertionFixture.pastes == 0)
-            print("PASS \(id.rawValue): capture, release, one paste, current cursor, cancellation, stale result, recovery, silence, tap")
+            InsertionFixture.reset(web: true)
+            coordinator.press()
+            coordinator.toggle()
+            coordinator.release()
+            try await settle()
+            precondition(coordinator.recording && coordinator.snapshot["kind"] as? String == "listening")
+            precondition(InsertionFixture.pastes == 0)
+            coordinator.combination()
+            coordinator.press()
+            coordinator.release()
+            precondition(coordinator.recording)
+            coordinator.toggle()
+            precondition(coordinator.snapshot["kind"] as? String == "finishing")
+            let samplesBeforeFinish = engine.audioSamples
+            coordinator.toggle()
+            coordinator.press()
+            coordinator.release()
+            precondition(engine.audioSamples == samplesBeforeFinish)
+            engine.deliver([final("Continuous words.")])
+            try await settle()
+            precondition(InsertionFixture.text == "Before. Continuous words." && InsertionFixture.pastes == 1)
+
+            InsertionFixture.reset(web: true)
+            coordinator.press()
+            try await settle()
+            let samplesBeforePromotion = engine.audioSamples
+            coordinator.toggle()
+            coordinator.release()
+            try await settle()
+            precondition(coordinator.recording && engine.audioSamples == samplesBeforePromotion)
+            coordinator.escape()
+            precondition(!coordinator.recording && coordinator.snapshot["kind"] as? String == "idle")
+            coordinator.toggle()
+            try await settle()
+            coordinator.toggle()
+            engine.completion?(.failure(NativeError.unavailable("Continuous recognition failed.")))
+            engine.completion = nil
+            precondition(coordinator.snapshot["kind"] as? String == "recovery" && !coordinator.recording)
+            coordinator.press()
+            try await settle()
+            coordinator.release()
+            engine.deliver([final("Hold works again.")])
+            try await settle()
+            precondition(InsertionFixture.text == "Before. Hold works again." && InsertionFixture.pastes == 1)
+
+            InsertionFixture.reset(web: true)
+            coordinator.toggle()
+            try await settle()
+            coordinator.revokeMicrophone()
+            precondition(!coordinator.recording)
+            coordinator.toggle()
+            try await settle()
+            precondition(!coordinator.recording)
+            coordinator.restoreMicrophone()
+            engine.failOpening = true
+            coordinator.toggle()
+            try await settle()
+            precondition(coordinator.snapshot["kind"] as? String == "recovery" && !coordinator.recording)
+            engine.failOpening = false
+            coordinator.press()
+            try await settle()
+            coordinator.release()
+            engine.deliver([])
+            try await settle()
+            precondition(coordinator.snapshot["kind"] as? String == "idle")
+            print("PASS \(id.rawValue): capture, release, one paste, current cursor, cancellation, stale result, recovery, silence, tap, continuous promotion/stop/cancel/failure/permissions")
         }
     }
 }

@@ -327,7 +327,7 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
 
       <section className="settings-section dictation-section" aria-labelledby="dictation-heading">
         <h2 className="section-heading" id="dictation-heading">Dictation</h2>
-        <SettingRow title="Dictation shortcut" description="Hold Fn / Globe to speak. Release to transcribe and paste.">
+        <SettingRow title="Dictation shortcut" description="Hold Fn / Globe and release to paste. Or press Fn + Space to start, then again to paste.">
           <kbd>Fn / Globe</kbd>
         </SettingRow>
         <SettingRow title="Keep recent transcripts" description="Keep this session’s transcripts in memory until you quit. Turning this off clears them.">
@@ -666,7 +666,7 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
           : state.session.kind === 'recovery' || !ready ? <Info size={14} aria-hidden="true" /> : <Mic size={14} aria-hidden="true" />}
         {status}
       </span>
-      <p className="hero-shortcut"><span>Hold</span><kbd>Fn <Globe size={16} aria-hidden="true" /></kbd><span>to speak. Release to paste.</span></p>
+      <p className="hero-shortcut"><span>Hold</span><kbd>Fn <Globe size={16} aria-hidden="true" /></kbd><span>to speak. Release to paste. Or use Fn + Space to start and stop.</span></p>
       {!setupComplete && <button className="button button-primary setup-button" type="button" onClick={onSetup}>Finish setting up <ArrowRight size={16} /></button>}
     </section>
     {(!ready || state.session.kind !== 'idle') && <p className="home-status" role="status" aria-live="polite">{status}</p>}
@@ -893,7 +893,7 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
     welcome: 'Voco turns your voice into text, right where you are working. Dictation runs on your Mac.',
     model: 'Start with the recommended model for your Mac, or compare the options. You can change models anytime in Settings.',
     access: 'Voco needs to hear you and write into your apps. macOS asks for your approval for each permission.',
-    practice: 'Click the field and hold Fn / Globe to speak. Release to transcribe and paste.',
+    practice: 'Click the field. Hold Fn / Globe and release to paste, or use Fn + Space to start and stop.',
   };
   const nextLabel = step === 'welcome' ? 'Get started' : step === 'model' ? 'Continue' : step === 'access' ? 'Try dictation' : 'Open Voco';
   const canContinue = step === 'welcome' || (step === 'model' && (modelReady || modelInProgress)) || (step === 'access' && accessReady) || (step === 'practice' && ready);
@@ -956,7 +956,7 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
               <p>{practiceBlocker.message}</p>
               <Button kind="secondary" onClick={() => setStep(practiceBlocker.step)}>{practiceBlocker.action} <ArrowRight size={15} /></Button>
             </div>}
-            <div className="practice-heading"><kbd>fn <Globe size={16} /></kbd><span>Hold to speak, release to paste</span></div>
+            <div className="practice-heading"><kbd>fn <Globe size={16} /></kbd><span>Hold to speak, release to paste. Or use Fn + Space to start and stop.</span></div>
             <label className="visually-hidden" htmlFor="practice-text">Try your first dictation</label>
             <textarea ref={practiceFieldRef} id="practice-text" defaultValue={practiceText.current} placeholder="Click here and say something…" disabled={!ready} />
             {preview && <p className="setup-note">Dictation is available in the desktop app.</p>}

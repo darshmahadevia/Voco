@@ -1,6 +1,6 @@
 # Voco
 
-Local English dictation for macOS. Hold Fn or Globe to speak. Release to transcribe and paste the completed text at the cursor.
+Local English dictation for macOS. Hold Fn or Globe to speak. Release to transcribe and paste the completed text at the cursor. For continuous dictation, press Fn + Space to start and press it again to stop and paste.
 
 The interface uses Electron, React, TypeScript, and Motion. A bundled native helper runs your selected Moonshine, Parakeet, or Whisper model and handles macOS microphone capture, shortcuts, and safe text insertion. The app needs no account or transcription API key.
 
@@ -36,7 +36,7 @@ Parakeet is recommended based on the [benchmark on this laptop](benchmarks/READM
 
 Once the model is downloaded, recognition runs offline. App updates preserve the model. A missing or damaged model returns setup to a repairable state instead of starting a hidden download.
 
-Fn / Globe is the only dictation shortcut. The waveform shows microphone input while you speak. After release, the pill shows Transcribing until the selected model finishes, then Voco inserts the complete transcript once. Escape cancels capture or pending transcription. If the focused field changes before insertion, Voco keeps the transcript for copying.
+Hold Fn / Globe to speak, then release to transcribe and paste. Press Fn + Space for continuous listening without holding Fn, then press it again to transcribe and paste. The waveform shows microphone input while you speak. After you stop, the pill shows Transcribing until the selected model finishes, then Voco inserts the complete transcript once. Escape cancels capture or pending transcription. If the focused field changes before insertion, Voco keeps the transcript for copying.
 
 ## Text insertion and recovery
 
