@@ -1056,8 +1056,9 @@ function App(): React.JSX.Element {
     return window.voco?.subscribeNavigation(setPage);
   }, []);
   useEffect(() => {
-    if (state && page === 'auto') setPage(canResumeHome(state, setupSeen) ? 'home' : 'onboarding');
-  }, [state, page, setupSeen]);
+    if (!state) return;
+    setPage(previous => previous === 'auto' ? canResumeHome(state, setupSeen) ? 'home' : 'onboarding' : previous);
+  }, [state, setupSeen]);
   useEffect(() => {
     if (view === 'pill' || page === 'auto') return;
     window.scrollTo({ top: 0, behavior: 'instant' });
