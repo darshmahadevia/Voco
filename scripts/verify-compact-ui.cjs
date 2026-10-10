@@ -64,8 +64,10 @@ app.whenReady().then(async () => {
     await capture(`${prefix}-welcome`);
     await click('Get started');
     await capture(`${prefix}-model`);
-    await evaluate("document.querySelector('.setup-model-options').open = true");
-    await capture(`${prefix}-model-expanded`);
+    assert.equal(await evaluate("document.querySelectorAll('.setup-workspace-model .model-row').length"), 3);
+    assert.ok(await evaluate("(() => { const left = document.querySelector('.onboarding-copy').getBoundingClientRect(); const right = document.querySelector('.setup-workspace-model').getBoundingClientRect(); return left.right < right.left; })()"));
+    await evaluate("document.querySelector('.setup-workspace-model .model-list').scrollTo({ top: 1000 })");
+    await capture(`${prefix}-model-comparison`);
     await click('Continue');
     await capture(`${prefix}-access`);
     await click('Try dictation');
@@ -79,6 +81,11 @@ app.whenReady().then(async () => {
     assert.ok(await evaluate("document.querySelector('.setup-arrow-next').disabled"));
     assert.match(await evaluate("document.querySelector('#setup-hint').textContent"), /Download a model/);
     await capture(`${prefix}-blocked-model`);
+    await load({ preview: 'downloading', page: 'onboarding' });
+    await click('Get started');
+    assert.equal(await evaluate("document.querySelector('.download-progress progress').value"), 0.42);
+    assert.ok(await evaluate("Boolean(document.querySelector('button[aria-label=\"Cancel Moonshine download\"]'))"));
+    await capture(`${prefix}-model-downloading`);
     await load({ preview: 'recovery', page: 'home' });
     await capture(`${prefix}-recovery`);
     await load({ preview: 'ready', page: 'transcripts', progress: 'empty' });

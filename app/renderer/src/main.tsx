@@ -448,9 +448,10 @@ function ModelChoices({
   const canSelect = !preview && pending === null && !loading && !captureActive;
   const canDownload = !preview && pending === null && !downloading && !loading;
 
-  const featuredId = state.models.find((entry) => entry.state.kind === 'downloading')?.id
-    ?? (state.model.kind !== 'missing' ? state.selectedModel : state.recommendedModel ?? state.selectedModel);
-  const rows = speechModels.map((definition) => {
+  const definitions = onboarding
+    ? [...speechModels].sort((a, b) => Number(b.id === state.recommendedModel) - Number(a.id === state.recommendedModel))
+    : speechModels;
+  const rows = definitions.map((definition) => {
       const selected = definition.id === state.selectedModel;
       const modelState = selected
         ? state.model
@@ -470,7 +471,7 @@ function ModelChoices({
       } else if (!selected && (modelState?.kind === 'installed' || modelState?.kind === 'ready')) {
         action = <Button disabled={!canSelect} onClick={() => void run({ kind: 'selectModel', modelId: definition.id })}>{pending === 'selectModel' ? 'Switching…' : 'Use model'}</Button>;
       } else if (modelState?.kind === 'missing' || modelState?.kind === 'error') {
-        action = <Button disabled={!canDownload} onClick={() => void run({ kind: 'downloadModel', modelId: definition.id })}>{pending === 'downloadModel' ? 'Starting…' : modelState.kind === 'error' ? 'Try again' : 'Download'}</Button>;
+        action = <Button disabled={!canDownload} ariaLabel={`${modelState.kind === 'error' ? 'Retry' : 'Download'} ${definition.name}`} onClick={() => void run({ kind: 'downloadModel', modelId: definition.id })}>{pending === 'downloadModel' ? 'Starting…' : modelState.kind === 'error' ? 'Try again' : 'Download'}</Button>;
       } else if (selected) {
         action = <span className="model-current">Selected</span>;
       }
@@ -492,15 +493,7 @@ function ModelChoices({
         </div>}
       </div>;
     });
-  return <div className="model-list">
-    {onboarding ? <>
-      {rows.filter((_, index) => speechModels[index]?.id === featuredId)}
-      <details className="setup-model-options">
-        <summary>Compare other models</summary>
-        {rows.filter((_, index) => speechModels[index]?.id !== featuredId)}
-      </details>
-    </> : rows}
-  </div>;
+  return <div className="model-list">{rows}</div>;
 }
 
 function PermissionRow({
@@ -918,13 +911,13 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
       : null;
   const headings = {
     welcome: 'A little setup.\nA lot less typing.',
-    model: 'Give your voice\na place to land.',
+    model: 'Choose a\nspeech model.',
     access: 'A few permissions.\nYou are in control.',
     practice: 'Meet your new\nway to write.',
   };
   const descriptions = {
     welcome: 'Voco turns your voice into text, right where you are working. Dictation runs on your Mac, without an account.',
-    model: 'Download one speech model to get started. You can change models anytime in Settings.',
+    model: 'Start with the recommended model for your Mac, or compare the options. You can change models anytime in Settings.',
     access: 'Voco needs to hear you and write into your apps. macOS asks for your approval for each permission.',
     practice: 'Click the field and hold Fn / Globe to speak. Release to transcribe and paste.',
   };
@@ -955,7 +948,7 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
       </div>
       <motion.div
         key={step}
-        className="onboarding-layout"
+        className={`onboarding-layout${step === 'model' ? ' onboarding-layout-model' : ''}`}
         initial={hasNavigated.current && !reducedMotion ? { opacity: 0.45, x: direction * 8 } : false}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: reducedMotion ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
@@ -963,6 +956,7 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
         <div className="onboarding-copy">
           <h2 ref={headingRef} tabIndex={-1}>{headings[step].split('\n').map((line, index) => <span key={line} className={index ? 'serif-line' : ''}>{line}</span>)}</h2>
           <p>{descriptions[step]}</p>
+          {step === 'model' && <p className="model-setup-note"><ShieldCheck size={15} aria-hidden="true" /><span>{modelInProgress ? 'Your download continues while you finish setup.' : 'One download. Offline dictation after setup.'}</span></p>}
         </div>
         <section className={`setup-workspace setup-workspace-${step}`} aria-label={SETUP_STEPS[stepIndex]?.title}>
           {step === 'welcome' && <>
@@ -970,10 +964,8 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
             <p className="setup-note"><ShieldCheck size={14} aria-hidden="true" /> Audio and transcripts are never saved to disk.</p>
           </>}
           {step === 'model' && <>
-            <h3>Choose a speech model</h3>
-            <p>Start with the recommended model, or compare the alternatives.</p>
+            <h3>Available models</h3>
             <ModelChoices state={state} pending={pending} run={run} onboarding />
-            <p className="setup-note">{modelInProgress ? 'The download and loading continue as you move through setup.' : 'After download, dictation works offline on your Mac.'}</p>
           </>}
           {step === 'access' && <>
             <h3>Allow access</h3>
