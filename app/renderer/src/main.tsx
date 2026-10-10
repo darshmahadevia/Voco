@@ -10,7 +10,6 @@ import {
   Globe,
   ArrowRight,
   Settings2,
-  ShieldCheck,
   Check,
   Copy,
   ExternalLink,
@@ -677,7 +676,6 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
     </div>
     <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} onShowMore={onTranscripts} />
     {state.session.kind !== 'recovery' && <ActionError message={error || loadError} />}
-    <footer className="dashboard-footer"><ShieldCheck size={13} aria-hidden="true" /> Offline after setup. No account needed.</footer>
   </main>;
 }
 
@@ -892,17 +890,13 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
     practice: 'Meet your new\nway to write.',
   };
   const descriptions = {
-    welcome: 'Voco turns your voice into text, right where you are working. Dictation runs on your Mac, without an account.',
+    welcome: 'Voco turns your voice into text, right where you are working. Dictation runs on your Mac.',
     model: 'Start with the recommended model for your Mac, or compare the options. You can change models anytime in Settings.',
     access: 'Voco needs to hear you and write into your apps. macOS asks for your approval for each permission.',
     practice: 'Click the field and hold Fn / Globe to speak. Release to transcribe and paste.',
   };
   const nextLabel = step === 'welcome' ? 'Get started' : step === 'model' ? 'Continue' : step === 'access' ? 'Try dictation' : 'Open Voco';
   const canContinue = step === 'welcome' || (step === 'model' && (modelReady || modelInProgress)) || (step === 'access' && accessReady) || (step === 'practice' && ready);
-  const footerMessage = step === 'welcome' ? 'One model, two permissions, your first words.'
-    : step === 'model' ? modelReady ? 'Speech model ready.' : modelInProgress ? 'Keep setting up while the model finishes.' : 'Download a model to continue.'
-    : step === 'access' ? accessReady ? 'Access is all set.' : 'Allow both permissions to continue.'
-    : ready ? 'Ready to use in your apps.' : 'Finish the steps above to start dictating.';
 
   function goForward(): void {
     if (!canContinue) return;
@@ -932,12 +926,10 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
         <div className="onboarding-copy">
           <h2 ref={headingRef} tabIndex={-1}>{headings[step].split('\n').map((line, index) => <span key={line} className={index ? 'serif-line' : ''}>{line}</span>)}</h2>
           <p>{descriptions[step]}</p>
-          {step === 'model' && <p className="model-setup-note"><ShieldCheck size={15} aria-hidden="true" /><span>{modelInProgress ? 'Your download continues while you finish setup.' : 'One download. Offline dictation after setup.'}</span></p>}
         </div>
         <section className={`setup-workspace setup-workspace-${step}`} aria-label={SETUP_STEPS[stepIndex]?.title}>
           {step === 'welcome' && <>
             <div className="welcome-shortcut"><kbd>fn <Globe size={16} /></kbd><span>Hold to speak. Release to paste.</span></div>
-            <p className="setup-note"><ShieldCheck size={14} aria-hidden="true" /> Audio and transcripts are never saved to disk.</p>
           </>}
           {step === 'model' && <>
             <h3>Available models</h3>
@@ -958,7 +950,6 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
               <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'showApp' })}><FolderOpen size={14} /> Show app in Finder</Button>
               <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'refresh' })}><RotateCw size={14} /> Check again</Button>
             </details>}
-            {accessReady && <p className="setup-access-ready" role="status"><Check size={16} /> Both permissions are allowed.</p>}
           </>}
           {step === 'practice' && <>
             {practiceBlocker && <div className="practice-blocker" role="status">
@@ -968,7 +959,7 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
             <div className="practice-heading"><kbd>fn <Globe size={16} /></kbd><span>Hold to speak, release to paste</span></div>
             <label className="visually-hidden" htmlFor="practice-text">Try your first dictation</label>
             <textarea ref={practiceFieldRef} id="practice-text" defaultValue={practiceText.current} placeholder="Click here and say something…" disabled={!ready} />
-            <p className="setup-note">{preview ? 'Dictation is available in the desktop app.' : 'Try: “My best ideas start with a conversation.”'}</p>
+            {preview && <p className="setup-note">Dictation is available in the desktop app.</p>}
             <details className="practice-help">
               <summary>Set up your Fn / Globe key</summary>
               <p>In macOS System Settings → Keyboard, set “Press Globe key to” to “Do Nothing”. Turn off any Apple Dictation shortcut that uses the same key.</p>
@@ -978,7 +969,7 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
         </section>
       </motion.div>
       <div className="setup-direction setup-next">
-        <button className="setup-arrow setup-arrow-next" type="button" aria-label={nextLabel} aria-describedby="setup-hint" title={canContinue ? nextLabel : footerMessage} disabled={!canContinue} onClick={goForward}><span>{nextLabel}</span><ArrowRight size={16} aria-hidden="true" /></button>
+        <button className="setup-arrow setup-arrow-next" type="button" aria-label={nextLabel} title={nextLabel} disabled={!canContinue} onClick={goForward}><span>{nextLabel}</span><ArrowRight size={16} aria-hidden="true" /></button>
       </div>
     </div>
     <footer className="setup-footer">
@@ -987,7 +978,6 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
           <span className="visually-hidden">{item.title}</span>
         </li>)}
       </ol>
-      <p id="setup-hint" className="setup-hint" role="status">{footerMessage}</p>
       {modelReady && <button className="text-link setup-explore" onClick={onDone}>Explore the app</button>}
     </footer>
   </main>;

@@ -88,7 +88,7 @@ app.whenReady().then(async () => {
     await load({ preview: 'setup' });
     await click('Get started');
     assert.ok(await evaluate("document.querySelector('.setup-arrow-next').disabled"));
-    assert.match(await evaluate("document.querySelector('#setup-hint').textContent"), /Download a model/);
+    assert.ok(await evaluate("!document.querySelector('#setup-hint')"));
     await capture(`${prefix}-blocked-model`);
     await load({ preview: 'downloading', page: 'onboarding' });
     await click('Get started');

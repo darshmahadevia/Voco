@@ -1196,17 +1196,6 @@ textarea:focus-visible {
   -webkit-line-clamp: unset;
 }
 
-.dashboard-footer {
-  display: flex;
-  min-height: 43px;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 12px 0 15px;
-  color: var(--text-tertiary);
-  font-size: 12px;
-}
-
 .page-heading h1 {
   margin: 0;
   font-size: 24px;
@@ -1406,17 +1395,6 @@ textarea:focus-visible {
 .access-help .button {
   margin: 0 8px 0 0;
   font-size: 12px;
-}
-
-.setup-access-ready {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.setup-workspace > .setup-access-ready {
-  margin: 16px 0 0;
-  color: var(--success);
 }
 
 .practice-blocker {
@@ -2322,7 +2300,6 @@ html:not([data-view="pill"]) #root { height: 100%; overflow: hidden; }
 .transcript-metadata { margin-top: 6px; gap: 8px; font-size: 11px; }
 .transcript-metadata span + span::before { margin-right: 8px; }
 .recent-transcript-row .copy-transcript-button { border-radius: 7px; }
-.desktop-shell-workspace .dashboard-footer { padding: 0; min-height: 26px; font-size: 11px; }
 .detail-page { max-width: 760px; padding-bottom: 0; }
 .detail-page-heading { padding: 0 0 18px; }
 .detail-page-heading h1 { font-size: 24px; margin-bottom: 5px; }
@@ -2397,7 +2374,6 @@ html:not([data-view="pill"]) #root { height: 100%; overflow: hidden; }
 .desktop-shell-onboarding .setup-arrow-next:hover:not(:disabled) { background: var(--accent-strong); color: var(--button-text); }
 .desktop-shell-onboarding .setup-arrow-next:disabled { border-color: var(--line); }
 .desktop-shell-onboarding .setup-footer { bottom: 14px; left: 100px; right: 140px; gap: 6px; min-height: 40px; justify-content: center; }
-.setup-hint { margin: 0; color: var(--text-secondary); font-size: 11px; line-height: 1.4; text-align: center; }
 .desktop-shell-onboarding .setup-explore { font-size: 11px; min-height: 20px; }
 .desktop-shell-onboarding .setup-progress { gap: 6px; }
 @media (max-width: 760px) {
@@ -2430,11 +2406,6 @@ html:not([data-view="pill"]) #root { height: 100%; overflow: hidden; }
 .desktop-shell-onboarding .onboarding-layout-model .onboarding-copy { text-align: left; }
 .desktop-shell-onboarding .onboarding-layout-model .onboarding-copy h2 { font-size: 32px; text-wrap: initial; }
 .desktop-shell-onboarding .onboarding-layout-model .onboarding-copy > p { margin: 16px 0 0; max-width: 30ch; }
-.desktop-shell-onboarding .onboarding-layout-model .onboarding-copy .model-setup-note {
-  display: flex; align-items: flex-start; gap: 8px; margin-top: 24px;
-  color: var(--text-tertiary); font-size: 12px; line-height: 1.6;
-}
-.model-setup-note svg { flex: 0 0 auto; margin-top: 2px; }
 .desktop-shell-onboarding .setup-workspace-model {
   display: flex; flex-direction: column; align-self: stretch;
   min-height: 0; max-width: none; padding: 0 0 0 24px;
