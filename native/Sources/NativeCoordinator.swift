@@ -12,7 +12,7 @@ final class NativeCoordinator {
         let stream: SpeechStreamID
         let target: FocusTarget
         let startedAt = ContinuousClock.now
-        var ledger = TranscriptLedger()
+        var fullText = ""
         var insertionTask: Task<Void, Never>?
 
         init(id: UUID, engine: any SpeechEngine, stream: SpeechStreamID, target: FocusTarget) {
@@ -22,7 +22,6 @@ final class NativeCoordinator {
             self.target = target
         }
 
-        var fullText: String { ledger.text }
     }
 
     private let state = NativeStateStore()
@@ -573,7 +572,7 @@ final class NativeCoordinator {
 
     private func finishDictation(_ lines: [SpeechLine], session: Dictation) async {
         guard sessionGate.accepts(session.id), active?.id == session.id else { return }
-        session.ledger.update(lines)
+        session.fullText = TranscriptLedger.join(lines.map(\.text))
         if !state.preferences.keepLastTranscript { state.lastTranscript = "" }
         else if !session.fullText.isEmpty { state.lastTranscript = session.fullText }
         guard !session.fullText.isEmpty else { completeDictation(session); return }

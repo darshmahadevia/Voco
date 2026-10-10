@@ -10,35 +10,10 @@ struct SessionIDGate {
 
 struct TranscriptLedger {
     private(set) var lines: [SpeechLine] = []
-    private var committedIDs = Set<UInt64>()
-    private(set) var committedText = ""
-
-    var pendingLines: [SpeechLine] { lines.filter { !committedIDs.contains($0.id) } }
-    var committablePrefix: [SpeechLine] {
-        pendingLines.prefix(while: \.complete).map { $0 }
-    }
-    var pendingText: String { Self.join(pendingLines.map(\.text)) }
-    var livePendingText: String {
-        Self.separate(committed: committedText, pending: pendingText)
-    }
-    var text: String { Self.join([committedText, pendingText]) }
+    var text: String { Self.join(lines.map(\.text)) }
 
     mutating func update(_ next: [SpeechLine]) {
         if !next.isEmpty { lines = next }
-    }
-
-    func insertion(for requested: [SpeechLine]) -> String {
-        let selected = requested.filter { $0.complete && !committedIDs.contains($0.id) }
-        let next = Self.join(selected.map(\.text))
-        return Self.separate(committed: committedText, pending: next)
-    }
-
-    mutating func markCommitted(_ requested: [SpeechLine]) {
-        let selected = requested.filter { $0.complete && !committedIDs.contains($0.id) }
-        let next = Self.join(selected.map(\.text))
-        guard !next.isEmpty else { return }
-        committedIDs.formUnion(selected.map(\.id))
-        committedText = Self.join([committedText, next])
     }
 
     static func join(_ parts: [String]) -> String {
@@ -52,12 +27,4 @@ struct TranscriptLedger {
         }.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func separate(committed: String, pending: String) -> String {
-        guard !pending.isEmpty, !committed.isEmpty,
-              let last = committed.last, let first = pending.first,
-              !last.isWhitespace, !first.isWhitespace,
-              !".,!?;:)".contains(first) else { return pending }
-        return " " + pending
-    }
 }
-
