@@ -48,7 +48,10 @@ private struct InvalidEdit: Decodable {
         }
         if arguments.contains("--model") {
             let polisher = TranscriptPolisher.system
-            guard polisher.availability.available else { fatalError(polisher.availability.message) }
+            guard polisher.availability.available else {
+                print("Cannot verify local model: \(polisher.availability.message)")
+                exit(2)
+            }
             for item in cases where item.model == true {
                 let result = try await polisher.polish(item.input, mode: .accurate)
                 let literalsPreserved = (item.preserved ?? []).allSatisfy { result.text.contains($0) }

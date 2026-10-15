@@ -253,5 +253,35 @@
     "input": "uh please bring apples oranges and pears",
     "balanced": "Please bring apples oranges and pears",
     "model": true
+  },
+  {
+    "id": "sentence-ending-url",
+    "input": "Visit https://example.com. Send red never mind send blue.",
+    "balanced": "Visit https://example.com. Send blue."
+  },
+  {
+    "id": "sentence-ending-path",
+    "input": "Use /tmp/config.json. Send red never mind send blue.",
+    "balanced": "Use /tmp/config.json. Send blue."
+  },
+  {
+    "id": "ordinary-noun-subject",
+    "input": "My colleagues never mind waiting.",
+    "balanced": "My colleagues never mind waiting."
+  },
+  {
+    "id": "ordinary-modified-subject",
+    "input": "We really never mind waiting.",
+    "balanced": "We really never mind waiting."
+  },
+  {
+    "id": "command-argument",
+    "input": "Run git commit -m um today.",
+    "balanced": "Run git commit -m um today."
+  },
+  {
+    "id": "abbreviation-proper-name",
+    "input": "Call U.S. Steel never mind call Acme.",
+    "balanced": "Call Acme."
   }
 ]

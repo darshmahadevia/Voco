@@ -14,7 +14,7 @@ npm test
 npm run verify:compact-ui
 ```
 
-The acceptance corpus has 41 fixed inputs and expected Balanced outputs. It checks Fast preservation, Accurate fallback when the model is unavailable or throws, and stable output when cleanup runs twice. Eleven candidate edits must be rejected, including changed flags, paths, email addresses, quotations, numbers, negations, and paragraph boundaries. The expected values live in `native/Tests/Fixtures` and the runner is `native/Tests/CleanupEvaluation.swift`.
+The acceptance corpus has 47 fixed inputs and expected Balanced outputs. It checks Fast preservation, Accurate fallback when the model is unavailable or throws, and stable output when cleanup runs twice. Sixteen candidate edits must be rejected, including changed flags, paths, email addresses, quotations, numbers, negations, paragraph boundaries, leading decimals, and moved currency signs. The expected values live in `native/Tests/Fixtures` and the runner is `native/Tests/CleanupEvaluation.swift`.
 
 ## Observed local results
 
@@ -31,3 +31,5 @@ Actual FoundationModels generation on this Mac produced these accepted results:
 Selected model cases also exercised protected quotes, URLs, command flags, negative quantities, paragraph breaks, and dictated instructions. Some results were rejected and fell back to Balanced cleanup. A fallback is a passing preservation check, not a successful AI formatting result. Generative output can vary with system model updates, so the `--model` check validates retained words and protected literals rather than promising identical punctuation on every run.
 
 These are synthetic text cases, not a speech-recognition accuracy evaluation. They do not establish word error rates, performance improvements, or a physical microphone-to-editor session.
+
+Sentence rollback uses the system NaturalLanguage sentence tokenizer instead of treating every period as a boundary. Regression cases cover URLs and paths at the end of a sentence, dotted abbreviations, and proper names after abbreviations. Ambiguous two-word `never mind` wording is preserved unless a restart cue is present.

@@ -12,7 +12,7 @@ Open **Settings → Output quality**. Changes apply to the next capture. Fast re
 
 Choose the speech model separately. Voco does not claim a model ranking without evaluation on representative audio. All output modes use the selected engine.
 
-Balanced removes spoken `um` and `uh`, including longer forms such as `ummm`. It preserves uppercase acronyms and numeric `um` units. Quotes, code, links, addresses, and technical text are treated as literal text. A standalone `never mind` or `nevermind` discards the current sentence before the phrase. Earlier completed sentences remain. Quoted occurrences are preserved. Use Fast for literal dictation of these phrases. Sentence boundaries come from the speech model, so inspect the result if its punctuation is wrong.
+Balanced removes spoken `um` and `uh`, including longer forms such as `ummm`. It preserves uppercase acronyms and numeric `um` units. Quotes, code, links, addresses, and technical text are treated as literal text. An explicit `never mind` or `nevermind` restart discards the current sentence before the phrase. For the two-word form, punctuation or a repeated action helps distinguish a restart from ordinary wording such as `My colleagues never mind waiting.` Ambiguous wording is preserved. Earlier completed sentences remain. Quoted occurrences are preserved. Use Fast for literal dictation of these phrases. Sentence boundaries use the transcript punctuation and the system sentence tokenizer. Incorrect recognition or missing punctuation can still make a restart ambiguous.
 
 For example, `Keep this. Send it Tuesday, never mind, send it Friday.` becomes `Keep this. Send it Friday.` in Balanced. This mode does not rewrite grammar or infer that every correction phrase is a command.
 
