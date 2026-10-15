@@ -1,5 +1,23 @@
 # Voco verification
 
+## Installed end-to-end check, October 15, 2026
+
+The current source builds and installs successfully at `~/Applications/Voco.app`. Independent native and Electron source reviews found no reproduced defect requiring a product-code change. This run adds the opt-in `npm run verify:dictation` check and records evidence in [the decision trail](end-to-end-decisions.tsv).
+
+Verified against the rebuilt installation:
+
+- Production TypeScript, Swift, and Electron builds, packaging, installation, strict deep signatures, installed asset comparison, and stable certificate signing requirements pass. The arm64 helper targets macOS 26 and links system frameworks without runtime dependencies on the build cache. Node 22.20.0, Swift 6.4, CMake, Command Line Tools, signing tools, and audio tools are available. The shell has `ELECTRON_RUN_AS_NODE=1`; the existing development and verification launchers clear it.
+- The installed desktop passes frontend/preload/helper communication, model readiness, tray navigation, two-window behavior, and permission-return checks. Eleven targeted IPC and protocol tests and the real native JSONL check pass. The built renderer passes 52 layout and onboarding/search scenarios.
+- All three installed models pass integrity checks, load, and transcribe the fixed speech fixture. A fresh Moonshine download into an isolated directory publishes byte progress, cancels, retries immediately, verifies integrity, loads automatically, and removes its staging directories.
+- Microphone capture through LaunchServices delivers audio. The normal installed app reports microphone granted, Accessibility granted, an active shortcut monitor, and a ready Parakeet model.
+- The installed desktop and bundled helper pass two native editor and nine Electron insertion cases. These cover recognition-to-insertion, selection replacement, Unicode, rich text, complete input events, clipboard restoration, and truncated-paste failure.
+- The normal app receives posted Fn hold/release events, captures generated speech through the physical microphone, transcribes locally, applies the saved Balanced cleanup, and inserts the complete expected words into a separate native editor. Posted Fn + Space starts capture that continues after releasing Fn, then finishes and inserts on the second chord. The retained smoke check compares all normalized words against the literal speech fixture.
+- Deferred coordinator and shortcut-monitor checks pass for hold, continuous mode, cancellation, stale results, deadlines, recovery, model switching, and frozen output preferences.
+
+The first acoustic probe overlapped renderer automation and produced no insertion. An isolated hold probe passed. The first retained two-case smoke run passed hold but produced no text for continuous mode. After a clean normal-app launch, a state observer confirmed both cases traversed listening, finishing, cleanup, and idle with complete insertion. No product failure cause was established from the earlier runs. Acoustic checks need stable focus and an audible speaker-to-microphone path.
+
+Physical Fn or Globe hardware delivery remains unverified. Posted events exercise the actual event tap and production coordinator but cannot establish that physical hardware generates those events. The local development signing identity is valid on this Mac. Developer ID signing and notarization remain unconfigured for public distribution.
+
 ## Current installation, October 10, 2026
 
 The current app is installed at `~/Applications/Voco.app`. Both the Electron bundle and Swift helper use the persistent **Voco Local Development** certificate. Strict deep signature verification passes. The packaged renderer, preload, main process, and helper build UUID match the source build. The helper targets arm64 and macOS 26, and links system frameworks rather than dependency libraries in the build cache.
