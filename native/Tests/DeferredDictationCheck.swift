@@ -1,11 +1,18 @@
 final class FixtureSpeechEngine: SpeechEngine, @unchecked Sendable {
+    private let warmFails: Bool
     var audioSamples = 0
     var finishes = 0
     var cancellations = 0
     var failOpening = false
     var completion: (@MainActor @Sendable (Result<[SpeechLine], Error>) -> Void)?
 
-    func warm(modelDirectory: URL, completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void) {}
+    init(warmFails: Bool = false) { self.warmFails = warmFails }
+
+    func warm(modelDirectory: URL, completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void) {
+        Task { @MainActor in
+            completion(warmFails ? .failure(NativeError.unavailable("Fixture model failed to load.")) : .success(()))
+        }
+    }
     func unload() {}
     func openStream() throws -> SpeechStreamID {
         if failOpening { throw NativeError.unavailable("Opening failed.") }
@@ -29,10 +36,13 @@ final class FixtureSpeechEngine: SpeechEngine, @unchecked Sendable {
 }
 
 enum SpeechModelCatalog {
+    @MainActor static var failWarmFor: SpeechModelID?
     static let recommendedModel: SpeechModelID? = nil
     static func modelsRoot(from directory: URL) -> URL { directory }
     static func directory(for id: SpeechModelID, in root: URL) -> URL { root.appendingPathComponent(id.rawValue) }
-    static func makeEngine(for id: SpeechModelID) -> any SpeechEngine { FixtureSpeechEngine() }
+    @MainActor static func makeEngine(for id: SpeechModelID) -> any SpeechEngine {
+        FixtureSpeechEngine(warmFails: failWarmFor == id)
+    }
 }
 
 final class ModelInstaller: Sendable {
@@ -71,13 +81,21 @@ actor SuspendedPolish {
 }
 
 extension NativeCoordinator {
+    fileprivate func activateFixture(_ id: SpeechModelID) {
+        permissionTimer?.invalidate()
+        permissionTimer = nil
+        state.models[id] = .installed
+        activateModel(id)
+    }
+    fileprivate func modelKind(_ id: SpeechModelID) -> String? { state.models[id]?.json["kind"] as? String }
+    fileprivate var selectedModel: SpeechModelID { state.selectedModel }
+    fileprivate var activating: Bool { activationGeneration != nil }
     fileprivate func prepare(_ id: SpeechModelID) -> FixtureSpeechEngine {
         permissionTimer?.invalidate()
         permissionTimer = nil
         let fixture = FixtureSpeechEngine()
         engine = fixture
         state.selectedModel = id
-        state.model = .ready
         state.models[id] = .ready
         state.microphone = "granted"
         state.accessibility = true
@@ -140,6 +158,33 @@ extension NativeCoordinator {
         precondition((stateSnapshot["polishing"] as? [String: Any])?["message"] is String)
         precondition(NativePreferences.defaults.object(forKey: "lastRawTranscript") == nil)
         precondition(NativePreferences.defaults.object(forKey: "polishNotice") == nil)
+
+        stateStore.models[.moonshine] = .ready
+        precondition((stateStore.snapshot()["model"] as? [String: Any])?["kind"] as? String == "ready")
+        stateStore.selectedModel = .parakeet
+        precondition((stateStore.snapshot()["model"] as? [String: Any])?["kind"] as? String == "missing")
+
+        for previousReady in [false, true] {
+            for fail in [false, true] {
+                NativePreferences.defaults.removeObject(forKey: "selectedSpeechModel")
+                SpeechModelCatalog.failWarmFor = fail ? .parakeet : nil
+                let coordinator = NativeCoordinator(modelDirectory: URL(fileURLWithPath: "/tmp/voco-fixture-model"))
+                if previousReady { _ = coordinator.prepare(.moonshine) }
+                coordinator.activateFixture(.parakeet)
+                for _ in 0..<100 {
+                    if !coordinator.activating { break }
+                    try await Task.sleep(for: .milliseconds(10))
+                }
+                precondition(!coordinator.activating, "Model activation did not finish")
+                precondition(coordinator.modelKind(.moonshine) == (previousReady ? (fail ? "ready" : "installed") : "missing"),
+                             "Switching models invented or lost the previous installation")
+                precondition(coordinator.modelKind(.whisper) == "missing")
+                precondition(coordinator.modelKind(.parakeet) == (fail ? "error" : "ready"))
+                precondition(coordinator.selectedModel == (previousReady && fail ? .moonshine : .parakeet))
+            }
+        }
+        SpeechModelCatalog.failWarmFor = nil
+        print("PASS model activation: missing models stay missing; failed switches restore only a loaded engine")
 
         for id in SpeechModelID.allCases {
             InsertionFixture.reset(web: true)

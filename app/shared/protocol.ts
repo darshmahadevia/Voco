@@ -68,7 +68,6 @@ export const commandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('openPrivacy'), pane: z.enum(['microphone', 'accessibility']) }),
   z.object({ kind: z.literal('setPreferences'), preferences: preferencesSchema }),
   z.object({ kind: z.literal('setUsagePreferences'), dailyGoal: usageSchema.shape.dailyGoal, typingWpm: usageSchema.shape.typingWpm }),
-  z.object({ kind: z.literal('stop') }),
   z.object({ kind: z.literal('cancel') }),
   z.object({ kind: z.literal('copyRecovery') }),
   z.object({ kind: z.literal('copyLast') }),

@@ -81,7 +81,7 @@ enum NativeSessionState {
 
 @MainActor
 final class NativeStateStore {
-    var model: NativeModelState = .missing
+    var model: NativeModelState { models[selectedModel] ?? .missing }
     var selectedModel: SpeechModelID = .moonshine
     var recommendedModel: SpeechModelID? = nil
     var models: [SpeechModelID: NativeModelState] = Dictionary(

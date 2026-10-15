@@ -123,7 +123,6 @@ final class NativeCoordinator {
             engine = SpeechModelCatalog.makeEngine(for: firstInstalled)
         }
         hasInspectedModels = true
-        syncSelectedModelState()
         if case .installed = state.models[state.selectedModel] {
             activateModel(state.selectedModel)
         } else {
@@ -152,12 +151,14 @@ final class NativeCoordinator {
         activationGeneration = generation
         let previousID = state.selectedModel
         let previousEngine = engine
+        let previousWasReady: Bool
+        if case .ready = state.models[previousID] { previousWasReady = true }
+        else { previousWasReady = false }
         let candidate = SpeechModelCatalog.makeEngine(for: modelID)
         let targetDirectory = modelDirectory(for: modelID)
         state.selectedModel = modelID
         state.models[modelID] = .loading
-        if previousID != modelID { state.models[previousID] = .installed }
-        syncSelectedModelState()
+        if previousID != modelID, previousWasReady { state.models[previousID] = .installed }
         publishState()
 
         Task { [weak self] in
@@ -173,23 +174,19 @@ final class NativeCoordinator {
                     self.engine = candidate
                     self.state.selectedModel = modelID
                     self.state.models[modelID] = .ready
-                    if previousID != modelID { self.state.models[previousID] = .installed }
                     NativePreferences.defaults.set(modelID.rawValue, forKey: "selectedSpeechModel")
                     self.activationGeneration = nil
-                    self.syncSelectedModelState()
                     self.publishState()
                 case let .failure(error):
                     candidate.unload()
                     self.state.models[modelID] = .error(error.localizedDescription)
-                    guard previousID != modelID else {
+                    guard previousID != modelID, previousWasReady else {
                         self.activationGeneration = nil
-                        self.syncSelectedModelState()
                         self.publishState()
                         return
                     }
                     self.state.models[previousID] = .loading
                     self.state.selectedModel = previousID
-                    self.syncSelectedModelState()
                     self.publishState()
                     previousEngine.warm(modelDirectory: self.modelDirectory(for: previousID)) { [weak self] restoreResult in
                         guard let self, self.activationGeneration == generation else { return }
@@ -201,7 +198,6 @@ final class NativeCoordinator {
                             self.state.models[previousID] = .error(restoreError.localizedDescription)
                         }
                         self.activationGeneration = nil
-                        self.syncSelectedModelState()
                         self.publishState()
                     }
                 }
@@ -216,10 +212,6 @@ final class NativeCoordinator {
 
     private var hasReadyModel: Bool {
         state.models.values.contains { if case .ready = $0 { return true }; return false }
-    }
-
-    private func syncSelectedModelState() {
-        state.model = state.models[state.selectedModel] ?? .missing
     }
 
     func receive(_ line: String) {
@@ -269,12 +261,10 @@ final class NativeCoordinator {
             }
             state.usage.dailyGoal = goal
             state.usage.typingWpm = wpm
-        case "stop": stopDictation()
         case "cancel": cancelDictation(message: "Dictation canceled.", clearRecovery: true)
         case "copyRecovery": copyRecovery()
         case "copyLast": copyLastTranscript()
         case "refresh": refreshPermissions(publish: false)
-        case "restart": NSApp.terminate(nil)
         default: throw NativeError.invalidCommand("Voco received an unknown command.")
         }
     }
@@ -315,7 +305,6 @@ final class NativeCoordinator {
         downloadGeneration = generation
         downloadModelID = modelID
         state.models[modelID] = .downloading(progress: 0, file: "Starting download…")
-        syncSelectedModelState()
         publishState()
         downloadTask = Task { [weak self] in
             do {
@@ -324,7 +313,6 @@ final class NativeCoordinator {
                         guard let self, self.downloadGeneration == generation else { return }
                         guard case .downloading = self.state.models[modelID] else { return }
                         self.state.models[modelID] = .downloading(progress: progress, file: file)
-                        self.syncSelectedModelState()
                         self.publishState()
                     }
                 }
@@ -333,7 +321,6 @@ final class NativeCoordinator {
                 self.downloadGeneration = nil
                 self.downloadModelID = nil
                 self.state.models[modelID] = .installed
-                self.syncSelectedModelState()
                 self.publishState()
                 if self.active == nil, self.startingSessionID == nil, !self.finishing,
                    self.state.selectedModel == modelID || !self.hasReadyModel {
@@ -345,7 +332,6 @@ final class NativeCoordinator {
                 self.downloadGeneration = nil
                 self.downloadModelID = nil
                 self.state.models[modelID] = .missing
-                self.syncSelectedModelState()
                 self.publishState()
             } catch {
                 guard let self, self.downloadGeneration == generation else { return }
@@ -353,7 +339,6 @@ final class NativeCoordinator {
                 self.downloadGeneration = nil
                 self.downloadModelID = nil
                 self.state.models[modelID] = .error(error.localizedDescription)
-                self.syncSelectedModelState()
                 self.publishState()
             }
         }
@@ -367,7 +352,6 @@ final class NativeCoordinator {
         downloadModelID = nil
         downloadTask.cancel()
         if let modelID { state.models[modelID] = .missing }
-        syncSelectedModelState()
         publishState()
     }
 
