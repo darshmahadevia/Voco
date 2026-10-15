@@ -19,6 +19,7 @@ import {
   LoaderCircle,
   Mic,
   Search,
+  ShieldCheck,
   RotateCw,
   X,
 } from 'lucide-react';
@@ -223,6 +224,7 @@ function AppSidebar({
   showSetup: boolean;
   onNavigate: (page: NavigationPage) => void;
 }): React.JSX.Element {
+  const reducedMotion = useReducedMotion();
   const navigationPages: NavigationPage[] = showSetup ? ['home', 'onboarding', 'transcripts', 'stats'] : ['home', 'transcripts', 'stats'];
   return <aside className="app-sidebar" aria-label="Voco workspace">
     <div className="sidebar-titlebar window-drag" aria-hidden="true" />
@@ -242,6 +244,7 @@ function AppSidebar({
           aria-current={currentPage === page ? 'page' : undefined}
           onClick={() => onNavigate(page)}
         >
+          {currentPage === page && <motion.span className="nav-selection" layoutId="navigation-selection" transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 36 }} />}
           {item.icon}
           <span>{item.label}</span>
           {page === 'onboarding' && <span className="nav-dot" aria-hidden="true" />}
@@ -249,6 +252,7 @@ function AppSidebar({
       })}
     </nav>
     <div className="sidebar-spacer" />
+    <div className="sidebar-local"><ShieldCheck size={14} aria-hidden="true" /><span>On your Mac.</span></div>
     <button className={`nav-item nav-settings${currentPage === 'settings' ? ' active' : ''}`} type="button" aria-label="Settings" title="Settings" aria-current={currentPage === 'settings' ? 'page' : undefined} onClick={() => onNavigate('settings')}>
       {NAVIGATION_ITEMS.settings.icon}<span>Settings</span>
     </button>
@@ -586,6 +590,7 @@ function PillView({ state, loadError }: { state: AppState; loadError: string }):
         <motion.section
           key={session.kind === 'recovery' ? 'recovery' : 'status'}
           className={`pill-card ${session.kind === 'recovery' ? 'pill-card-recovery' : ''}`}
+          data-session={session.kind}
           layout
           initial={reducedMotion ? false : { opacity: 0, y: 7, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -659,6 +664,7 @@ function Waveform({ level, size, active = false, state }: { level: number; size:
 
 function PillStatus({ state }: { state: AppState }): React.JSX.Element {
   const { session } = state;
+  const reducedMotion = useReducedMotion();
   let title: string;
   switch (session.kind) {
     case 'idle': title = isReady(state) ? 'Ready' : 'Finish setup'; break;
@@ -671,7 +677,15 @@ function PillStatus({ state }: { state: AppState }): React.JSX.Element {
   const processing = session.kind === 'starting' || session.kind === 'finishing' || session.kind === 'polishing';
   return <div className="pill-status" role="status" aria-live="polite">
     {processing ? <LoaderCircle className="spin pill-loader" size={18} aria-hidden="true" /> : <Waveform size="pill" state={state} level={session.kind === 'listening' ? state.audioLevel : 0} active={session.kind === 'listening'} />}
-    <p className="pill-title">{title}</p>
+    <AnimatePresence initial={false} mode="popLayout">
+      <motion.p className="pill-title" key={title}
+        initial={reducedMotion ? false : { opacity: 0, y: 5, filter: 'blur(3px)' }}
+        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+        exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -5, filter: 'blur(3px)' }}
+        transition={{ duration: reducedMotion ? 0 : 0.18 }}
+      >{title}</motion.p>
+    </AnimatePresence>
+    <span className="pill-indicator" data-active={session.kind === 'listening'} aria-hidden="true" />
   </div>;
 }
 
@@ -691,14 +705,23 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
   return <main className="dashboard">
     <div className="dashboard-overview">
     <section className="home-hero" aria-labelledby="home-heading">
-      <h1 id="home-heading">{state.userName ? <>Hello, <span className="user-name">{state.userName}</span></> : 'Welcome to Voco'}</h1>
-      <span className="dashboard-ready dictation-status" data-ready={ready && state.session.kind === 'idle'} role="status" aria-live="polite">
-        {state.session.kind === 'starting' || state.session.kind === 'finishing' || state.session.kind === 'polishing' || (setupComplete && !ready)
-          ? <LoaderCircle className="spin" size={14} aria-hidden="true" />
-          : state.session.kind === 'recovery' || !ready ? <Info size={14} aria-hidden="true" /> : <Mic size={14} aria-hidden="true" />}
-        {status}
-      </span>
-      <p className="hero-shortcut"><span>Hold</span><kbd>Fn <Globe size={16} aria-hidden="true" /></kbd><span>to speak. Release to paste.</span><span className="shortcut-alternative">Fn + Space to toggle</span></p>
+      <div className="home-heading-row">
+        <div><h1 id="home-heading">{state.userName ? <>Hello, <span className="user-name">{state.userName}.</span></> : 'Welcome to Voco.'}</h1>
+        <p className="home-introduction">A little less typing. A little more you.</p></div>
+        <span className="dashboard-ready dictation-status" data-ready={ready && state.session.kind === 'idle'} role="status" aria-live="polite">
+          {state.session.kind === 'starting' || state.session.kind === 'finishing' || state.session.kind === 'polishing' || (setupComplete && !ready)
+            ? <LoaderCircle className="spin" size={14} aria-hidden="true" />
+            : state.session.kind === 'recovery' || !ready ? <Info size={14} aria-hidden="true" /> : <Mic size={14} aria-hidden="true" />}
+          {status}
+        </span>
+      </div>
+      <div className="voice-workspace" data-session={state.session.kind}>
+        <div className="voice-instruction"><h2>Your words, anywhere.</h2>
+          <p>Hold <kbd>Fn <Globe size={13} aria-hidden="true" /></kbd> to speak. Release to paste.</p>
+          <span className="shortcut-alternative">Or press Fn + Space to start and stop.</span>
+        </div>
+        <div className="home-capsule" aria-label="Live dictation status"><PillStatus state={state} /></div>
+      </div>
       {!setupComplete && <button className="button button-primary setup-button" type="button" onClick={onSetup}>Finish setting up <ArrowRight size={16} /></button>}
     </section>
     {state.session.kind === 'recovery' && <div className="home-recovery"><RecoveryContent session={state.session} preview={preview} pending={pending} run={run} error={error || loadError} /></div>}
@@ -1080,6 +1103,7 @@ function canResumeHome(state: AppState, setupSeen: boolean): boolean {
 
 function App(): React.JSX.Element {
   const { state, transcripts, error } = useAppState();
+  const reducedMotion = useReducedMotion();
   const [page, setPage] = useState<AppPage>(() => {
     const requested = navigationPageSchema.safeParse(query.get('page'));
     return requested.success ? requested.data : 'auto';
@@ -1118,7 +1142,9 @@ function App(): React.JSX.Element {
       <div className="titlebar window-drag" aria-hidden="true" />
       <div className="workspace-main">
         <PreviewNotice />
+        <motion.div key={currentPage} className="page-transition" initial={reducedMotion ? false : { opacity: 0.65, y: 6, filter: 'blur(2px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: reducedMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}>
         {currentPage === 'settings' ? <SettingsView state={state} loadError={error} /> : currentPage === 'onboarding' ? <OnboardingView state={state} loadError={error} onDone={finishSetup} /> : currentPage === 'transcripts' ? <TranscriptsView state={state} transcripts={transcripts} loadError={error} /> : currentPage === 'stats' ? <StatsView state={state} loadError={error} /> : <HomeView state={state} transcripts={transcripts} loadError={error} onSetup={() => setPage('onboarding')} onTranscripts={() => setPage('transcripts')} onStats={() => setPage('stats')} />}
+        </motion.div>
       </div>
     </div>
   </div>;
