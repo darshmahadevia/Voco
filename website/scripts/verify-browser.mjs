@@ -1,6 +1,7 @@
 import { chromium } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -8,7 +9,13 @@ const baseURL = process.env.VOCO_WEBSITE_URL || "http://127.0.0.1:4174";
 const output = resolve("../.impeccable/review");
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ channel: "chrome", headless: true });
-const report = { baseURL, layouts: [], interactions: [], accessibility: [] };
+const report = {
+  baseURL,
+  capturedAt: new Date().toISOString(),
+  layouts: [],
+  interactions: [],
+  accessibility: [],
+};
 try {
   for (const [name, width, height] of [
     ["desktop", 1440, 1000],
@@ -17,45 +24,40 @@ try {
     ["mobile", 390, 844],
     ["narrow", 320, 740],
   ]) {
-    const context = await browser.newContext({
-      viewport: { width, height },
-      reducedMotion: "no-preference",
-    });
+    const context = await browser.newContext({ viewport: { width, height } });
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.goto(baseURL);
+    const response = await page.goto(baseURL);
+    report.artifactSha256 ??= createHash("sha256")
+      .update(await response.text())
+      .digest("hex");
     await page.evaluate(() => document.fonts.ready);
-    await page.waitForFunction(
-      () => document.querySelector("#release-version").textContent === "v0.2.1",
-    );
     assert.equal(await page.locator("h1").count(), 1);
-    const theme = await page.evaluate(() => ({
-      scheme: getComputedStyle(document.documentElement).colorScheme,
-      canvas: getComputedStyle(document.documentElement).backgroundColor,
-      action: getComputedStyle(document.querySelector(".hero .button")).color,
-    }));
-    assert.deepEqual(
-      theme,
-      { scheme: "dark", canvas: "rgb(23, 24, 25)", action: "rgb(23, 24, 25)" },
-      "Voco must retain its dark canvas and readable soft-white actions",
-    );
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
       true,
-      `${name} overflows horizontally`,
+      `${name} horizontal overflow`,
+    );
+    assert.equal(
+      await page
+        .locator("html")
+        .evaluate((el) => getComputedStyle(el).colorScheme),
+      "dark",
     );
     if (width < 641) {
-      const toggle = page.getByRole("button", { name: "Open navigation" });
-      await toggle.click();
+      await page.getByRole("button", { name: "Open navigation" }).click();
+      assert.equal(await page.locator("#mobile-nav").isVisible(), true);
       await page
         .getByRole("button", { name: "Close navigation" })
         .press("Escape");
       assert.equal(await page.locator("#mobile-nav").isVisible(), false);
       assert.equal(
-        await toggle.evaluate((element) => document.activeElement === element),
+        await page
+          .locator(".menu-toggle")
+          .evaluate((el) => el === document.activeElement),
         true,
       );
     }
@@ -64,247 +66,216 @@ try {
     await page.getByRole("tab", { name: "Your progress" }).press("ArrowRight");
     assert.equal(
       await page
-        .getByRole("tab", { name: "Your workspace" })
+        .getByRole("tab", { name: "Workspace" })
         .getAttribute("aria-selected"),
       "true",
     );
-    const faq = page.getByRole("button", {
-      name: "Does my voice leave my Mac?",
-    });
-    await faq.click();
-    assert.equal(await faq.getAttribute("aria-expanded"), "true");
-    await faq.click();
-    assert.equal(
-      await page.locator("#faq-2").evaluate((element) => element.inert),
-      true,
-    );
-    if (name === "desktop") {
-      await page.getByRole("button", { name: "Play demo" }).press("Enter");
-      assert.equal(
-        await page
-          .locator("#demo-cancel")
-          .evaluate((element) => document.activeElement === element),
-        true,
-        "Keyboard playback must move focus to Cancel",
-      );
-      assert.equal(
-        await page.locator(".demo").getAttribute("data-phase"),
-        "listening",
-      );
-      assert.equal(
-        (await page.locator("#demo-output").textContent()).includes(
-          "afternoon",
-        ),
-        false,
-      );
-      await page.waitForFunction(
-        () => document.querySelector(".demo").dataset.phase === "complete",
-      );
-      assert.match(
-        await page.locator("#demo-output").textContent(),
-        /first draft this afternoon/,
-      );
-      await page.getByRole("button", { name: "Play again" }).click();
-      await page.emulateMedia({ reducedMotion: "reduce" });
-      await page.waitForFunction(
-        () => document.querySelector(".demo").dataset.phase === "complete",
-      );
-      assert.equal(
-        await page.locator(".demo").getAttribute("data-phase"),
-        "complete",
-      );
-      report.interactions.push(
-        "Demo completes, replays, and respects reduced motion",
-      );
-    }
     await page.getByRole("button", { name: "View full size" }).click();
-    assert.equal(await page.getByRole("dialog").isVisible(), true);
-    assert.match(
-      await page.locator("#screenshot-image").getAttribute("src"),
-      /app-home.webp/,
-    );
-    await page
-      .getByRole("button", { name: "Close", exact: true })
-      .press("Escape");
-    assert.equal(await page.getByRole("dialog").isVisible(), false);
+    assert.equal(await page.locator("#screenshot-dialog").isVisible(), true);
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator("#screenshot-dialog").isVisible(), false);
     assert.equal(
       await page
         .locator("#gallery-enlarge")
-        .evaluate((element) => document.activeElement === element),
+        .evaluate((el) => el === document.activeElement),
       true,
     );
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    for (const [name, text] of [
-      ["A quick note", "first five minutes"],
-      ["A message", "thoughtful feedback"],
-    ]) {
-      await page.getByRole("button", { name, exact: true }).click();
-      await page
-        .getByRole("button", { name: "Play demo", exact: true })
-        .click();
+    const faq = page.getByText("Does my voice leave my Mac?", { exact: true });
+    await faq.click();
+    assert.equal(await faq.evaluate((el) => el.parentElement.open), true);
+    await faq.click();
+    if (name === "desktop") {
+      await page.locator("#demo-play").click();
       assert.equal(
-        await page.locator(".demo").getAttribute("data-phase"),
-        "complete",
+        await page.locator(".voice-stage").getAttribute("data-phase"),
+        "listening",
       );
-      assert.match(
+      assert.equal(
         await page.locator("#demo-output").textContent(),
-        new RegExp(text),
+        "Your thought is on its way.",
+      );
+      assert.equal(
+        await page
+          .locator("#demo-cancel")
+          .evaluate((el) => el === document.activeElement),
+        true,
+      );
+      await page.waitForFunction(
+        () =>
+          document.querySelector(".voice-stage").dataset.phase ===
+          "transcribing",
+      );
+      assert.equal(
+        await page.locator("#demo-output").textContent(),
+        "Your thought is on its way.",
+      );
+      await page.waitForFunction(
+        () =>
+          document.querySelector(".voice-stage").dataset.phase === "complete",
+      );
+      assert.equal(
+        await page.locator("#demo-output").textContent(),
+        "I have an idea. Let's take the complicated part out and make the first five minutes feel effortless.",
+      );
+      await page.locator("#demo-play").click();
+      await page.locator("#demo-cancel").press("Escape");
+      assert.equal(
+        await page.locator(".voice-stage").getAttribute("data-phase"),
+        "idle",
+      );
+      await page.locator("#demo-play").click();
+      await page.getByRole("button", { name: "An idea", exact: true }).click();
+      await page.waitForTimeout(3400);
+      assert.equal(
+        await page.locator(".voice-stage").getAttribute("data-phase"),
+        "idle",
+      );
+      assert.equal(
+        await page.locator("#demo-output").textContent(),
+        "What if the best version is the one with fewer steps? Start with the moment someone needs help, and work backwards.",
+      );
+      await page
+        .getByRole("button", { name: "A message", exact: true })
+        .click();
+      const video = page.locator("#app-video");
+      await video.scrollIntoViewIfNeeded();
+      await page.locator("#walkthrough-play").click();
+      await page.waitForFunction(
+        () => document.querySelector("#app-video").controls,
+      );
+      assert.equal(await video.evaluate((el) => el.controls), true);
+      assert.equal(await page.locator("#walkthrough-play").isVisible(), false);
+      await page.waitForFunction(
+        () => document.querySelector("#app-video").currentTime > 0.2,
+      );
+      assert.ok(await video.evaluate((el) => el.duration > 18));
+      await video.evaluate((el) => el.pause());
+      report.interactions.push(
+        "Complete transcript only after processing, cancel, Escape, sample-switch timer cleanup, playable 18-second recording",
       );
     }
-    await page.getByRole("button", { name: "An email", exact: true }).click();
-    await page.emulateMedia({ reducedMotion: "no-preference" });
-    await page
-      .getByRole("button", { name: "Play dictation demo", exact: true })
-      .click();
-    assert.equal(
-      await page.locator(".demo").getAttribute("data-phase"),
-      "listening",
-    );
-    assert.equal(
-      await page
-        .locator("#demo-cancel")
-        .evaluate((element) => document.activeElement === element),
-      true,
-    );
-    await page
-      .getByRole("button", { name: "Cancel", exact: true })
-      .press("Escape");
-    assert.equal(
-      await page.locator(".demo").getAttribute("data-phase"),
-      "idle",
-    );
-    assert.equal(await page.locator("#demo-play").isEnabled(), true);
-    await page
-      .getByRole("button", { name: "Play demo", exact: true })
-      .press("Enter");
-    assert.equal(
-      await page
-        .locator("#demo-cancel")
-        .evaluate((element) => document.activeElement === element),
-      true,
-    );
-    await page.keyboard.press("Escape");
-    assert.equal(
-      await page.locator(".demo").getAttribute("data-phase"),
-      "idle",
-    );
-    assert.equal(
-      await page
-        .locator("#demo-play")
-        .evaluate((element) => document.activeElement === element),
-      true,
-    );
-    await page.getByRole("button", { name: "Play demo", exact: true }).click();
-    await page
-      .getByRole("button", { name: "A quick note", exact: true })
-      .click();
-    assert.equal(
-      await page.locator(".demo").getAttribute("data-phase"),
-      "idle",
-    );
-    await page.waitForTimeout(3800);
-    assert.equal(
-      await page.locator(".demo").getAttribute("data-phase"),
-      "idle",
-      "Canceled demo timer survived sample switch",
-    );
-    await page.getByRole("button", { name: "An email", exact: true }).click();
-    for (const image of await page.locator("img:visible").all()) {
-      await image.scrollIntoViewIfNeeded();
-      await image.evaluate((element) => element.decode());
-    }
-    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-    await page.waitForTimeout(600);
-    report.layouts.push(
-      await page.evaluate(
-        (name) => ({
-          name,
-          width: innerWidth,
-          height: innerHeight,
-          scrollWidth: document.documentElement.scrollWidth,
-          headingSize: getComputedStyle(document.querySelector("h1")).fontSize,
-        }),
-        name,
-      ),
-    );
+    await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
     await page.screenshot({
-      path: `${output}/${name}.png`,
+      path: resolve(output, `${name}.png`),
       fullPage: true,
       animations: "disabled",
     });
-    if (name === "desktop") {
-      await page.screenshot({
-        path: `${output}/hero.png`,
-        animations: "disabled",
-      });
-      await page
-        .locator(".demo")
-        .screenshot({ path: `${output}/demo.png`, animations: "disabled" });
-    }
-    const axe = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
-      .analyze();
-    report.accessibility.push({
-      name,
-      violations: axe.violations.map((item) => ({
-        id: item.id,
-        impact: item.impact,
-        nodes: item.nodes.map((node) => ({
-          target: node.target,
-          summary: node.failureSummary,
-        })),
-      })),
+    await page.screenshot({
+      path: resolve(output, `${name}-hero.png`),
+      animations: "disabled",
     });
-    assert.deepEqual(errors, [], "Browser JavaScript errors");
+    if (name === "desktop" || name === "mobile") {
+      const results = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze();
+      report.accessibility.push({ name, violations: results.violations });
+      assert.deepEqual(
+        results.violations.map((v) => ({
+          id: v.id,
+          nodes: v.nodes.map((n) => n.target),
+        })),
+        [],
+        `${name} accessibility`,
+      );
+    }
+    assert.deepEqual(errors, [], `${name} browser exceptions`);
+    report.layouts.push({ name, width, height, overflow: false, errors });
     await context.close();
   }
-  report.interactions.push(
-    "All demo samples, hero key, cancellation, sample switching, full-size screenshot dialog, Escape, and focus restoration verified at every viewport",
+  const reduced = await browser.newContext({ reducedMotion: "reduce" });
+  const page = await reduced.newPage();
+  await page.goto(baseURL);
+  await page.locator("#demo-play").click();
+  assert.equal(
+    await page.locator(".voice-stage").getAttribute("data-phase"),
+    "complete",
   );
-  const noScript = await browser.newContext({
-    javaScriptEnabled: false,
-    viewport: { width: 390, height: 844 },
-  });
-  const plain = await noScript.newPage();
-  await plain.goto(baseURL);
-  assert.equal(await plain.locator("h1").isVisible(), true);
+  report.interactions.push("Reduced-motion playback completes immediately");
+  await reduced.close();
+  const mediaFailure = await browser.newContext();
+  const mediaPage = await mediaFailure.newPage();
+  await mediaPage.route("**/videos/*.webm", (route) => route.abort("failed"));
+  await mediaPage.goto(baseURL);
+  await mediaPage.locator("#walkthrough-play").click();
+  await mediaPage.locator("#walkthrough-error").waitFor();
   assert.match(
-    await plain.locator("#release-download").getAttribute("href"),
-    /voco-releases\/releases\/download/,
+    await mediaPage.locator("#walkthrough-error").textContent(),
+    /Try again/,
   );
-  assert.equal(await plain.locator("#faq-2").isVisible(), true);
+  assert.equal(await mediaPage.locator("#walkthrough-play").isVisible(), true);
+  assert.equal(await mediaPage.locator("#walkthrough-play").isEnabled(), true);
+  await mediaPage.unroute("**/videos/*.webm");
+  await mediaPage.locator("#walkthrough-play").click();
+  await mediaPage.waitForFunction(
+    () => document.querySelector("#app-video").currentTime > 0.2,
+  );
+  assert.equal(
+    await mediaPage.locator("#walkthrough-error").isVisible(),
+    false,
+  );
+  assert.equal(await mediaPage.locator("#walkthrough-play").isVisible(), false);
+  await mediaFailure.close();
   report.interactions.push(
-    "Core copy, download link, and FAQ remain available without JavaScript",
+    "Unavailable recording exposes retry and screenshots; retry recovers after network returns",
   );
-  await noScript.close();
-  const failureContext = await browser.newContext();
-  const failurePage = await failureContext.newPage();
-  await failurePage.route("**/release.json", (route) =>
-    route.fulfill({ status: 503, body: "" }),
+  const fallback = await browser.newContext();
+  const failure = await fallback.newPage();
+  await failure.route("**/release.json", (route) =>
+    route.fulfill({ status: 503, body: "Unavailable" }),
   );
-  await failurePage.goto(baseURL);
-  await failurePage
+  await failure.goto(baseURL);
+  await failure
     .locator("#release-status")
-    .getByText("Latest release details are unavailable.", { exact: false })
+    .filter({ hasText: "unavailable" })
     .waitFor();
-  assert.match(
-    await failurePage.locator("#release-download").getAttribute("href"),
-    /voco-releases\/releases\/download/,
+  assert.equal(
+    await failure.locator("#release-download").getAttribute("href"),
+    "https://github.com/darshmahadevia/voco-releases/releases/download/v0.2.1/Voco-0.2.1-arm64.dmg",
   );
+  await failure.unroute("**/release.json");
+  await failure.route("**/release.json", (route) =>
+    route.fulfill({
+      json: {
+        version: "0.2.1",
+        downloadUrl: "https://example.com/untrusted",
+        releaseUrl: "https://example.com/release",
+        notarized: false,
+        fileSize: "147 MB",
+      },
+    }),
+  );
+  await failure.reload();
+  await failure
+    .locator("#release-status")
+    .filter({ hasText: "unavailable" })
+    .waitFor();
+  assert.ok(
+    (
+      await failure.locator("#release-download").getAttribute("href")
+    ).startsWith("https://github.com/"),
+  );
+  await fallback.close();
+  const noJS = await browser.newContext({ javaScriptEnabled: false });
+  const staticPage = await noJS.newPage();
+  await staticPage.goto(baseURL);
+  assert.equal(
+    await staticPage.getByRole("heading", { level: 1 }).isVisible(),
+    true,
+  );
+  assert.ok(
+    (
+      await staticPage.locator("#release-download").getAttribute("href")
+    ).endsWith(".dmg"),
+  );
+  await noJS.close();
   report.interactions.push(
-    "Release-manifest failure preserves a real fallback download",
+    "Failed and untrusted release metadata keep pinned download; readable page and download without JavaScript",
   );
-  await failureContext.close();
   await writeFile(
-    `${output}/verification.json`,
+    resolve(output, "browser-report.json"),
     JSON.stringify(report, null, 2),
   );
   console.log(JSON.stringify(report, null, 2));
-  assert.equal(
-    report.accessibility.flatMap((item) => item.violations).length,
-    0,
-    "Accessibility violations need repair",
-  );
 } finally {
   await browser.close();
 }

@@ -190,23 +190,40 @@ const walkthroughPlay = document.querySelector("#walkthrough-play");
 const walkthroughError = document.querySelector("#walkthrough-error");
 walkthrough.controls = false;
 walkthroughPlay.hidden = false;
-walkthroughPlay.addEventListener("click", async () => {
+let playbackAttempt = 0;
+function showWalkthroughFailure() {
+  walkthrough.controls = false;
+  walkthroughPlay.disabled = false;
+  walkthroughPlay.hidden = false;
+  walkthroughError.textContent =
+    "The walkthrough could not play. Try again or explore the screenshots below.";
+  walkthroughError.hidden = false;
+  document.querySelector("#walkthrough-action").firstChild.textContent =
+    "Try the walkthrough again";
+}
+walkthrough.addEventListener("error", showWalkthroughFailure);
+walkthrough
+  .querySelector("source")
+  .addEventListener("error", showWalkthroughFailure);
+walkthrough.addEventListener("playing", () => {
+  walkthrough.controls = true;
+  walkthroughPlay.hidden = true;
+  walkthroughPlay.disabled = false;
+  walkthroughError.hidden = true;
+  walkthrough.focus({ preventScroll: true });
+});
+walkthroughPlay.addEventListener("click", () => {
+  const attempt = ++playbackAttempt;
   walkthroughPlay.disabled = true;
   walkthroughError.hidden = true;
-  try {
-    await walkthrough.play();
-    walkthrough.controls = true;
-    walkthroughPlay.hidden = true;
-    walkthrough.focus({ preventScroll: true });
-  } catch {
-    walkthroughError.textContent =
-      "The walkthrough could not play. Try again or explore the screenshots below.";
-    walkthroughError.hidden = false;
-    document.querySelector("#walkthrough-action").firstChild.textContent =
-      "Try the walkthrough again";
-  } finally {
-    walkthroughPlay.disabled = false;
-  }
+  if (
+    walkthrough.error ||
+    walkthrough.networkState === HTMLMediaElement.NETWORK_NO_SOURCE
+  )
+    walkthrough.load();
+  walkthrough.play().catch(() => {
+    if (attempt === playbackAttempt) showWalkthroughFailure();
+  });
 });
 
 const canvas = document.querySelector("#voice-canvas");
