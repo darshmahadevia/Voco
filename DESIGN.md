@@ -150,7 +150,7 @@ Use tonal layering for structural depth. Home’s workspace is lighter than the 
 
 ## Shapes
 
-Voco’s brand mark is a continuous, rounded V that follows the flow of a voice wave. Use the single smooth orange stroke in `Resources/Brand/voco-mark.svg`, with round terminals and a gently curved valley. Keep it static, preserve its proportions, and leave the viewBox’s clear space intact. The wordmark remains Manrope with its orange dot. The Dock icon places the mark on a graphite tile; the menu bar uses a monochrome template. Run `npm run build:icons` to regenerate the app and menu-bar assets from the master SVG.
+Voco’s brand mark is a continuous voice wave with a cursive v at its center. A short entry wave flows into the deep v and rises into a smaller trailing wave. Use the single smooth orange stroke in `Resources/Brand/voco-mark.svg`, with rounded terminals and continuous curves. Keep it static, preserve its proportions, and leave the viewBox’s clear space intact. The wordmark remains Manrope with its orange dot. The Dock icon places the mark on a graphite tile; the menu bar uses a monochrome template. Run `npm run build:icons` to regenerate the app and menu-bar assets from the master SVG.
 
 Primary and secondary actions, search fields, chips, and status capsules are fully rounded. Navigation selections use 10px corners. Voice and recovery workspaces use 16px corners; practice fields use 12px corners and selected output options use 9px. Keyboard keys use 7px corners and a doubled lower border. Keep visible orange focus outlines offset from controls.
 
