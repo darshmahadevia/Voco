@@ -9,5 +9,4 @@ release
 native/build
 native/.cache/
 .audit/
-.vercel
 .env*

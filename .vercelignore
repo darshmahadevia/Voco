@@ -1,7 +1,0 @@
-*
-!website/
-!website/**
-website/node_modules/
-website/dist/
-website/.env*
-website/.vercel/
