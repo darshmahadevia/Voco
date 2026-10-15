@@ -30,6 +30,10 @@ Dictate English directly into the text field you are using. Hold Fn or Globe to 
 - Start in the menu bar with the dashboard hidden. Closing the dashboard keeps dictation running. Provide a compact dashboard with readiness, Fn / Globe guidance, and recent transcripts held in memory. Use black surfaces, gray borders, a restrained orange accent, bundled Manrope, a Pixelify Sans Home accent matching the first headline line in size, and Instrument Serif setup headlines, and reduced-motion support. First-run onboarding guides welcome, model download, microphone and keyboard access, and practice dictation with Fn / Globe troubleshooting. Keep model, access, shortcut, and transcript controls in Settings.
 - Do not submit forms, press Return, or write to password fields.
 
+## Output quality
+
+Settings exposes Fast for the original speech-model transcript, Balanced for local filler and restart rules, and Accurate for an optional on-device FoundationModels cleanup pass. Speech-model choice stays independent. Preserve the original when AI cleanup is unavailable or fails validation. Retain the latest original in memory only while transcript retention is enabled. Show Polishing during cleanup. The product prioritizes local processing and recoverable text, without a guarantee of accuracy or speed.
+
 ## Deferred work
 
 Windows integration, languages beyond English, public signing/notarization, and additional product features.

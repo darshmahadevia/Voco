@@ -65,3 +65,18 @@ Electron 44 clipboard writes return promises. Recovery copying after helper fail
 A physical Fn or Globe press cannot be driven by this session's computer-use API. The attempted `pressKey("fn")` returned `keyNotFound("fn")`. Gesture and shortcut-event handling pass automated checks, and the installed helper's event tap starts with the existing Accessibility grant. This does not establish physical key delivery or one uninterrupted physical-key, microphone, transcription, and editor session.
 
 The local app is signed for development on this Mac. Developer ID signing and notarization are unconfigured for public distribution. No privacy grants were reset or broadened during this work.
+
+## Local output quality, 2026-10-14
+
+The output-quality change adds Fast, Balanced, and Accurate without changing the selected speech engine. Verification covered:
+
+- TypeScript type checking and 27 renderer, protocol, usage, and process-bridge tests.
+- The compact Electron check passed 45 layouts, including all three output options, disabled preview actions, and the Polishing spinner.
+- Native cleanup cases covered fillers, quoted phrases, sentence boundaries, decimal and signed quantities, names, negations, empty output, and raw-text fallback.
+- Deferred coordinator fixtures covered frozen preferences, cancellation during suspended cleanup, late results, missing recognition callbacks, cleanup deadlines, and single insertion for all three engine adapters.
+- The FoundationModels smoke check reported available and returned `Alice has 12 tickets, not 13.` for `Um, Alice has 12 tickets, not 13.` without a fallback notice.
+- The real native JSONL process accepted Balanced, rejected an unknown mode, and published the new state fields.
+
+A synthetic `say` audio fixture spoke `Um, please send Alice twelve tickets, not thirteen.` Moonshine returned `Hum. Please send Alice 12 tickets, not 13. 13.` Parakeet and Whisper returned `Um, please send Alice 12 tickets, not 13.` This single synthetic example proves local inference runs and exposes recognition differences. It is not an accuracy benchmark. Cleanup intentionally does not guess that `Hum` is a filler or delete an arbitrary repeated number.
+
+The native helper built after installing the missing CMake prerequisite. Physical microphone and Fn-key dictation were not exercised for this change. The installed desktop bundle was not replaced by these source checks.

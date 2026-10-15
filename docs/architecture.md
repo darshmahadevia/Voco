@@ -23,3 +23,9 @@ See [the migration design and alternatives](migration/architecture.md). [The pre
 The listening protocol carries capture status without an insertion mode or partial transcript text. Microphone levels update the waveform independently of recognition. `lastTranscript` updates only when a final transcript arrives and its in-memory preference is enabled.
 
 All macOS integration code lives in `native/Sources`. Direct focus and insertion fixtures live in `native/Tests` and exercise the same files compiled into the helper. `Sources/VocoCore` contains the hold and continuous shortcut gesture, with portable tests in `Tests/VocoCoreTests`. The predecessor SwiftUI application and its separate lifecycle checks have been removed.
+
+## Transcript cleanup
+
+`TranscriptPolisher` is a native adapter between final recognition and insertion. The `OutputMode` captured at session creation selects the original text, deterministic cleanup, or FoundationModels generation. A fresh language-model session prevents cross-dictation context retention. The renderer receives availability, fallback notices, and optionally the latest raw transcript. It does not own an inference runtime.
+
+The native adapter was chosen over an Electron-owned model runtime because native code already owns session cancellation, focus, and insertion. An Electron runtime would add a model distribution and lifecycle system plus another request protocol. The current choice depends on Apple Intelligence availability, with raw-text fallback when unavailable.

@@ -1,6 +1,6 @@
 # Voco
 
-Local English dictation for Apple Silicon Macs running macOS 26 or newer. Hold Fn or Globe to speak, then release to transcribe and insert the complete text into the focused app. Press Fn + Space to start continuous capture and press it again to stop. Escape cancels capture or pending transcription.
+Local English dictation for Apple Silicon Macs running macOS 26 or newer, with optional on-device transcript cleanup. Hold Fn or Globe to speak, then release to transcribe and insert the complete text into the focused app. Press Fn + Space to start continuous capture and press it again to stop. Escape cancels capture or pending transcription.
 
 Electron, React, TypeScript, and Vite provide the interface. A bundled Swift helper handles microphone capture, global shortcuts, local recognition, and text insertion. Moonshine, Parakeet, and Whisper run on this Mac without an account or transcription API key.
 
@@ -38,9 +38,15 @@ Models live under `~/Library/Application Support/Voco/models`, outside the app b
 
 The current models are Moonshine Medium Streaming, Parakeet TDT 0.6B v2, and Whisper Large v3 Turbo. All use English dictation. Whisper's multilingual weights run in English mode.
 
+## Output quality
+
+Settings offers **Fast**, **Balanced**, and **Accurate**. Fast keeps the speech model's words. Balanced removes fillers and spoken restarts with local rules. Accurate adds Apple's on-device language model for conservative cleanup when Apple Intelligence is available, and keeps the original on failure. The speech model is selected separately. These options do not promise error-free recognition or a measured accuracy ranking.
+
+With transcript retention enabled, Home lets you inspect and copy the original when cleanup changes it. See [output modes, examples, and evaluation guidance](docs/local-dictation.md).
+
 ## Insertion and privacy
 
-Voco records while listening and inserts once after transcription finishes. The pill shows the microphone waveform during capture and **Transcribing** afterward. No provisional words are written into the destination.
+Voco records while listening and inserts once after transcription finishes. The pill shows the microphone waveform during capture and **Transcribing** afterward. The pill shows **Polishing** during optional cleanup. No provisional words are written into the destination.
 
 The insertion uses the current caret or selection in the original field. Selected text is replaced, as with ordinary typing. Switching apps or fields prevents insertion and retains the completed transcript for copying. Password fields are rejected. Native text controls use Accessibility writes; browser and Electron controls receive a paste event so their application state updates too. For fields that expose readable text and selection, Voco verifies the complete write. Incomplete writes report failure and retain the full transcript without retrying and duplicating the partial text. Paste restores the previous clipboard unless another app changes it. Voco never presses Return or submits a form.
 
