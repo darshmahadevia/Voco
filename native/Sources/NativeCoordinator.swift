@@ -591,7 +591,7 @@ final class NativeCoordinator {
 
     private func finishDictation(_ lines: [SpeechLine], session: Dictation) async {
         guard sessionGate.accepts(session.id), active?.id == session.id else { return }
-        session.fullText = TranscriptLedger.join(lines.map(\.text))
+        session.fullText = TranscriptText.join(lines.map(\.text))
         state.lastRawTranscript = state.preferences.keepLastTranscript ? session.fullText : ""
         guard !session.fullText.isEmpty else { completeDictation(session); return }
         guard lines.allSatisfy(\.complete) else { recoverUncommitted(session); return }

@@ -25,7 +25,7 @@ enum WhisperCancellationCheck {
         precondition(!phrase.isEmpty)
         let longAudio = Array(repeating: phrase, count: max(1, 120 * 16_000 / phrase.count)).flatMap { $0 }
         let engine = WhisperEngine()
-        try engine.loadIfNeeded(modelDirectory: model)
+        try await engine.warm(modelDirectory: model)
         defer { engine.unload() }
 
         // Establish that this exact long input really decodes successfully before testing abort.
@@ -37,22 +37,10 @@ enum WhisperCancellationCheck {
         precondition(!baselineLines.isEmpty, "Control inference must produce text")
         print("Control inference completed in \(baselineDuration)s")
 
-        for operation in ["finish", "transcribe", "synchronous finish"] {
+        do {
             let stream = try engine.openStream()
             try longAudio.withUnsafeBufferPointer { try engine.addAudio($0, to: stream) }
-            let completion = Task { @MainActor in
-                try await withCheckedThrowingContinuation { continuation in
-                    if operation == "finish" {
-                        engine.finish(stream: stream) { continuation.resume(with: $0) }
-                    } else if operation == "transcribe" {
-                        engine.transcribe(stream: stream) { continuation.resume(with: $0) }
-                    } else {
-                        DispatchQueue.global().async {
-                            continuation.resume(with: Result { try engine.finishSynchronously(stream: stream) })
-                        }
-                    }
-                }
-            }
+            let completion = Task { @MainActor in try await engine.finish(stream: stream) }
             // Give actual inference time to enter whisper_full, then cancel from the caller.
             try await Task.sleep(for: .milliseconds(500))
             let cancelStart = Date()
@@ -61,10 +49,10 @@ enum WhisperCancellationCheck {
             let reopenDuration = Date().timeIntervalSince(cancelStart)
             engine.cancel(stream: next)
             let cancelledLines = try await completion.value
-            precondition(cancelledLines.isEmpty, "Cancelled \(operation) published text")
-            precondition(reopenDuration < 3, "Next open waited \(reopenDuration)s after cancelling \(operation)")
+            precondition(cancelledLines.isEmpty, "Cancelled final inference published text")
+            precondition(reopenDuration < 3, "Next open waited \(reopenDuration)s after cancelling final inference")
             precondition(reopenDuration < baselineDuration / 2, "Cancellation did not interrupt the control workload")
-            print("PASS \(operation): cancelled and reopened in \(reopenDuration)s, no stale text")
+            print("PASS final inference: cancelled and reopened in \(reopenDuration)s, no stale text")
         }
 
         // Keep the main queue occupied until inference and its result dispatch have completed.
@@ -82,32 +70,11 @@ enum WhisperCancellationCheck {
         precondition(queuedResult.isEmpty, "Cancellation published a queued final result")
         print("PASS cancellation suppresses final text already queued for delivery")
 
-        for cached in [false, true] {
-            let partial = try engine.openStream()
-            try phrase.withUnsafeBufferPointer { try engine.addAudio($0, to: partial) }
-            if cached {
-                let initial: [SpeechLine] = try await withCheckedThrowingContinuation { continuation in
-                    engine.transcribe(stream: partial) { continuation.resume(with: $0) }
-                }
-                precondition(!initial.isEmpty, "Cached partial needs a real transcript")
-            }
-            let delivered: [SpeechLine] = try await withCheckedThrowingContinuation { continuation in
-                engine.transcribe(stream: partial) { continuation.resume(with: $0) }
-                do {
-                    let barrier = try engine.openStream()
-                    engine.cancel(stream: partial)
-                    engine.cancel(stream: barrier)
-                } catch { fatalError("Queue barrier failed: \(error)") }
-            }
-            precondition(delivered.isEmpty, "Cancellation published queued partial text")
-            print("PASS cancellation suppresses queued \(cached ? "cached" : "decoded") partial text")
-        }
-
         let recovery = try engine.openStream()
         try phrase.withUnsafeBufferPointer { try engine.addAudio($0, to: recovery) }
         let recovered = try await finish(engine, recovery)
         precondition(!recovered.isEmpty && recovered.allSatisfy(\.complete), "Context did not recover after abort")
-        print("PASS same context transcribes the next phrase: \(TranscriptLedger.join(recovered.map(\.text)))")
+        print("PASS same context transcribes the next phrase: \(TranscriptText.join(recovered.map(\.text)))")
     }
 
     static func finish(_ engine: WhisperEngine, _ stream: SpeechStreamID) async throws -> [SpeechLine] {

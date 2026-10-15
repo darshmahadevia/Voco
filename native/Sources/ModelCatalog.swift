@@ -16,84 +16,40 @@ struct ModelAsset: Sendable {
     }
 }
 
-enum WhisperModelVariant: String, CaseIterable, Sendable {
-    case largeV3Turbo
-    case largeV3
-
-    var directoryName: String {
-        switch self {
-        case .largeV3Turbo: "whisper-large-v3-turbo"
-        case .largeV3: "whisper-large-v3"
-        }
-    }
-
-    var modelVersion: String {
-        switch self {
-        case .largeV3Turbo: "large-v3-turbo, FP16"
-        case .largeV3: "large-v3, FP16"
-        }
-    }
-}
-
 enum SpeechModelCatalog {
     static let ids = SpeechModelID.allCases
     static let recommendedModel: SpeechModelID? = .parakeet
 
-    static func descriptor(for id: SpeechModelID, whisperVariant: WhisperModelVariant = .largeV3Turbo) -> SpeechModelDescriptor {
-        let name: String
-        let version: String
-        let language: String
-        let license: String
-        switch id {
-        case .moonshine:
-            name = "Moonshine Medium Streaming"
-            version = "moonshine-medium-streaming-en v0.1.5"
-            language = "English"
-            license = "MIT"
-        case .parakeet:
-            name = "Parakeet TDT 0.6B v2"
-            version = "parakeet-tdt-0.6b-v2-coreml @ ee09c569f73759e6d44c9bd16766f477b2b36d39"
-            language = "English"
-            license = "CC BY 4.0"
-        case .whisper:
-            name = whisperVariant == .largeV3Turbo ? "Whisper Large v3 Turbo" : "Whisper Large v3"
-            version = "\(whisperVariant.modelVersion) @ 5359861c739e955e79d9a303bcbc70fb988958b1"
-            language = "Multilingual"
-            license = "MIT"
-        }
-        return SpeechModelDescriptor(id: id, name: name, modelVersion: version, language: language, license: license)
-    }
-
-    static func directoryName(for id: SpeechModelID, whisperVariant: WhisperModelVariant = .largeV3Turbo) -> String {
+    static func directoryName(for id: SpeechModelID) -> String {
         switch id {
         case .moonshine: "moonshine-medium-streaming-en"
         case .parakeet: "parakeet-tdt-0.6b-v2-coreml"
-        case .whisper: whisperVariant.directoryName
+        case .whisper: "whisper-large-v3-turbo"
         }
     }
 
-    static func directory(for id: SpeechModelID, in modelsRoot: URL, whisperVariant: WhisperModelVariant = .largeV3Turbo) -> URL {
-        modelsRoot.appendingPathComponent(directoryName(for: id, whisperVariant: whisperVariant), isDirectory: true)
+    static func directory(for id: SpeechModelID, in modelsRoot: URL) -> URL {
+        modelsRoot.appendingPathComponent(directoryName(for: id), isDirectory: true)
     }
 
     static func modelsRoot(from moonshineDirectory: URL) -> URL {
         moonshineDirectory.standardizedFileURL.deletingLastPathComponent()
     }
 
-    static func makeEngine(for id: SpeechModelID, whisperVariant: WhisperModelVariant = .largeV3Turbo) -> any SpeechEngine {
+    static func makeEngine(for id: SpeechModelID) -> any SpeechEngine {
         switch id {
         case .moonshine: MoonshineEngine()
         case .parakeet: ParakeetEngine()
-        case .whisper: WhisperEngine(variant: whisperVariant)
+        case .whisper: WhisperEngine()
         }
     }
 
-    static func assets(for id: SpeechModelID, whisperVariant: WhisperModelVariant = .largeV3Turbo) throws -> [ModelAsset] {
+    static func assets(for id: SpeechModelID) throws -> [ModelAsset] {
         switch id {
         case .moonshine:
             try MoonshineCatalog.englishMediumStreamingFiles()
         case .parakeet: parakeetAssets
-        case .whisper: whisperVariant == .largeV3Turbo ? whisperTurboAssets : whisperLargeV3Assets
+        case .whisper: whisperTurboAssets
         }
     }
 
@@ -123,9 +79,5 @@ enum SpeechModelCatalog {
 
     private static let whisperTurboAssets: [ModelAsset] = [
         ModelAsset(name: "ggml-large-v3-turbo.bin", url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo.bin?download=true", size: 1624555275, checksum: "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69", checksumType: "sha256")
-    ]
-
-    private static let whisperLargeV3Assets: [ModelAsset] = [
-        ModelAsset(name: "ggml-large-v3.bin", url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3.bin?download=true", size: 3095033483, checksum: "64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2", checksumType: "sha256")
     ]
 }

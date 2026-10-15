@@ -58,17 +58,15 @@ final class ModelInstaller: @unchecked Sendable {
     private static let installLock = NSLock()
     let modelDirectory: URL
     private let modelID: SpeechModelID
-    private let whisperVariant: WhisperModelVariant
     private let fileManager = FileManager.default
 
-    init(modelDirectory: URL, modelID: SpeechModelID = .moonshine, whisperVariant: WhisperModelVariant = .largeV3Turbo) {
+    init(modelDirectory: URL, modelID: SpeechModelID = .moonshine) {
         self.modelDirectory = modelDirectory.standardizedFileURL
         self.modelID = modelID
-        self.whisperVariant = whisperVariant
     }
 
     func verifyCachedModel(verifyChecksums: Bool = true) throws -> Bool {
-        let files = try SpeechModelCatalog.assets(for: modelID, whisperVariant: whisperVariant)
+        let files = try SpeechModelCatalog.assets(for: modelID)
         if fileManager.fileExists(atPath: modelDirectory.path), (try? Self.verify(files, in: modelDirectory, verifyChecksums: verifyChecksums)) != nil {
             Self.removeStaleBackups(for: modelDirectory, fileManager: fileManager)
             return true
@@ -89,7 +87,7 @@ final class ModelInstaller: @unchecked Sendable {
     func download(
         onProgress: @escaping @Sendable (_ file: String, _ fraction: Double) -> Void
     ) async throws {
-        let files = try SpeechModelCatalog.assets(for: modelID, whisperVariant: whisperVariant)
+        let files = try SpeechModelCatalog.assets(for: modelID)
         guard !files.isEmpty else { throw NativeError.unavailable("The selected speech model has no downloadable files.") }
 
         let parent = modelDirectory.deletingLastPathComponent()

@@ -20,44 +20,23 @@ private final class WhisperCancellation: @unchecked Sendable {
 
 private struct WhisperStream {
     var samples: [Float] = []
-    var latestText = ""
-    var lastDecodedSampleCount = 0
     let cancellation = WhisperCancellation()
     var isFinishing = false
 
-    func lines(complete: Bool = false) -> [SpeechLine] {
-        guard !latestText.isEmpty else { return [] }
-        return [SpeechLine(
-            text: latestText,
-            complete: complete
-        )]
-    }
 }
 
 final class WhisperEngine: SpeechEngine, @unchecked Sendable {
-    let descriptor: SpeechModelDescriptor
-    private let variant: WhisperModelVariant
     private let queue = DispatchQueue(label: "org.vocoapp.Voco.whisper", qos: .userInitiated)
     private let audioLock = NSLock()
-    private let updateStrideSamples = 32_000
     private var context: OpaquePointer?
     private var modelPath: String?
     private var streams: [SpeechStreamID: WhisperStream] = [:]
-
-    init(variant: WhisperModelVariant = .largeV3Turbo) {
-        self.variant = variant
-        descriptor = SpeechModelCatalog.descriptor(for: .whisper, whisperVariant: variant)
-    }
 
     func warm(modelDirectory: URL, completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void) {
         queue.async {
             let result = Result { try self.loadLocked(modelDirectory: modelDirectory) }
             DispatchQueue.main.async { completion(result) }
         }
-    }
-
-    func loadIfNeeded(modelDirectory: URL) throws {
-        try queue.sync { try loadLocked(modelDirectory: modelDirectory) }
     }
 
     func unload() {
@@ -79,7 +58,7 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
         if let context { whisper_free(context) }
         context = nil
         modelPath = nil
-        let modelURL = modelDirectory.appendingPathComponent(variant.modelFileName)
+        let modelURL = modelDirectory.appendingPathComponent("ggml-large-v3-turbo.bin")
         var parameters = whisper_context_default_params()
         parameters.use_gpu = true
         parameters.flash_attn = true
@@ -128,50 +107,6 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
         audioLock.unlock()
     }
 
-    func transcribe(
-        stream: SpeechStreamID,
-        completion: @escaping @MainActor @Sendable (Result<[SpeechLine], Error>) -> Void
-    ) {
-        queue.async {
-            guard let context = self.context else {
-                DispatchQueue.main.async { completion(.failure(NativeError.unavailable("The Whisper model is not ready."))) }
-                return
-            }
-            self.audioLock.lock()
-            guard var state = self.streams[stream], !state.isFinishing else {
-                self.audioLock.unlock()
-                DispatchQueue.main.async { completion(.failure(NativeError.unavailable("The Whisper session has already ended."))) }
-                return
-            }
-            let changedEnough = state.samples.count - state.lastDecodedSampleCount >= self.updateStrideSamples
-            guard changedEnough else {
-                let lines = state.lines()
-                let cancellation = state.cancellation
-                self.audioLock.unlock()
-                DispatchQueue.main.async { completion(.success(cancellation.isCancelled ? [] : lines)) }
-                return
-            }
-            state.lastDecodedSampleCount = state.samples.count
-            let samples = state.samples
-            let cancellation = state.cancellation
-            self.streams[stream] = state
-            self.audioLock.unlock()
-
-            let result = Result { try self.transcribeLocked(context: context, samples: samples, cancellation: cancellation) }
-            self.audioLock.lock()
-            guard var current = self.streams[stream], current.cancellation === cancellation else {
-                self.audioLock.unlock()
-                DispatchQueue.main.async { completion(.success([])) }
-                return
-            }
-            if case let .success(text) = result { current.latestText = text }
-            let lines = current.lines()
-            self.streams[stream] = current
-            self.audioLock.unlock()
-            DispatchQueue.main.async { completion(cancellation.isCancelled ? .success([]) : result.map { _ in lines }) }
-        }
-    }
-
     func finish(
         stream: SpeechStreamID,
         completion: @escaping @MainActor @Sendable (Result<[SpeechLine], Error>) -> Void
@@ -203,30 +138,6 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
                     text.isEmpty ? [] : [SpeechLine(text: text, complete: true)]
                 })
             }
-        }
-    }
-
-    func finishSynchronously(stream: SpeechStreamID) throws -> [SpeechLine] {
-        try queue.sync {
-            guard let context else { throw NativeError.unavailable("The Whisper model is not ready.") }
-            audioLock.lock()
-            guard var state = streams[stream], !state.isFinishing else {
-                audioLock.unlock()
-                throw NativeError.unavailable("The Whisper session has already ended.")
-            }
-            state.isFinishing = true
-            streams[stream] = state
-            audioLock.unlock()
-            defer {
-                audioLock.lock()
-                streams.removeValue(forKey: stream)
-                audioLock.unlock()
-            }
-            let text = try transcribeLocked(context: context, samples: state.samples, cancellation: state.cancellation)
-            guard !state.cancellation.isCancelled, !text.isEmpty else { return [] }
-            return [SpeechLine(
-                text: text, complete: true
-            )]
         }
     }
 
@@ -274,15 +185,6 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
             guard let value = whisper_full_get_segment_text(context, Int32(index)) else { return nil }
             return String(cString: value).trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        return TranscriptLedger.join(segments)
-    }
-}
-
-private extension WhisperModelVariant {
-    var modelFileName: String {
-        switch self {
-        case .largeV3Turbo: "ggml-large-v3-turbo.bin"
-        case .largeV3: "ggml-large-v3.bin"
-        }
+        return TranscriptText.join(segments)
     }
 }

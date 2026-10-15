@@ -108,7 +108,7 @@ native/build/VocoNative.app/Contents/MacOS/VocoNative \
   --transcribe-file /absolute/path/to/speech.wav
 ```
 
-Use `--model parakeet` or `--model whisper` with the corresponding directory. `--download-model` explicitly downloads and verifies that model. `--stream-transcribe-file` checks recognizer updates from a fixture. These checks do not prove a physical Fn key press. See [the verification record](verification.md) and [architecture](architecture.md).
+Use `--model parakeet` or `--model whisper` with the corresponding directory. `--download-model` explicitly downloads and verifies that model. File checks use the same asynchronous loading and final transcription as dictation. These checks do not prove a physical Fn key press. See [the verification record](verification.md) and [architecture](architecture.md).
 
 ## Local signing
 

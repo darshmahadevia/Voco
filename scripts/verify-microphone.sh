@@ -17,5 +17,5 @@ catch { throw new Error(readFileSync(join(directory, 'error.log'), 'utf8') || 'N
 if (report.status !== 'pass' || report.microphone !== 'granted' || !(report.audioCallbacks > 0)) {
   throw new Error(report.error || 'The microphone did not deliver audio.');
 }
-console.log(`Microphone capture: PASS (${report.audioCallbacks} audio callbacks, ${report.speechCallbacks} speech callbacks, ${report.partialUpdates} partial updates)`);
+console.log(`Microphone capture: PASS (${report.audioCallbacks} audio callbacks, ${report.speechCallbacks} speech callbacks)`);
 JS

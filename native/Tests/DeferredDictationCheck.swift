@@ -1,18 +1,11 @@
 final class FixtureSpeechEngine: SpeechEngine, @unchecked Sendable {
-    let descriptor: SpeechModelDescriptor
     var audioSamples = 0
-    var polls = 0
     var finishes = 0
     var cancellations = 0
     var failOpening = false
     var completion: (@MainActor @Sendable (Result<[SpeechLine], Error>) -> Void)?
 
-    init(_ id: SpeechModelID) {
-        descriptor = SpeechModelDescriptor(id: id, name: id.rawValue, modelVersion: "fixture", language: "English", license: "fixture")
-    }
-
     func warm(modelDirectory: URL, completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void) {}
-    func loadIfNeeded(modelDirectory: URL) throws {}
     func unload() {}
     func openStream() throws -> SpeechStreamID {
         if failOpening { throw NativeError.unavailable("Opening failed.") }
@@ -22,14 +15,10 @@ final class FixtureSpeechEngine: SpeechEngine, @unchecked Sendable {
     func enqueueAudio(_ samples: UnsafeBufferPointer<Float>, to stream: SpeechStreamID, onFailure: @escaping @Sendable (String) -> Void) {
         audioSamples += samples.count
     }
-    func transcribe(stream: SpeechStreamID, completion: @escaping @MainActor @Sendable (Result<[SpeechLine], Error>) -> Void) {
-        polls += 1
-    }
     func finish(stream: SpeechStreamID, completion: @escaping @MainActor @Sendable (Result<[SpeechLine], Error>) -> Void) {
         finishes += 1
         self.completion = completion
     }
-    func finishSynchronously(stream: SpeechStreamID) throws -> [SpeechLine] { [] }
     func cancel(stream: SpeechStreamID) { cancellations += 1 }
 
     @MainActor func deliver(_ lines: [SpeechLine]) {
@@ -43,7 +32,7 @@ enum SpeechModelCatalog {
     static let recommendedModel: SpeechModelID? = nil
     static func modelsRoot(from directory: URL) -> URL { directory }
     static func directory(for id: SpeechModelID, in root: URL) -> URL { root.appendingPathComponent(id.rawValue) }
-    static func makeEngine(for id: SpeechModelID) -> any SpeechEngine { FixtureSpeechEngine(id) }
+    static func makeEngine(for id: SpeechModelID) -> any SpeechEngine { FixtureSpeechEngine() }
 }
 
 final class ModelInstaller: Sendable {
@@ -85,7 +74,7 @@ extension NativeCoordinator {
     fileprivate func prepare(_ id: SpeechModelID) -> FixtureSpeechEngine {
         permissionTimer?.invalidate()
         permissionTimer = nil
-        let fixture = FixtureSpeechEngine(id)
+        let fixture = FixtureSpeechEngine()
         engine = fixture
         state.selectedModel = id
         state.model = .ready
@@ -161,7 +150,7 @@ extension NativeCoordinator {
             coordinator.press()
             try await settle()
             precondition(coordinator.snapshot["kind"] as? String == "listening" && coordinator.recording)
-            precondition(engine.audioSamples == 16_000 && engine.polls == 0 && engine.finishes == 0)
+            precondition(engine.audioSamples == 16_000 && engine.finishes == 0)
             precondition(InsertionFixture.text == "Before. " && InsertionFixture.pastes == 0 && InsertionFixture.keyboardEvents == 0)
             coordinator.release()
             coordinator.release()
@@ -273,7 +262,7 @@ extension NativeCoordinator {
             try await settle()
             coordinator.escape()
             precondition(coordinator.snapshot["kind"] as? String == "idle" && !coordinator.recording)
-            precondition(engine.polls == 0 && InsertionFixture.pastes == 0)
+            precondition(InsertionFixture.pastes == 0)
             InsertionFixture.reset(web: true)
             coordinator.press()
             coordinator.toggle()

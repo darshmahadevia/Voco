@@ -3,13 +3,6 @@ import Foundation
 import Moonshine
 
 final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
-    let descriptor = SpeechModelDescriptor(
-        id: .moonshine,
-        name: "Moonshine Medium Streaming",
-        modelVersion: "moonshine-medium-streaming-en v0.1.5",
-        language: "English",
-        license: "MIT"
-    )
     private let queue = DispatchQueue(label: "org.vocoapp.Voco.moonshine", qos: .userInitiated)
     private let audioLock = NSLock()
     private var pendingAudio = 0
@@ -29,10 +22,6 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }
-    }
-
-    func loadIfNeeded(modelDirectory: URL) throws {
-        try queue.sync { try loadLocked(modelDirectory: modelDirectory) }
     }
 
     func unload() {
@@ -133,21 +122,6 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
         }
     }
 
-    func transcribe(
-        stream: SpeechStreamID,
-        completion: @escaping @MainActor @Sendable (Result<[SpeechLine], Error>) -> Void
-    ) {
-        queue.async {
-            let result = Result {
-                guard let handle = self.streamHandles[stream], self.liveStreams.contains(handle) else {
-                    throw NativeError.unavailable("The Moonshine session has already ended.")
-                }
-                return try self.transcribeLocked(stream: handle, forceUpdate: false)
-            }
-            DispatchQueue.main.async { completion(result) }
-        }
-    }
-
     func finish(
         stream: SpeechStreamID,
         completion: @escaping @MainActor @Sendable (Result<[SpeechLine], Error>) -> Void
@@ -165,26 +139,9 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
                 guard stopped == 0 else {
                     throw Self.error(stopped, prefix: "Moonshine could not finish the current phrase.")
                 }
-                return try self.transcribeLocked(stream: handle, forceUpdate: true)
+                return try self.transcribeLocked(stream: handle)
             }
             DispatchQueue.main.async { completion(result) }
-        }
-    }
-
-    func finishSynchronously(stream: SpeechStreamID) throws -> [SpeechLine] {
-        audioLock.lock()
-        acceptingAudioStreams.remove(stream)
-        audioLock.unlock()
-        return try queue.sync {
-            guard let handle = streamHandles.removeValue(forKey: stream), liveStreams.remove(handle) != nil else {
-                throw NativeError.unavailable("The Moonshine session has already ended.")
-            }
-            let stopped = moonshine_stop_stream(transcriber, handle)
-            defer { _ = moonshine_free_stream(transcriber, handle) }
-            guard stopped == 0 else {
-                throw Self.error(stopped, prefix: "Moonshine could not finish the current phrase.")
-            }
-            return try transcribeLocked(stream: handle, forceUpdate: true)
         }
     }
 
@@ -200,11 +157,10 @@ final class MoonshineEngine: SpeechEngine, @unchecked Sendable {
         }
     }
 
-    private func transcribeLocked(stream: Int32, forceUpdate: Bool) throws -> [SpeechLine] {
+    private func transcribeLocked(stream: Int32) throws -> [SpeechLine] {
         guard transcriber >= 0 else { throw NativeError.unavailable("The Moonshine model is not ready.") }
         var transcript: UnsafeMutablePointer<transcript_t>?
-        let flags: UInt32 = forceUpdate ? UInt32(MOONSHINE_FLAG_FORCE_UPDATE) : 0
-        let result = moonshine_transcribe_stream(transcriber, stream, flags, &transcript)
+        let result = moonshine_transcribe_stream(transcriber, stream, UInt32(MOONSHINE_FLAG_FORCE_UPDATE), &transcript)
         guard result == 0, let transcript else {
             throw Self.error(result, prefix: "Moonshine could not transcribe the current phrase.")
         }
@@ -362,8 +318,7 @@ final class NativeAudioTapProcessor {
 
 enum NativeAudioFile {
     @MainActor
-    static func feed(_ url: URL, to engine: any SpeechEngine, stream: SpeechStreamID,
-                     onChunk: () async throws -> Void = {}) async throws {
+    static func feed(_ url: URL, to engine: any SpeechEngine, stream: SpeechStreamID) async throws {
         let file = try AVAudioFile(forReading: url)
         let sourceFormat = file.processingFormat
         guard sourceFormat.sampleRate > 0, sourceFormat.channelCount > 0,
@@ -396,29 +351,7 @@ enum NativeAudioFile {
             if let samples = converted.floatChannelData?[0] {
                 let input = UnsafeBufferPointer(start: samples, count: Int(converted.frameLength))
                 try engine.addAudio(input, to: stream)
-                try await onChunk()
             }
         }
-    }
-}
-
-@MainActor
-func transcribeStreamingFile(_ url: URL, engine: any SpeechEngine,
-                             onTranscript: ([SpeechLine]) async throws -> Void) async throws -> [SpeechLine] {
-    let stream = try engine.openStream()
-    var chunks = 0
-    do {
-        try await NativeAudioFile.feed(url, to: engine, stream: stream) {
-            chunks += 1
-            guard chunks % 5 == 0 else { return }
-            let lines = try await withCheckedThrowingContinuation { continuation in
-                engine.transcribe(stream: stream) { continuation.resume(with: $0) }
-            }
-            try await onTranscript(lines)
-        }
-        return try engine.finishSynchronously(stream: stream)
-    } catch {
-        engine.cancel(stream: stream)
-        throw error
     }
 }
