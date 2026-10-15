@@ -80,3 +80,5 @@ The output-quality change adds Fast, Balanced, and Accurate without changing the
 A synthetic `say` audio fixture spoke `Um, please send Alice twelve tickets, not thirteen.` Moonshine returned `Hum. Please send Alice 12 tickets, not 13. 13.` Parakeet and Whisper returned `Um, please send Alice 12 tickets, not 13.` This single synthetic example proves local inference runs and exposes recognition differences. It is not an accuracy benchmark. Cleanup intentionally does not guess that `Hum` is a filler or delete an arbitrary repeated number.
 
 The native helper built after installing the missing CMake prerequisite. Physical microphone and Fn-key dictation were not exercised for this change. The installed desktop bundle was not replaced by these source checks.
+
+The focused `scripts/check-whisper-cancellation.sh` check also passed against the cached Whisper model. It exercised real decoding, cancellation, reopening, suppression of queued partial and final results, and subsequent transcription in the same context. Cancellation uses whisper.cpp's cooperative abort callback. The final `npm run build` and native JSONL check passed after the reliability fixes.

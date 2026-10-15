@@ -61,6 +61,8 @@ npm run typecheck
 npm test -- app/main/native-bridge.test.ts app/shared/state.test.ts
 ./scripts/test.sh
 ./scripts/check-deferred-dictation.sh
+./scripts/check-transcript-polisher.sh
+./scripts/check-whisper-cancellation.sh
 ./scripts/check-focus.sh
 ./scripts/check-insertion.sh
 ./scripts/verify-native.sh
