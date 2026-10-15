@@ -598,14 +598,14 @@ final class NativeCoordinator {
         do {
             if session.outputMode != .fast {
                 state.session = .polishing
-                let original = session.fullText
+                let baseline = TranscriptPolisher.clean(session.fullText)
                 session.deadlineTask = Task { [weak self] in
                     do { try await Task.sleep(for: self?.cleanupTimeout ?? .seconds(20)) }
                     catch { return }
                     guard let self, self.sessionGate.accepts(session.id), self.active?.id == session.id else { return }
                     session.insertionTask?.cancel()
-                    session.fullText = original
-                    self.state.polishNotice = "Local cleanup took too long. Kept the original transcript."
+                    session.fullText = baseline
+                    self.state.polishNotice = "Local cleanup took too long. Kept basic cleanup."
                     session.insertionTask = Task { await self.insertDictation(session) }
                 }
                 publishState()
