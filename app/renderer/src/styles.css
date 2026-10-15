@@ -82,8 +82,10 @@ h1, h2, h3 { text-wrap: balance; }
 .home-hero h1 { margin: 0; font-size: 32px; font-weight: 500; line-height: 1.25; letter-spacing: -.03em; }
 .user-name { color: var(--text-primary); }
 .home-introduction { margin-top: 8px; color: var(--text-secondary); font-size: 12px; }
-.voice-workspace { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 110px; margin-top: 22px; padding: 18px 20px; border-radius: 16px; background: var(--surface-raised); }
-.voice-instruction { min-width: 0; }
+.voice-workspace { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 110px; margin-top: 22px; padding: 18px 20px; border-radius: 16px; background: var(--surface-raised); }
+.voice-instruction { max-width: 78%; position: relative; z-index: 1; min-width: 0; }
+.voice-art { position: absolute; z-index: 0; width: 300px; inset: -12px -24px -12px auto; overflow: hidden; color: var(--accent); opacity: .72; mask-image: linear-gradient(to right, transparent, #000 30%); pointer-events: none; }
+.voice-art pre { margin: 0; font: 6px/5px monospace; letter-spacing: 1px; white-space: pre; user-select: none; }
 .voice-instruction h2 { margin: 0 0 9px; font-size: 17px; font-weight: 500; letter-spacing: -.025em; }
 .voice-instruction p { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; color: var(--text-secondary); font-size: 12px; }
 kbd { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 26px; padding: 3px 8px; border: 1px solid #45474a; border-bottom-width: 2px; border-radius: 7px; background: #2b2d30; color: var(--text-primary); font: inherit; font-size: 11px; white-space: nowrap; }
@@ -355,7 +357,6 @@ html[data-view='pill'], html[data-view='pill'] body, html[data-view='pill'] #roo
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.voice-key { flex-shrink: 0; width: 58px; height: 52px; border-radius: 12px; font-size: 17px; }
 .workspace-status { flex-shrink: 0; background: #191b1d; }
 .live-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 0 26px; border-top: 1px solid var(--line); }
 .live-shortcut { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12px; }
@@ -393,7 +394,8 @@ html[data-view='pill'], html[data-view='pill'] body, html[data-view='pill'] #roo
   .transcript-time { flex: 1 0 100%; display: flex; gap: 8px; }
   .settings-index { gap: 18px; }
   .settings-index button { padding-inline: 3px; }
-  .voice-key { display: none; }
+  .voice-art { opacity: .28; right: -130px; }
+  .voice-instruction { max-width: 100%; }
   .progress-totals dt { align-items: flex-start; font-size: 11px; }
   .progress-totals dt svg { display: none; }
 }

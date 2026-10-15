@@ -36,6 +36,7 @@ import { initialState, isReady, isSetupComplete } from '../../shared/state';
 import { ProgressDashboard, UsageTotals } from './ProgressDashboard';
 import { sampleUsage } from '../../shared/usage';
 import { retainTranscripts, type RecentTranscript } from './recent-transcripts';
+import { VoiceRibbon } from './VoiceRibbon';
 import './styles.css';
 
 type PreviewScenario = 'setup' | 'ready' | 'downloading' | 'recovery' | 'listening' | 'finishing' | 'polishing' | 'silent';
@@ -761,7 +762,7 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
           <p>Hold <kbd>Fn <Globe size={13} aria-hidden="true" /></kbd> to speak. Release to paste.</p>
           <span className="shortcut-alternative">Or press Fn + Space to start and stop.</span>
         </div>
-        <kbd className="voice-key" aria-hidden="true">fn <Globe size={19} /></kbd>
+        <VoiceRibbon />
       </div>
       {!setupComplete && <button className="button button-primary setup-button" type="button" onClick={onSetup}>Finish setting up <ArrowRight size={16} /></button>}
     </section>
