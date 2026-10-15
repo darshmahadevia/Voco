@@ -67,7 +67,6 @@ h1, h2, h3 { text-wrap: balance; }
 .nav-item:hover { color: var(--text-primary); background: #202224; }
 .nav-item.active { color: var(--text-primary); }
 .nav-selection { position: absolute; z-index: -1; inset: 0; border-radius: inherit; background: #2b2d30; }
-.nav-settings.active { background: #2b2d30; }
 .nav-dot { width: 5px; height: 5px; margin-left: auto; border-radius: 50%; background: var(--accent); }
 .sidebar-spacer { flex: 1; min-height: 30px; }
 .sidebar-local { display: flex; align-items: center; gap: 8px; padding: 18px 14px; color: var(--text-tertiary); font-size: 10px; }

@@ -254,6 +254,7 @@ function AppSidebar({
     <div className="sidebar-spacer" />
     <div className="sidebar-local"><ShieldCheck size={14} aria-hidden="true" /><span>On your Mac.</span></div>
     <button className={`nav-item nav-settings${currentPage === 'settings' ? ' active' : ''}`} type="button" aria-label="Settings" title="Settings" aria-current={currentPage === 'settings' ? 'page' : undefined} onClick={() => onNavigate('settings')}>
+      {currentPage === 'settings' && <motion.span className="nav-selection" layoutId="navigation-selection" transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 36 }} />}
       {NAVIGATION_ITEMS.settings.icon}<span>Settings</span>
     </button>
   </aside>;

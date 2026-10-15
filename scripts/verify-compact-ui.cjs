@@ -143,10 +143,29 @@ app.whenReady().then(async () => {
   await evaluate("(() => { const select = document.querySelector('.progress-preferences select'); select.value = '1000'; select.dispatchEvent(new Event('change', { bubbles: true })); })()");
   await settle();
   assert.match(await evaluate("document.querySelector('.goal-count').textContent"), /1,000/);
-  await window.loadFile(renderer, { query: { preview: 'polishing', view: 'pill' } });
-  await settle();
-  assert.equal(await evaluate("document.querySelector('.pill-title').textContent"), 'Polishing…');
-  assert.ok(await evaluate("Boolean(document.querySelector('.pill-loader'))"));
+  const desktopWindow = window;
+  window = new BrowserWindow({ width: 400, height: 220, show: false, frame: false, transparent: true, webPreferences: { contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
+  window.webContents.on('console-message', (_event, details) => { if (details.level === 'error') errors.push(details.message); });
+  desktopWindow.destroy();
+  for (const [scenario, title] of [['ready', 'Ready'], ['listening', 'Listening…'], ['silent', 'Listening…'], ['finishing', 'Transcribing…'], ['polishing', 'Polishing…'], ['recovery', 'Transcript needs attention']]) {
+    await load({ preview: scenario, view: 'pill' });
+    assert.equal(await evaluate("document.querySelector('.pill-title').textContent"), title);
+    const bounds = await evaluate("(() => { const r = document.querySelector('.pill-card').getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: innerWidth, height: innerHeight }; })()");
+    assert.ok(bounds.left >= 0 && bounds.right <= bounds.width && bounds.top >= 0 && bounds.bottom <= bounds.height, `${scenario}: capsule is clipped`);
+    if (scenario === 'finishing' || scenario === 'polishing') assert.ok(await evaluate("Boolean(document.querySelector('.pill-loader'))"));
+    if (scenario === 'recovery') assert.ok(await evaluate("(() => { const r = document.querySelector('.recovery-actions').getBoundingClientRect(); return r.bottom <= innerHeight; })()"));
+    await writeFile(join(output, `pill-${scenario}.png`), (await window.webContents.capturePage()).toPNG());
+  }
+  window.setContentSize(390, 844);
+  await load({ preview: 'ready', page: 'home' });
+  await capture('390x844-home');
+  window.webContents.debugger.attach('1.3');
+  await window.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  await load({ preview: 'listening', page: 'home' });
+  assert.equal(await evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches"), true);
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.nav-item')).transitionDuration"), '0s');
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.page-transition')).filter"), 'blur(0px)');
+  window.webContents.debugger.detach();
   assert.deepEqual(errors, [], 'Renderer console errors');
   await writeFile(join(output, 'report.json'), JSON.stringify({ screenshots: report, errors, interactions: 'Onboarding, blocked continuation, transcript search, empty results, copy feedback, calendar keyboard navigation, and goal adjustment passed.' }, null, 2));
   process.stdout.write(`Verified ${report.length} layouts and onboarding/search interactions. Screenshots: ${output}\n`);
