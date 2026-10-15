@@ -68,8 +68,11 @@ npm test -- app/main/native-bridge.test.ts app/shared/state.test.ts
 ./scripts/check-insertion.sh
 ./scripts/verify-native.sh
 npm run verify:compact-ui
+npm run verify:motion
 npm run verify:menu-bar
 ```
+
+`verify:motion` runs `scripts/verify-motion.cjs` against the built renderer in Electron. It checks page transitions, rapid navigation, reduced motion, search focus, Settings anchors, persistent status, retention, and recovery. It writes screenshots and a report to `/tmp/voco-motion`. Build the renderer before running this check.
 
 After installing, verify the current bundle and physical microphone:
 
