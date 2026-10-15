@@ -264,6 +264,30 @@ func AXUIElementSetAttributeValue(_ element: AXUIElement, _ attribute: CFString,
         precondition(InsertionFixture.pastes == 1 && NSPasteboard.general.string(forType: .string) == "Original clipboard")
         print("Failed paste detected; clipboard ownership respected")
 
+        InsertionFixture.reset()
+        InsertionFixture.flags = .maskShift
+        let delayedRelease = Task { @MainActor in
+            try await Task.sleep(for: .milliseconds(100))
+            InsertionFixture.flags = []
+        }
+        try await target().insert("After release.")
+        _ = try await delayedRelease.value
+        precondition(InsertionFixture.text == "Before. After release.")
+
+        InsertionFixture.reset()
+        InsertionFixture.flags = .maskCommand
+        let changingFocus = Task { @MainActor in
+            try await Task.sleep(for: .milliseconds(75))
+            InsertionFixture.changedFocus = true
+            InsertionFixture.flags = []
+        }
+        do {
+            try await target().insert("Must not insert.")
+            preconditionFailure("Focus must be revalidated after modifiers release")
+        } catch InsertionError.focusChanged {}
+        _ = try await changingFocus.value
+        precondition(InsertionFixture.text == "Before. ")
+
         for failure in [InsertionError.secureField, .focusChanged, .permission, .modifiers] {
             InsertionFixture.reset(web: true)
             let captured = try target()

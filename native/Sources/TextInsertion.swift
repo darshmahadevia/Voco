@@ -87,13 +87,13 @@ struct FocusTarget {
         guard !text.isEmpty else { return }
         try Task.checkCancellation()
         guard AXIsProcessTrusted() else { throw InsertionError.permission }
-        // A buffered insertion waits for the hold key to be released.
+        let modifiers: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift, .maskSecondaryFn]
         for _ in 0..<20 {
-            if !CGEventSource.flagsState(.combinedSessionState).contains(.maskSecondaryFn) { break }
+            if CGEventSource.flagsState(.combinedSessionState).intersection(modifiers).isEmpty { break }
             try await Task.sleep(for: .milliseconds(25))
         }
+        try Task.checkCancellation()
         let element = try validate()
-        let modifiers: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift, .maskSecondaryFn]
         guard CGEventSource.flagsState(.combinedSessionState).intersection(modifiers).isEmpty
         else { throw InsertionError.modifiers }
         let before = Self.textValue(of: element)
