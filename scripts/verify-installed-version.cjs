@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
+const { readFileSync, readdirSync } = require('node:fs');
 const { homedir } = require('node:os');
 const { join, resolve } = require('node:path');
 const { execFileSync } = require('node:child_process');
@@ -23,4 +23,15 @@ function nativeBuildId(path) {
   return id;
 }
 assert.equal(nativeBuildId(installedHelper), nativeBuildId(builtHelper), `${bundle}: native helper differs from the latest build`);
+const iconName = execFileSync('plutil', ['-extract', 'CFBundleIconFile', 'raw', join(bundle, 'Contents/Info.plist')], { encoding: 'utf8' }).trim();
+const installedIcon = iconName.endsWith('.icns') ? iconName : `${iconName}.icns`;
+const brandFiles = readdirSync(join(project, 'Resources/Brand'));
+const resourcePairs = [
+  ...brandFiles.map((file) => [`Resources/Brand/${file}`, `Contents/Resources/brand/${file}`]),
+  ['Resources/Voco.icns', `Contents/Resources/${installedIcon}`],
+  ['Resources/Voco.icns', 'Contents/Resources/native/VocoNative.app/Contents/Resources/Voco.icns'],
+];
+for (const [source, installed] of resourcePairs) {
+  assert.ok(readFileSync(join(bundle, installed)).equals(readFileSync(join(project, source))), `${bundle}: ${installed} differs from the current brand assets`);
+}
 console.log(`PASS latest installed Voco: ${bundle}`);
