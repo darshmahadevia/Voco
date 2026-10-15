@@ -16,6 +16,8 @@ Verified against the rebuilt installation:
 
 The first acoustic probe overlapped renderer automation and produced no insertion. An isolated hold probe passed. The first retained two-case smoke run passed hold but produced no text for continuous mode. After a clean normal-app launch, a state observer confirmed both cases traversed listening, finishing, cleanup, and idle with complete insertion. No product failure cause was established from the earlier runs. Acoustic checks need stable focus and an audible speaker-to-microphone path.
 
+Both cases then passed in two further runs, including `npm run verify:dictation` after quitting the observed app and reopening normally through LaunchServices without remote debugging. The app and helper remain running from that normal launch. macOS reports `AppleFnUsageType=0` for the Globe-key action.
+
 Physical Fn or Globe hardware delivery remains unverified. Posted events exercise the actual event tap and production coordinator but cannot establish that physical hardware generates those events. The local development signing identity is valid on this Mac. Developer ID signing and notarization remain unconfigured for public distribution.
 
 ## Current installation, October 10, 2026
