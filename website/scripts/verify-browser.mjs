@@ -69,7 +69,14 @@ try {
       true,
     );
     if (name === "desktop") {
-      await page.getByRole("button", { name: "Play demo" }).click();
+      await page.getByRole("button", { name: "Play demo" }).press("Enter");
+      assert.equal(
+        await page
+          .locator("#demo-cancel")
+          .evaluate((element) => document.activeElement === element),
+        true,
+        "Keyboard playback must move focus to Cancel",
+      );
       assert.equal(
         await page.locator(".demo").getAttribute("data-phase"),
         "listening",
@@ -157,6 +164,26 @@ try {
       "idle",
     );
     assert.equal(await page.locator("#demo-play").isEnabled(), true);
+    await page
+      .getByRole("button", { name: "Play demo", exact: true })
+      .press("Enter");
+    assert.equal(
+      await page
+        .locator("#demo-cancel")
+        .evaluate((element) => document.activeElement === element),
+      true,
+    );
+    await page.keyboard.press("Escape");
+    assert.equal(
+      await page.locator(".demo").getAttribute("data-phase"),
+      "idle",
+    );
+    assert.equal(
+      await page
+        .locator("#demo-play")
+        .evaluate((element) => document.activeElement === element),
+      true,
+    );
     await page.getByRole("button", { name: "Play demo", exact: true }).click();
     await page
       .getByRole("button", { name: "A quick note", exact: true })

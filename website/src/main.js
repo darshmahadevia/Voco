@@ -111,8 +111,11 @@ function setDemoPhase(phase) {
   demoStatus.textContent = current.label;
   playButton.querySelector("span").textContent = current.action;
   playButton.disabled = phase === "listening" || phase === "transcribing";
-  if (phase === "complete" && document.activeElement === cancelButton)
-    playButton.focus();
+  if (
+    (phase === "complete" || phase === "idle") &&
+    document.activeElement === cancelButton
+  )
+    playButton.focus({ preventScroll: true });
   cancelButton.hidden = !(phase === "listening" || phase === "transcribing");
   demoContext.textContent = demoSamples[demoState.sample].context;
   demoOutput.textContent =
@@ -127,6 +130,9 @@ function setDemoPhase(phase) {
 }
 function playDemo() {
   setDemoPhase(reducedMotion.matches ? "complete" : "listening");
+  (cancelButton.hidden ? playButton : cancelButton).focus({
+    preventScroll: true,
+  });
 }
 playButton.addEventListener("click", playDemo);
 cancelButton.addEventListener("click", () => {
@@ -148,7 +154,6 @@ document.querySelector(".shortcut-key").addEventListener("click", () => {
     block: "center",
   });
   playDemo();
-  (cancelButton.hidden ? playButton : cancelButton).focus({ preventScroll: true });
 });
 demo.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !cancelButton.hidden) {
