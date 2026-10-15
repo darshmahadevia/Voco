@@ -22,7 +22,7 @@ To build and install the desktop app:
 open ~/Applications/Voco.app
 ```
 
-`npm run build` builds the Swift helper and production interface. `npm run pack` creates the signed app bundle, and `npm run dist` creates a disk image. `npm run build:icons` regenerates the icon from the committed brand PNG when needed.
+`npm run build` builds the Swift helper and production interface using the committed icons. `npm run pack` creates the signed app bundle at `release/mac-arm64/Voco.app`, and `npm run dist` creates a disk image. After changing `Resources/Brand/voco-mark.svg`, run `npm run build:icons` and commit the regenerated assets with the source. Ordinary builds do not rewrite brand assets.
 
 Native dependencies are pinned to Moonshine 0.1.5, FluidAudio 0.9.1, and whisper.cpp 1.9.5. The build verifies the Moonshine archive checksum and Whisper source revision. It does not download speech models. Native artifacts live in `~/Library/Caches/Voco/Native`, with `native/build` linking there. Set `VOCO_NATIVE_BUILD_DIR` to choose another cache. Desktop artifacts live in `~/Library/Caches/Voco/Electron`, with `release` linking there. Installation keeps one app at `~/Applications/Voco.app` and moves the previous bundle to Trash.
 

@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "verify:renderer": "npm run verify:compact-ui",
-    "build": "npm run typecheck && npm run build:icons && npm run build:native && electron-vite build",
+    "build": "npm run typecheck && npm run build:native && electron-vite build",
     "pack": "npm run build && node scripts/package-desktop.mjs",
     "dist": "npm run build && node scripts/package-desktop.mjs dmg",
     "verify": "npm run typecheck && npm test && npm run build && npm run verify:renderer && npm run verify:motion",

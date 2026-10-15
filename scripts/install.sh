@@ -6,7 +6,7 @@ bundle_dir="$project_dir/release/mac-arm64/Voco.app"
 launch_services="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 cd "$project_dir"
 if test "${1:-}" != --built; then
-    ./scripts/build.sh
+    npm run pack
 fi
 node scripts/verify-installed-version.cjs "$bundle_dir"
 codesign --verify --deep --strict "$bundle_dir"
