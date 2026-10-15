@@ -5,6 +5,7 @@ import Foundation
 
 struct NativePreferences: Codable, Equatable {
     var keepLastTranscript = true
+    var outputMode: OutputMode = .fast
 
     static var defaults: UserDefaults {
         if let suite = ProcessInfo.processInfo.environment["VOCO_PREFERENCE_SUITE"],
@@ -26,13 +27,15 @@ struct NativePreferences: Codable, Equatable {
         }
         let keep = defaults.object(forKey: "keepLastTranscript") as? Bool ?? true
         return NativePreferences(
-            keepLastTranscript: keep
+            keepLastTranscript: keep,
+            outputMode: defaults.string(forKey: "outputMode").flatMap(OutputMode.init(rawValue:)) ?? .fast
         )
     }
 
     func save() {
         let defaults = Self.defaults
         defaults.set(keepLastTranscript, forKey: "keepLastTranscript")
+        defaults.set(outputMode.rawValue, forKey: "outputMode")
     }
 }
 
@@ -61,6 +64,7 @@ enum NativeSessionState {
     case starting
     case listening
     case finishing
+    case polishing
     case recovery(message: String, text: String)
 
     var json: [String: Any] {
@@ -69,6 +73,7 @@ enum NativeSessionState {
         case .starting: ["kind": "starting"]
         case .listening: ["kind": "listening"]
         case .finishing: ["kind": "finishing"]
+        case .polishing: ["kind": "polishing"]
         case let .recovery(message, text): ["kind": "recovery", "message": message, "text": text]
         }
     }
@@ -92,6 +97,8 @@ final class NativeStateStore {
         didSet { usage.save(defaults: NativePreferences.defaults) }
     }
     var lastTranscript = ""
+    var lastRawTranscript = ""
+    var polishNotice = ""
     var microphone: String = "required"
     var accessibility = false
     var shortcut = false
@@ -114,8 +121,12 @@ final class NativeStateStore {
             "session": session.json,
             "preferences": [
                 "keepLastTranscript": preferences.keepLastTranscript,
+                "outputMode": preferences.outputMode.rawValue,
             ],
             "lastTranscript": lastTranscript,
+            "lastRawTranscript": lastRawTranscript,
+            "polishNotice": polishNotice,
+            "polishing": TranscriptPolisher.system.availability.json,
             "userName": NSFullUserName(),
             "usage": usage.json,
         ]

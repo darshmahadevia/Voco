@@ -7,7 +7,7 @@ cd "$ROOT"
 xcrun swiftc -swift-version 6 -target arm64-apple-macos26.0 -emit-library -static -emit-module -module-name VocoCore \
   Sources/VocoCore/*.swift -o "$SCRATCH/libVocoCore.a" -emit-module-path "$SCRATCH/VocoCore.swiftmodule"
 cat native/Sources/SessionTypes.swift native/Sources/TranscriptLedger.swift native/Sources/UsageStats.swift \
-  native/Sources/AudioMeter.swift native/Sources/NativeProtocol.swift native/Sources/TextInsertion.swift \
+  native/Sources/AudioMeter.swift native/Sources/TranscriptPolisher.swift native/Sources/NativeProtocol.swift native/Sources/TextInsertion.swift \
   native/Sources/NativeCoordinator.swift native/Tests/InsertionCheck.swift > "$SCRATCH/check.swift"
 python3 - "$SCRATCH/check.swift" "$ROOT/native/Tests/DeferredDictationCheck.swift" <<'PY'
 import sys

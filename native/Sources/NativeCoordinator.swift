@@ -11,20 +11,23 @@ final class NativeCoordinator {
         let engine: any SpeechEngine
         let stream: SpeechStreamID
         let target: FocusTarget
+        let outputMode: OutputMode
         let startedAt = ContinuousClock.now
         var fullText = ""
         var insertionTask: Task<Void, Never>?
 
-        init(id: UUID, engine: any SpeechEngine, stream: SpeechStreamID, target: FocusTarget) {
+        init(id: UUID, engine: any SpeechEngine, stream: SpeechStreamID, target: FocusTarget, outputMode: OutputMode) {
             self.id = id
             self.engine = engine
             self.stream = stream
             self.target = target
+            self.outputMode = outputMode
         }
 
     }
 
     private let state = NativeStateStore()
+    private var polisher = TranscriptPolisher.system
     private var engine: any SpeechEngine
     private let audio = NativeAudioInput()
     private var lastLevelPublication = ContinuousClock.now
@@ -41,6 +44,7 @@ final class NativeCoordinator {
     private struct PendingCapture {
         let id: UUID
         let target: FocusTarget
+        let outputMode: OutputMode
     }
     private var captureMode: CaptureMode?
     private var pendingCapture: PendingCapture?
@@ -276,8 +280,15 @@ final class NativeCoordinator {
               let keep = raw["keepLastTranscript"] as? Bool else {
             throw NativeError.invalidCommand("Voco received invalid preferences.")
         }
-        state.preferences = NativePreferences(keepLastTranscript: keep)
-        if !keep { state.lastTranscript = "" }
+        let mode: OutputMode
+        if let value = raw["outputMode"] {
+            guard let string = value as? String, let parsed = OutputMode(rawValue: string) else {
+                throw NativeError.invalidCommand("Choose a supported output mode.")
+            }
+            mode = parsed
+        } else { mode = state.preferences.outputMode }
+        state.preferences = NativePreferences(keepLastTranscript: keep, outputMode: mode)
+        if !keep { state.lastTranscript = ""; state.lastRawTranscript = "" }
         refreshPermissions(publish: false)
     }
 
@@ -408,13 +419,13 @@ final class NativeCoordinator {
             guard let self, self.pendingCapture?.id == request.id else { return }
             self.holdTask = nil
             self.pendingCapture = nil
-            self.startDictation(id: request.id, target: request.target)
+            self.startDictation(id: request.id, target: request.target, outputMode: request.outputMode)
         }
     }
 
     private func captureRequest() -> PendingCapture? {
         guard canDictate, let target = FocusTarget.capture() else { writeShowSettings(); return nil }
-        return PendingCapture(id: UUID(), target: target)
+        return PendingCapture(id: UUID(), target: target, outputMode: state.preferences.outputMode)
     }
 
     private func toggleContinuous() {
@@ -429,13 +440,13 @@ final class NativeCoordinator {
                 holdTask?.cancel()
                 holdTask = nil
                 pendingCapture = nil
-                startDictation(id: request.id, target: request.target)
+                startDictation(id: request.id, target: request.target, outputMode: request.outputMode)
             }
             return
         }
         guard active == nil, startingSessionID == nil, let request = captureRequest() else { return }
         captureMode = .continuous
-        startDictation(id: request.id, target: request.target)
+        startDictation(id: request.id, target: request.target, outputMode: request.outputMode)
     }
 
     private func releaseHold() {
@@ -457,10 +468,12 @@ final class NativeCoordinator {
         return false
     }
 
-    private func startDictation(id: UUID, target: FocusTarget) {
+    private func startDictation(id: UUID, target: FocusTarget, outputMode: OutputMode) {
         guard canDictate, active == nil, !finishing else { clearCaptureIntent(); writeShowSettings(); return }
         sessionGate.begin(id)
         startingSessionID = id
+        state.polishNotice = ""
+        state.lastRawTranscript = ""
         state.session = .starting
         publishState()
 
@@ -470,7 +483,7 @@ final class NativeCoordinator {
                 guard let self, self.startingSessionID == id, self.sessionGate.accepts(id) else { return }
                 self.startingSessionID = nil
                 self.targetResolutionTask = nil
-                self.openDictation(id: id, target: resolvedTarget)
+                self.openDictation(id: id, target: resolvedTarget, outputMode: outputMode)
             } catch {
                 guard let self, self.startingSessionID == id, self.sessionGate.accepts(id) else { return }
                 self.startingSessionID = nil
@@ -483,7 +496,7 @@ final class NativeCoordinator {
         }
     }
 
-    private func openDictation(id: UUID, target: FocusTarget) {
+    private func openDictation(id: UUID, target: FocusTarget, outputMode: OutputMode) {
         guard sessionGate.accepts(id) else { return }
         guard canDictate, active == nil, !finishing else {
             sessionGate.invalidate()
@@ -497,7 +510,7 @@ final class NativeCoordinator {
             _ = try target.validate()
             let sessionEngine = engine
             let stream = try sessionEngine.openStream()
-            let session = Dictation(id: id, engine: sessionEngine, stream: stream, target: target)
+            let session = Dictation(id: id, engine: sessionEngine, stream: stream, target: target, outputMode: outputMode)
             active = session
             state.audioLevel = 0
             state.audioWaveform = Array(repeating: 0, count: AudioMeter.barCount)
@@ -568,9 +581,22 @@ final class NativeCoordinator {
     private func finishDictation(_ lines: [SpeechLine], session: Dictation) async {
         guard sessionGate.accepts(session.id), active?.id == session.id else { return }
         session.fullText = TranscriptLedger.join(lines.map(\.text))
+        state.lastRawTranscript = state.preferences.keepLastTranscript ? session.fullText : ""
         guard !session.fullText.isEmpty else { completeDictation(session); return }
         guard lines.allSatisfy(\.complete) else { recoverUncommitted(session); return }
         do {
+            if session.outputMode != .fast {
+                state.session = .polishing
+                publishState()
+            }
+            let result = try await polisher.polish(session.fullText, mode: session.outputMode)
+            try Task.checkCancellation()
+            guard sessionGate.accepts(session.id), active?.id == session.id else { return }
+            session.fullText = result.text
+            state.polishNotice = result.notice
+            state.session = .finishing
+            publishState()
+            if session.fullText.isEmpty { completeDictation(session); return }
             try await session.target.insert(session.fullText)
             guard sessionGate.accepts(session.id), active?.id == session.id else { return }
             completeDictation(session)

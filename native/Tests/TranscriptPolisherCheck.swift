@@ -11,6 +11,8 @@ import Foundation
             ("Umbridge and humming are not fillers.", "Umbridge and humming are not fillers."),
             ("First line.\nwrong never mind right", "First line.\nright"),
             ("um uh umm", ""),
+            ("Um, uh, umm.", ""),
+            ("Um. Hello Alice.", "Hello Alice."),
             ("Keep this. Charge 1.5 never mind charge 2.", "Keep this. charge 2."),
             ("Keep this. Ask Dr. Alice never mind ask Bob.", "Keep this. ask Bob."),
             ("I don't owe Alice 20 dollars.", "I don't owe Alice 20 dollars."),

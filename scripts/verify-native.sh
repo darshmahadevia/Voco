@@ -7,6 +7,7 @@ EXECUTABLE="$APP/Contents/MacOS/VocoNative"
 MODEL_DIRECTORY="${VOCO_MODEL_DIRECTORY:-}"
 TRANSCRIBE_FIXTURE="${VOCO_TRANSCRIBE_FIXTURE:-}"
 
+"$ROOT/scripts/check-transcript-polisher.sh"
 "$ROOT/scripts/build-native.sh"
 swiftc \
   -swift-version 6 \

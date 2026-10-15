@@ -73,6 +73,14 @@ final class ModelInstaller: Sendable {
     func stop() { isRunning = false }
 }
 
+actor SuspendedPolish {
+    private var continuation: CheckedContinuation<String, Never>?
+    func generate(_ raw: String) async -> String {
+        await withCheckedContinuation { continuation = $0 }
+    }
+    func resume(_ text: String) { continuation?.resume(returning: text); continuation = nil }
+}
+
 extension NativeCoordinator {
     fileprivate func prepare(_ id: SpeechModelID) -> FixtureSpeechEngine {
         permissionTimer?.invalidate()
@@ -88,6 +96,10 @@ extension NativeCoordinator {
         return fixture
     }
 
+    fileprivate func chooseOutput(_ mode: OutputMode) { state.preferences.outputMode = mode }
+    fileprivate func usePolisher(_ value: TranscriptPolisher) { polisher = value }
+    fileprivate var rawText: String { state.lastRawTranscript }
+    fileprivate var notice: String { state.polishNotice }
     fileprivate func press() { shortcutMonitor.onAction?(.pressed) }
     fileprivate func toggle() { shortcutMonitor.onAction?(.toggleContinuous) }
     fileprivate func combination() { shortcutMonitor.onAction?(.cancelled) }
@@ -121,6 +133,23 @@ extension NativeCoordinator {
             SpeechLine(text: text, complete: complete)
         }
         func settle() async throws { try await Task.sleep(for: .milliseconds(220)) }
+
+        NativePreferences.defaults.removeObject(forKey: "outputMode")
+        precondition(NativePreferences.load().outputMode == .fast)
+        NativePreferences(keepLastTranscript: true, outputMode: .balanced).save()
+        precondition(NativePreferences.load().outputMode == .balanced)
+        precondition(NativeSessionState.polishing.json["kind"] as? String == "polishing")
+        NativePreferences.defaults.set("fast", forKey: "outputMode")
+        let stateStore = NativeStateStore()
+        stateStore.lastRawTranscript = "Memory only"
+        stateStore.polishNotice = "Ephemeral"
+        let stateSnapshot = stateStore.snapshot()
+        precondition((stateSnapshot["preferences"] as? [String: Any])?["outputMode"] as? String == "fast")
+        precondition(stateSnapshot["lastRawTranscript"] as? String == "Memory only")
+        precondition(stateSnapshot["polishNotice"] as? String == "Ephemeral")
+        precondition((stateSnapshot["polishing"] as? [String: Any])?["message"] is String)
+        precondition(NativePreferences.defaults.object(forKey: "lastRawTranscript") == nil)
+        precondition(NativePreferences.defaults.object(forKey: "polishNotice") == nil)
 
         for id in SpeechModelID.allCases {
             InsertionFixture.reset(web: true)
@@ -320,6 +349,59 @@ extension NativeCoordinator {
             precondition(InsertionFixture.pastes == 0)
             precondition(coordinator.snapshot["kind"] as? String == "recovery")
             precondition(coordinator.snapshot["text"] as? String == "Keep the complete transcript.")
+            InsertionFixture.reset(web: true)
+            coordinator.enableRetention()
+            coordinator.chooseOutput(.balanced)
+            coordinator.press()
+            // A capture freezes output mode before the hold delay and target resolution.
+            coordinator.chooseOutput(.fast)
+            try await settle()
+            coordinator.release()
+            engine.deliver([final("um Alice has 12 tickets not 13")])
+            try await settle()
+            precondition(InsertionFixture.text == "Before. Alice has 12 tickets not 13")
+            precondition(coordinator.rawText == "um Alice has 12 tickets not 13")
+
+            InsertionFixture.reset(web: true)
+            let suspended = SuspendedPolish()
+            coordinator.usePolisher(TranscriptPolisher(availability: .init(available: true, message: "fixture")) {
+                await suspended.generate($0)
+            })
+            coordinator.chooseOutput(.accurate)
+            coordinator.press()
+            try await settle()
+            coordinator.release()
+            engine.deliver([final("um Alice has 12 tickets")])
+            try await settle()
+            precondition(coordinator.snapshot["kind"] as? String == "polishing")
+            precondition(coordinator.rawText == "um Alice has 12 tickets")
+            precondition(InsertionFixture.pastes == 0)
+            coordinator.escape()
+            precondition(coordinator.snapshot["text"] as? String == "um Alice has 12 tickets")
+            coordinator.chooseOutput(.fast)
+            coordinator.press()
+            try await settle()
+            await suspended.resume("Alice has 12 tickets.")
+            try await settle()
+            precondition(coordinator.snapshot["kind"] as? String == "listening")
+            precondition(InsertionFixture.pastes == 0 && InsertionFixture.text == "Before. ")
+            coordinator.release()
+            engine.deliver([final("New session words.")])
+            try await settle()
+            precondition(InsertionFixture.text == "Before. New session words.")
+
+            InsertionFixture.reset(web: true)
+            coordinator.chooseOutput(.accurate)
+            coordinator.usePolisher(TranscriptPolisher(availability: .init(available: true, message: "fixture")) { _ in "" })
+            coordinator.press()
+            try await settle()
+            coordinator.release()
+            engine.deliver([final("um keep every original word")])
+            try await settle()
+            precondition(InsertionFixture.text == "Before. um keep every original word")
+            precondition(!coordinator.notice.isEmpty)
+            coordinator.chooseOutput(.fast)
+            print("PASS \(id.rawValue): output mode persistence/freeze, raw before cleanup, suspended cleanup cancellation/stale result, unsafe output fallback")
             print("PASS \(id.rawValue): capture, release, one paste, current cursor, cancellation, stale result, recovery, silence, tap, continuous promotion/stop/cancel/failure/permissions")
         }
     }

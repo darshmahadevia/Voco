@@ -137,7 +137,13 @@ struct TranscriptPolisher: Sendable {
                     sentenceStart = index + 1
                 } else if ["um", "umm", "uh"].contains(lower) {
                     removed.insert(index)
-                    if index + 1 < parts.count, parts[index + 1].text == "," { removed.insert(index + 1) }
+                    if index + 1 < parts.count {
+                        let punctuation = parts[index + 1].text
+                        let onlyFillers = (sentenceStart..<index).allSatisfy { removed.contains($0) }
+                        if punctuation == "," || (onlyFillers && [".", "!", "?"].contains(punctuation)) {
+                            removed.insert(index + 1)
+                        }
+                    }
                 } else if [".", "!", "?"].contains(token.text) {
                     let nextHasSpace = index + 1 == parts.count || parts[index + 1].range.location > NSMaxRange(token.range)
                     let previous = index > 0 ? parts[index - 1].text.lowercased() : ""
