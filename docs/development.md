@@ -58,7 +58,6 @@ Run only the checks relevant to your change:
 
 ```sh
 npm run typecheck
-node --test scripts/push-update.test.mjs
 npm test -- app/main/native-bridge.test.ts app/shared/state.test.ts
 ./scripts/test.sh
 ./scripts/check-deferred-dictation.sh
