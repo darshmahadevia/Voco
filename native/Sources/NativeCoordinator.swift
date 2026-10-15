@@ -15,6 +15,7 @@ final class NativeCoordinator {
         let startedAt = ContinuousClock.now
         var fullText = ""
         var insertionTask: Task<Void, Never>?
+        var deadlineTask: Task<Void, Never>?
 
         init(id: UUID, engine: any SpeechEngine, stream: SpeechStreamID, target: FocusTarget, outputMode: OutputMode) {
             self.id = id
@@ -28,6 +29,8 @@ final class NativeCoordinator {
 
     private let state = NativeStateStore()
     private var polisher = TranscriptPolisher.system
+    private var recognitionTimeout: Duration = .seconds(120)
+    private var cleanupTimeout: Duration = .seconds(20)
     private var engine: any SpeechEngine
     private let audio = NativeAudioInput()
     private var lastLevelPublication = ContinuousClock.now
@@ -568,8 +571,15 @@ final class NativeCoordinator {
         audio.stop()
         state.session = .finishing
         publishState()
+        session.deadlineTask = Task { [weak self] in
+            do { try await Task.sleep(for: self?.recognitionTimeout ?? .seconds(120)) }
+            catch { return }
+            self?.failDictation("Speech recognition took too long. Try a shorter dictation or restart Voco.", id: session.id)
+        }
         session.engine.finish(stream: session.stream) { [weak self] result in
             guard let self, self.sessionGate.accepts(session.id), self.active?.id == session.id else { return }
+            session.deadlineTask?.cancel()
+            session.deadlineTask = nil
             switch result {
             case let .success(lines):
                 session.insertionTask = Task { await self.finishDictation(lines, session: session) }
@@ -587,16 +597,45 @@ final class NativeCoordinator {
         do {
             if session.outputMode != .fast {
                 state.session = .polishing
+                let original = session.fullText
+                session.deadlineTask = Task { [weak self] in
+                    do { try await Task.sleep(for: self?.cleanupTimeout ?? .seconds(20)) }
+                    catch { return }
+                    guard let self, self.sessionGate.accepts(session.id), self.active?.id == session.id else { return }
+                    session.insertionTask?.cancel()
+                    session.fullText = original
+                    self.state.polishNotice = "Local cleanup took too long. Kept the original transcript."
+                    session.insertionTask = Task { await self.insertDictation(session) }
+                }
                 publishState()
             }
             let result = try await polisher.polish(session.fullText, mode: session.outputMode)
             try Task.checkCancellation()
             guard sessionGate.accepts(session.id), active?.id == session.id else { return }
+            session.deadlineTask?.cancel()
+            session.deadlineTask = nil
             session.fullText = result.text
             state.polishNotice = result.notice
-            state.session = .finishing
-            publishState()
-            if session.fullText.isEmpty { completeDictation(session); return }
+            await insertDictation(session)
+        } catch is CancellationError {
+            return
+        } catch {
+            failDictation(error.localizedDescription, id: session.id)
+        }
+    }
+
+    private func insertDictation(_ session: Dictation) async {
+        guard !Task.isCancelled, sessionGate.accepts(session.id), active?.id == session.id else { return }
+        session.deadlineTask?.cancel()
+        session.deadlineTask = nil
+        state.session = .finishing
+        publishState()
+        if session.fullText.isEmpty {
+            state.polishNotice = "Cleanup removed the entire transcript. Nothing was inserted."
+            completeDictation(session)
+            return
+        }
+        do {
             try await session.target.insert(session.fullText)
             guard sessionGate.accepts(session.id), active?.id == session.id else { return }
             completeDictation(session)
@@ -608,6 +647,7 @@ final class NativeCoordinator {
     }
 
     private func recoverUncommitted(_ session: Dictation) {
+        session.deadlineTask?.cancel()
         let text = session.fullText
         guard !text.isEmpty else {
             completeDictation(session)
@@ -623,11 +663,12 @@ final class NativeCoordinator {
     }
 
     private func completeDictation(_ session: Dictation) {
+        session.deadlineTask?.cancel()
         let text = session.fullText
         let elapsed = (ContinuousClock.now - session.startedAt).components
         state.usage.record(text: text, seconds: Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18)
         if !state.preferences.keepLastTranscript { state.lastTranscript = "" }
-        else if !text.isEmpty { state.lastTranscript = text }
+        else { state.lastTranscript = text }
         active = nil
         sessionGate.invalidate()
         finishing = false
@@ -647,6 +688,7 @@ final class NativeCoordinator {
             return
         }
         session.insertionTask?.cancel()
+        session.deadlineTask?.cancel()
         audio.stop()
         session.engine.cancel(stream: session.stream)
         let text = session.fullText
@@ -663,6 +705,7 @@ final class NativeCoordinator {
     private func failDictation(_ message: String, id: UUID) {
         guard let session = active, session.id == id else { return }
         session.insertionTask?.cancel()
+        session.deadlineTask?.cancel()
         audio.stop()
         session.engine.cancel(stream: session.stream)
         let text = session.fullText

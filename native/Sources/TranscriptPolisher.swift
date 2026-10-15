@@ -147,9 +147,14 @@ struct TranscriptPolisher: Sendable {
                 } else if [".", "!", "?"].contains(token.text) {
                     let nextHasSpace = index + 1 == parts.count || parts[index + 1].range.location > NSMaxRange(token.range)
                     let previous = index > 0 ? parts[index - 1].text.lowercased() : ""
-                    let abbreviation = token.text == "." && (previous.count == 1 || ["dr", "mr", "mrs", "ms", "prof", "sr", "jr"].contains(previous))
+                    let abbreviation = token.text == "." && (["dr", "mr", "mrs", "ms", "prof", "sr", "jr"].contains(previous))
                     if nextHasSpace && !abbreviation { sentenceStart = index + 1 }
                 }
+            }
+            if token.quoted, ["\"", "'", "”", "’"].contains(token.text), index > 0,
+               [".", "!", "?"].contains(parts[index - 1].text),
+               index + 1 == parts.count || parts[index + 1].range.location > NSMaxRange(token.range) {
+                sentenceStart = index + 1
             }
             index += 1
         }
@@ -169,9 +174,9 @@ struct TranscriptPolisher: Sendable {
             tokens(text).map(\.text).filter { $0.unicodeScalars.contains { CharacterSet.alphanumerics.contains($0) } }.map { $0.lowercased() }
         }
         func numbers(_ text: String) -> [String] {
-            let regex = try! NSRegularExpression(pattern: #"[+\-]?\p{N}+(?:[.,:/\-]\p{N}+)*%?"#)
+            let regex = try! NSRegularExpression(pattern: #"[+\-−]?[ \t]*\p{N}+(?:[.,:/\-]\p{N}+)*%?"#)
             let source = text as NSString
-            return regex.matches(in: text, range: NSRange(location: 0, length: source.length)).map { source.substring(with: $0.range) }
+            return regex.matches(in: text, range: NSRange(location: 0, length: source.length)).map { source.substring(with: $0.range).replacingOccurrences(of: #"[ \t]"#, with: "", options: .regularExpression) }
         }
         // Punctuation in quantities can change their meaning even when words match.
         let output = words(candidate)

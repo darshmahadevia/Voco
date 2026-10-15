@@ -96,6 +96,7 @@ extension NativeCoordinator {
         return fixture
     }
 
+    fileprivate func shortDeadlines() { recognitionTimeout = .milliseconds(100); cleanupTimeout = .milliseconds(100) }
     fileprivate func chooseOutput(_ mode: OutputMode) { state.preferences.outputMode = mode }
     fileprivate func usePolisher(_ value: TranscriptPolisher) { polisher = value }
     fileprivate var rawText: String { state.lastRawTranscript }
@@ -400,6 +401,46 @@ extension NativeCoordinator {
             try await settle()
             precondition(InsertionFixture.text == "Before. um keep every original word")
             precondition(!coordinator.notice.isEmpty)
+            InsertionFixture.reset()
+            coordinator.chooseOutput(.balanced)
+            coordinator.press()
+            try await settle()
+            coordinator.release()
+            engine.deliver([final("um")])
+            try await settle()
+            precondition(coordinator.retainedText.isEmpty && coordinator.rawText == "um")
+            precondition(coordinator.notice.contains("Nothing was inserted"))
+            precondition(InsertionFixture.text == "Before. ")
+            coordinator.shortDeadlines()
+            coordinator.chooseOutput(.fast)
+            InsertionFixture.reset()
+            coordinator.press()
+            try await settle()
+            coordinator.release()
+            try await Task.sleep(for: .milliseconds(180))
+            precondition(coordinator.snapshot["kind"] as? String == "recovery")
+            precondition(InsertionFixture.text == "Before. ")
+            engine.deliver([SpeechLine(text: "Late words.", complete: true)])
+            try await Task.sleep(for: .milliseconds(50))
+            precondition(InsertionFixture.text == "Before. ")
+
+            let delayedPolish = SuspendedPolish()
+            coordinator.usePolisher(TranscriptPolisher(availability: .init(available: true, message: "fixture")) {
+                await delayedPolish.generate($0)
+            })
+            coordinator.chooseOutput(.accurate)
+            coordinator.press()
+            try await settle()
+            coordinator.release()
+            engine.deliver([SpeechLine(text: "um Keep 12 tickets.", complete: true)])
+            try await Task.sleep(for: .milliseconds(200))
+            precondition(coordinator.snapshot["kind"] as? String == "idle")
+            precondition(InsertionFixture.text == "Before. um Keep 12 tickets.")
+            precondition(coordinator.notice.contains("too long"))
+            await delayedPolish.resume("Keep 12 tickets.")
+            try await Task.sleep(for: .milliseconds(50))
+            precondition(InsertionFixture.text == "Before. um Keep 12 tickets.")
+            print("PASS \(id.rawValue): recognition deadline, raw fallback on cleanup deadline, late results ignored")
             coordinator.chooseOutput(.fast)
             print("PASS \(id.rawValue): output mode persistence/freeze, raw before cleanup, suspended cleanup cancellation/stale result, unsafe output fallback")
             print("PASS \(id.rawValue): capture, release, one paste, current cursor, cancellation, stale result, recovery, silence, tap, continuous promotion/stop/cancel/failure/permissions")
