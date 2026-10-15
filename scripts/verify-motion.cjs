@@ -56,11 +56,21 @@ app.whenReady().then(async () => {
   await navigate('Settings');
   await settle();
   for (const [label, target] of [['Models', 'model-heading'], ['Access', 'access-heading'], ['Dictation', 'dictation-heading'], ['Output', 'output-heading']]) {
-    await evaluate(`document.querySelector('.settings-index a[href="#${target}"]').click()`);
+    await evaluate(`[...document.querySelectorAll('[role=tab]')].find(tab => tab.textContent.trim() === '${label}').click()`);
     await settle();
-    assert.equal(await evaluate('document.activeElement.id'), target, `${label}: section focus is missing`);
-    assert.equal(await evaluate("document.querySelector('.settings-index a[aria-current=location]').textContent"), label, `${label}: section indicator is wrong. ${JSON.stringify(await evaluate("({ active:document.activeElement.id, top:document.querySelector('.workspace-main').getBoundingClientRect().top, bottom:document.querySelector('.workspace-main').getBoundingClientRect().bottom, scroll:document.querySelector('.workspace-main').scrollTop, headings:[...document.querySelectorAll('.settings-section h2')].map(e=>({id:e.id,top:e.getBoundingClientRect().top,bottom:e.getBoundingClientRect().bottom})) })"))}`);
+    assert.equal(await evaluate("document.querySelector('[role=tab][aria-selected=true]').textContent.trim()"), label, `${label}: selected tab is wrong`);
+    assert.equal(await evaluate("[...document.querySelectorAll('[role=tabpanel]')].filter(panel => !panel.hidden).length"), 1, `${label}: unrelated settings remain visible`);
+    assert.ok(await evaluate(`(() => { const heading = document.getElementById('${target}'); const panel = heading.closest('[role=tabpanel]'); const tab = document.querySelector('[role=tab][aria-selected=true]'); return !panel.hidden && panel.getAttribute('aria-labelledby') === tab.id && document.getElementById(tab.getAttribute('aria-controls')) === panel; })()`), `${label}: panel is not linked to its tab`);
     assert.ok(await evaluate(`(() => { const r = document.getElementById('${target}').getBoundingClientRect(); const main = document.querySelector('.workspace-main').getBoundingClientRect(); return r.top >= main.top && r.bottom <= main.bottom; })()`), `${label}: section heading is not visible`);
+    await capture(`settings-${label.toLowerCase()}`);
+  }
+  await evaluate("document.querySelector('[role=tab][aria-selected=true]').focus()");
+  for (const [key, expected] of [['Right', 'Models'], ['End', 'Dictation'], ['Right', 'Output'], ['Left', 'Dictation'], ['Home', 'Output']]) {
+    window.webContents.sendInputEvent({ type: 'keyDown', keyCode: key });
+    window.webContents.sendInputEvent({ type: 'keyUp', keyCode: key });
+    await frame();
+    assert.equal(await evaluate("document.activeElement.textContent.trim()"), expected, `${key}: tab keyboard focus is wrong`);
+    assert.equal(await evaluate("document.querySelector('[role=tab][aria-selected=true]').textContent.trim()"), expected, `${key}: selected panel did not follow focus`);
   }
   window.webContents.debugger.attach('1.3');
   await window.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
@@ -135,6 +145,8 @@ app.whenReady().then(async () => {
   assert.equal(await evaluate("document.querySelectorAll('.recent-transcript-row').length"), 1);
   await navigate('Settings');
   await settle();
+  await evaluate("[...document.querySelectorAll('[role=tab]')].find(tab => tab.textContent.trim() === 'Dictation').click()");
+  await frame();
   await evaluate("document.querySelector('button[role=switch]').click()");
   await frame();
   assert.equal(commands.length, 2, 'Retention preference command was delayed or repeated');
@@ -150,6 +162,32 @@ app.whenReady().then(async () => {
     assert.ok(await evaluate("document.querySelector('.recovery-content').innerText.includes('Recover all of these words.')"), `${label}: recovery is inaccessible`);
   }
   await capture('native-recovery');
+  await publish({ session: { kind: 'idle' } });
+  await navigate('Settings');
+  await settle();
+  await evaluate("[...document.querySelectorAll('[role=tab]')].find(tab => tab.textContent.trim() === 'Models').click()");
+  await frame();
+  await evaluate("document.querySelector('[data-model-id=parakeet] button').click()");
+  await frame();
+  assert.deepEqual(commands.at(-1), { kind: 'downloadModel', modelId: 'parakeet' }, 'Model download uses the wrong command');
+  await publish({ models: fixture.models.map(model => model.id === 'parakeet' ? { ...model, state: { kind: 'downloading', progress: 0.42, file: 'parakeet-model' } } : model) });
+  await settle();
+  assert.equal(await evaluate("document.querySelector('[data-model-id=parakeet] progress').value"), 0.42);
+  await evaluate("document.querySelector('button[aria-label=\"Cancel Parakeet download\"]').click()");
+  await frame();
+  assert.deepEqual(commands.at(-1), { kind: 'cancelDownload' }, 'Model cancellation uses the wrong command');
+  await publish({ models: fixture.models.map(model => model.id === 'parakeet' ? { ...model, state: { kind: 'error', message: 'Download interrupted.' } } : model) });
+  await settle();
+  assert.ok(await evaluate("document.querySelector('[data-model-id=parakeet]').innerText.includes('Download interrupted.')"), 'Model error is hidden');
+  await evaluate("document.querySelector('[data-model-id=parakeet] button').click()");
+  await frame();
+  assert.deepEqual(commands.at(-1), { kind: 'downloadModel', modelId: 'parakeet' }, 'Model retry uses the wrong command');
+  await publish({ models: fixture.models.map(model => model.id === 'parakeet' ? { ...model, state: { kind: 'installed' } } : model) });
+  await settle();
+  await evaluate("document.querySelector('[data-model-id=parakeet] button').click()");
+  await frame();
+  assert.deepEqual(commands.at(-1), { kind: 'selectModel', modelId: 'parakeet' }, 'Installed model selection uses the wrong command');
+
   assert.deepEqual(errors, [], 'Renderer console errors');
   await writeFile(join(output, 'report.json'), JSON.stringify({ transitions, reduced, errors, rapidNavigation: 'passed', searchFocus: 'passed', settingsSections: 'passed', immediateCommands: commands.length, persistentStatus: 'passed', retention: 'passed', recovery: 'passed' }, null, 2));
   process.stdout.write(`Verified page continuity, rapid navigation, search focus, and reduced motion. Evidence: ${output}\n`);

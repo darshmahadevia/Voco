@@ -374,7 +374,7 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
               </Button>
             )}
           </PermissionRow>
-  
+
           <PermissionRow
             icon={<Keyboard size={17} aria-hidden="true" />}
             title="Keyboard access"
@@ -393,7 +393,7 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
               </Button>
             )}
           </PermissionRow>
-  
+
           {!state.permissions.accessibility && (
             <details className="manual-access-help">
               <summary>Keyboard access still says off?</summary>

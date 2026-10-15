@@ -2,20 +2,21 @@
 name: Voco
 description: A quiet local voice workspace for your Mac.
 colors:
-  surface: "#151617"
+  surface: "#171819"
   sidebar: "#111213"
-  surface-raised: "#1c1e20"
-  surface-muted: "#26282b"
-  accent: "#f49667"
-  accent-strong: "#ffb68e"
-  accent-soft: "#30231e"
+  surface-raised: "#202123"
+  surface-muted: "#2b2d2f"
+  accent: "#FF742F"
+  accent-strong: "#ffb58f"
+  accent-soft: "#38251d"
   text-primary: "#f2f0ec"
-  text-secondary: "#b2b1b0"
+  text-secondary: "#b9b8b5"
   text-tertiary: "#929497"
   button-text: "#1c1d1f"
-  line: "#303235"
+  line: "#303234"
   success: "#b9cbbd"
   danger: "#ff9d9d"
+  text-selection: "#803c1b"
 typography:
   display:
     fontFamily: "Manrope, -apple-system, sans-serif"
@@ -55,6 +56,8 @@ typography:
 rounded:
   key: "7px"
   field: "12px"
+  navigation: "10px"
+  segment: "9px"
   workspace: "16px"
   pill: "999px"
 spacing:
@@ -117,7 +120,7 @@ The visual direction draws on [vibrant.design](https://vibrant.design/) for rest
 
 ### Primary
 
-Warm orange (`accent`) identifies live voice feedback, progress, the wordmark dot, and small emphasis. Its lighter and darker companions support notices and badges. Soft white (`text-primary`) fills primary actions; primary buttons do not use orange.
+Orange `#FF742F` (`accent`) identifies live voice feedback, progress, the wordmark dot, and small emphasis. Its lighter and darker companions support notices and badges. Soft white (`text-primary`) fills primary actions; primary buttons do not use orange.
 
 ### Neutral
 
@@ -147,7 +150,7 @@ Use tonal layering for structural depth. Home’s workspace is lighter than the 
 
 ## Shapes
 
-Primary and secondary actions, navigation selections, search fields, chips, and status capsules are fully rounded. Voice and recovery workspaces use 16px corners; practice fields and selected output options use 12px. Keyboard keys use 7px corners and a doubled lower border. Keep visible orange focus outlines offset from controls.
+Primary and secondary actions, search fields, chips, and status capsules are fully rounded. Navigation selections use 10px corners. Voice and recovery workspaces use 16px corners; practice fields use 12px corners and selected output options use 9px. Keyboard keys use 7px corners and a doubled lower border. Keep visible orange focus outlines offset from controls.
 
 ## Components
 
@@ -159,11 +162,11 @@ The sidebar selection moves between main navigation destinations using a shared 
 
 ### Voice guidance and live status
 
-Home uses a compact shortcut panel. The persistent live footer and floating dictation pill share their status language. Orange waveform bars respond only to measured microphone energy during capture. Silence returns them to a still baseline; processing uses a spinner and short status text. Do not show partial transcript text while capturing. Preserve recovery’s complete copy action and separately scrolling explanation and transcript. The standard pill reserves a 58px symbol slot and a 134px label slot so state changes keep its footprint stable. Keep one persistent polite live region outside the animated visual labels. The floating recovery panel changes shape with a spring using stiffness 380, damping 32, and mass 0.8.
+Home uses a compact shortcut panel with a cropped orange ASCII voice ribbon inspired by the [Maple Research posters on Vibrant](https://vibrant.design/). The artwork is static and decorative, separate from microphone feedback. The persistent live footer and floating dictation pill share their status language. Orange waveform bars respond only to measured microphone energy during capture. Silence returns them to a still baseline; processing uses a spinner and short status text. Do not show partial transcript text while capturing. Preserve recovery’s complete copy action and separately scrolling explanation and transcript. The standard pill reserves a 58px symbol slot and a 134px label slot so state changes keep its footprint stable. Keep one persistent polite live region outside the animated visual labels. The floating recovery panel changes shape with a spring using stiffness 380, damping 32, and mass 0.8.
 
 ### Setup and Settings
 
-Model rows show version, size, recommendation, status, progress, and the available action. Preserve permission guidance, loading, retry, cancellation, and practice blockers. Settings apply immediately, with no save or Done action. Output quality, Speech model, Access, and Dictation use flat divided sections. A sticky anchor index tracks the visible section and moves keyboard focus to the selected heading. Reduced motion makes section scrolling immediate. Output quality uses a three-part segmented radio group, a quiet selected background, and a description below the choices. The transcript switch has a 44px by 34px hit area and a 180ms thumb transition using the standard movement easing.
+Model rows separate the name and description from version and download size. An orange selection indicator identifies the current model. Show one action per row and avoid duplicate readiness labels. Preserve permission guidance, loading, retry, cancellation, and practice blockers. Settings apply immediately, with no save or Done action. Output, Models, Access, and Dictation are labeled tabs with one visible panel. Arrow keys wrap between tabs; Home and End select the first and last tabs. Keep inactive panels hidden and preserve command state above them. An orange underline moves between tabs, with immediate changes under reduced motion. Above 1000px, each panel pairs a compact introduction column with its controls. Smaller windows stack these groups. Output quality uses a three-part segmented radio group, a quiet selected background, and one selected description below the choices. Detailed cleanup behavior and caveats stay in a disclosure. The transcript switch has a 44px by 34px hit area and a 180ms thumb transition using the standard movement easing.
 
 ### Motion and accessibility
 

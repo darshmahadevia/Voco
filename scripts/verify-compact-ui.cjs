@@ -73,8 +73,11 @@ app.whenReady().then(async () => {
         assert.equal(await evaluate("document.querySelector('input[name=output-mode]:checked').value"), 'fast');
         assert.ok(await evaluate("[...document.querySelectorAll('input[name=output-mode]')].every(input => input.disabled)"));
         assert.ok(await evaluate("![...document.querySelectorAll('button')].some(button => button.textContent.trim() === 'Done')"));
-        await evaluate("document.querySelector('.workspace-main').scrollTo({ top: 10000 })");
-        await capture(`${prefix}-settings-footer`);
+        for (const label of ['Models', 'Access', 'Dictation']) {
+          await evaluate(`[...document.querySelectorAll('[role=tab]')].find(tab => tab.textContent.trim() === '${label}').click()`);
+          assert.equal(await evaluate("[...document.querySelectorAll('[role=tabpanel]')].filter(panel => !panel.hidden).length"), 1);
+          await capture(`${prefix}-settings-${label.toLowerCase()}`);
+        }
       }
       assert.equal(await evaluate("document.querySelector('.workspace-status [role=status]').textContent"), 'Ready');
       assert.ok(await evaluate("(() => { const footer = document.querySelector('.live-footer').getBoundingClientRect(); return footer.top >= 0 && footer.bottom <= innerHeight; })()"), `${prefix}: live status is clipped`);
