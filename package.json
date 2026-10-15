@@ -17,10 +17,11 @@
     "build": "npm run typecheck && npm run build:native && electron-vite build",
     "pack": "npm run build && node scripts/package-desktop.mjs",
     "dist": "npm run build && node scripts/package-desktop.mjs dmg",
-    "verify": "npm run typecheck && npm test && npm run build && npm run verify:renderer",
+    "verify": "npm run typecheck && npm test && npm run build && npm run verify:renderer && npm run verify:motion",
     "verify:compact-ui": "env -u ELECTRON_RUN_AS_NODE electron scripts/verify-compact-ui.cjs",
     "verify:menu-bar": "node scripts/verify-menu-bar.mjs",
-    "verify:insertion": "bash scripts/verify-buffered-insertion.sh"
+    "verify:insertion": "bash scripts/verify-buffered-insertion.sh",
+    "verify:motion": "env -u ELECTRON_RUN_AS_NODE electron scripts/verify-motion.cjs"
   },
   "dependencies": {
     "lucide-react": "^0.577.0",
