@@ -1,6 +1,5 @@
 import "./transitions.css";
 import "./style.css";
-import { mountVoiceRibbon } from "./ribbon.js";
 
 /** @typedef {{version: string, downloadUrl: string, releaseUrl: string, fileSize?: string, notarized: boolean}} ReleaseManifest */
 /** @typedef {'idle' | 'listening' | 'transcribing' | 'complete'} DemoPhase */
@@ -23,8 +22,6 @@ const gallery = [
       "A little perspective on the words you put into the world. Sample data is labeled in the preview.",
   },
 ];
-
-mountVoiceRibbon(document.querySelector("#voice-ribbon"), reducedMotion);
 
 const heroCopy = document.querySelector(".hero-copy");
 if (!reducedMotion.matches) {
