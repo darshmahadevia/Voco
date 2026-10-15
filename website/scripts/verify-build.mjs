@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL('../dist/', import.meta.url));
 const html = await readFile(join(root, 'index.html'), 'utf8');
 const release = JSON.parse(await readFile(join(root, 'release.json'), 'utf8'));
 assert.equal((html.match(/<h1\b/g) || []).length, 1, 'The page must have one main heading');
-assert.ok(html.includes('https://voco-mac.vercel.app'), 'Canonical production URL is missing');
+assert.ok(html.includes('https://getvoco.vercel.app'), 'Canonical production URL is missing');
 assert.ok(!html.includes('github.com/darshmahadevia/Voco'), 'Private source repository linked publicly');
 assert.ok(html.includes(release.downloadUrl), 'JavaScript-free download differs from release manifest');
 assert.ok(html.includes(release.releaseUrl), 'JavaScript-free release notes differ from manifest');
