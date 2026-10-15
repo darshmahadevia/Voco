@@ -936,7 +936,7 @@ button {
   font-size: 10px;
   text-decoration: underline;
   text-underline-offset: 4px;
-  display: inline-block;
+  display: inline-flex;
   margin-top: 12px;
   color: #cec9bf;
 }

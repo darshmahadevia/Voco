@@ -18,7 +18,7 @@ Dictate English directly into the text field you are using. Hold Fn or Globe to 
 
 ## Capabilities and constraints
 
-- Free to build and use, with open-source app code and local speech models. Preserve the license notices for each engine and model.
+- Free to build and use, with MIT-licensed application code in a private repository and public binary distribution. Speech models run locally. Preserve the license notices for each engine and model.
 - Install the app first, then explicitly download and load a speech model in setup. Switch models while dictation is idle.
 - Show download progress, cancellation, retry, loading, and readiness. Keep the model outside the app bundle so updates preserve it.
 - Run speech recognition offline after setup, without an account, cloud service, API key, or subscription.
