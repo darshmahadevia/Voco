@@ -48,6 +48,32 @@ try {
       assert.equal(await page.locator('.demo').getAttribute('data-phase'), 'complete');
       report.interactions.push('Demo completes, replays, and respects reduced motion');
     }
+    await page.getByRole('button', { name: 'View full size' }).click();
+    assert.equal(await page.getByRole('dialog').isVisible(), true);
+    assert.match(await page.locator('#screenshot-image').getAttribute('src'), /app-home.webp/);
+    await page.getByRole('button', { name: 'Close', exact: true }).press('Escape');
+    assert.equal(await page.getByRole('dialog').isVisible(), false);
+    assert.equal(await page.locator('#gallery-enlarge').evaluate(element => document.activeElement === element), true);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    for (const [name, text] of [['A quick note', 'first five minutes'], ['A message', 'thoughtful feedback']]) {
+      await page.getByRole('button', { name, exact: true }).click();
+      await page.getByRole('button', { name: 'Play demo', exact: true }).click();
+      assert.equal(await page.locator('.demo').getAttribute('data-phase'), 'complete');
+      assert.match(await page.locator('#demo-output').textContent(), new RegExp(text));
+    }
+    await page.getByRole('button', { name: 'An email', exact: true }).click();
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.getByRole('button', { name: 'Play dictation demo', exact: true }).click();
+    assert.equal(await page.locator('.demo').getAttribute('data-phase'), 'listening');
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    assert.equal(await page.locator('.demo').getAttribute('data-phase'), 'idle');
+    assert.equal(await page.locator('#demo-play').isEnabled(), true);
+    await page.getByRole('button', { name: 'Play demo', exact: true }).click();
+    await page.getByRole('button', { name: 'A quick note', exact: true }).click();
+    assert.equal(await page.locator('.demo').getAttribute('data-phase'), 'idle');
+    await page.waitForTimeout(3800);
+    assert.equal(await page.locator('.demo').getAttribute('data-phase'), 'idle', 'Canceled demo timer survived sample switch');
+    await page.getByRole('button', { name: 'An email', exact: true }).click();
     for (const image of await page.locator('img:visible').all()) {
       await image.scrollIntoViewIfNeeded();
       await image.evaluate(element => element.decode());
@@ -62,6 +88,7 @@ try {
     assert.deepEqual(errors, [], 'Browser JavaScript errors');
     await context.close();
   }
+  report.interactions.push('All demo samples, hero key, cancellation, sample switching, full-size screenshot dialog, Escape, and focus restoration verified at every viewport');
   const noScript = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
   const plain = await noScript.newPage();
   await plain.goto(baseURL);

@@ -58,8 +58,23 @@ const demo = document.querySelector(".demo");
 const playButton = document.querySelector("#demo-play");
 const demoStatus = document.querySelector("#demo-status");
 const demoOutput = document.querySelector("#demo-output");
-const demoText =
-  "Let's give this idea a little room to grow. I'll send over a first draft this afternoon.";
+const demoSamples = {
+  email: {
+    context: "A little breathing room",
+    text: "Let's give this idea a little room to grow. I'll send over a first draft this afternoon.",
+  },
+  note: {
+    context: "An idea for later",
+    text: "An idea for the next release: make the first five minutes feel as thoughtful as the rest of the app.",
+  },
+  message: {
+    context: "A message to the team",
+    text: "Thanks for the thoughtful feedback. Let's pick this up tomorrow when we've both had a little time to think.",
+  },
+};
+const sampleButtons = [...document.querySelectorAll("[data-sample]")];
+const cancelButton = document.querySelector("#demo-cancel");
+const demoContext = document.querySelector("#demo-context");
 const demoPhases = {
   idle: {
     label: "Ready when you are",
@@ -68,13 +83,13 @@ const demoPhases = {
     next: "listening",
   },
   listening: {
-    label: "Listening to the example…",
+    label: "Simulating listening…",
     action: "Playing…",
     delay: 2600,
     next: "transcribing",
   },
   transcribing: {
-    label: "Turning voice into words…",
+    label: "Transcribing the example…",
     action: "Finishing…",
     delay: 1100,
     next: "complete",
@@ -86,8 +101,8 @@ const demoPhases = {
     next: "listening",
   },
 };
-/** @type {{phase: DemoPhase, timer: ReturnType<typeof setTimeout> | null}} */
-const demoState = { phase: "idle", timer: null };
+/** @type {{phase: DemoPhase, sample: keyof typeof demoSamples, timer: ReturnType<typeof setTimeout> | null}} */
+const demoState = { phase: "idle", sample: "email", timer: null };
 function setDemoPhase(phase) {
   clearTimeout(demoState.timer);
   demoState.phase = phase;
@@ -96,16 +111,50 @@ function setDemoPhase(phase) {
   demoStatus.textContent = current.label;
   playButton.querySelector("span").textContent = current.action;
   playButton.disabled = phase === "listening" || phase === "transcribing";
+  if (phase === "complete" && document.activeElement === cancelButton)
+    playButton.focus();
+  cancelButton.hidden = !(phase === "listening" || phase === "transcribing");
+  demoContext.textContent = demoSamples[demoState.sample].context;
   demoOutput.textContent =
-    phase === "complete" ? demoText : "Your next good idea goes here.";
+    phase === "complete"
+      ? demoSamples[demoState.sample].text
+      : "Your next good idea goes here.";
   if (current.delay)
     demoState.timer = setTimeout(
       () => setDemoPhase(current.next),
       current.delay,
     );
 }
-playButton.addEventListener("click", () => {
+function playDemo() {
   setDemoPhase(reducedMotion.matches ? "complete" : "listening");
+}
+playButton.addEventListener("click", playDemo);
+cancelButton.addEventListener("click", () => {
+  setDemoPhase("idle");
+  playButton.focus();
+});
+sampleButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    demoState.sample = button.dataset.sample;
+    sampleButtons.forEach((item) =>
+      item.setAttribute("aria-pressed", String(item === button)),
+    );
+    setDemoPhase("idle");
+  });
+});
+document.querySelector(".shortcut-key").addEventListener("click", () => {
+  demo.scrollIntoView({
+    behavior: reducedMotion.matches ? "instant" : "smooth",
+    block: "center",
+  });
+  playDemo();
+  (cancelButton.hidden ? playButton : cancelButton).focus({ preventScroll: true });
+});
+demo.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !cancelButton.hidden) {
+    setDemoPhase("idle");
+    playButton.focus();
+  }
 });
 reducedMotion.addEventListener("change", (event) => {
   if (event.matches && ["listening", "transcribing"].includes(demoState.phase))
@@ -146,6 +195,43 @@ galleryButtons.forEach((button, index) => {
       selectGallery(next, true);
     }
   });
+});
+
+const screenshotDialog = document.querySelector("#screenshot-dialog");
+const enlargeButton = document.querySelector("#gallery-enlarge");
+enlargeButton.addEventListener("click", () => {
+  const selected = document.querySelector(
+    "[data-gallery][aria-selected='true']",
+  );
+  const original = document.querySelector(
+    `#panel-${selected.dataset.gallery} img`,
+  );
+  const image = document.querySelector("#screenshot-image");
+  image.src = original.src;
+  image.alt = original.alt;
+  document.querySelector("#screenshot-title").textContent =
+    selected.textContent.trim();
+  screenshotDialog.showModal();
+  document.body.classList.add("screenshot-open");
+});
+document
+  .querySelector("#screenshot-close")
+  .addEventListener("click", () => screenshotDialog.close());
+screenshotDialog.addEventListener("click", (event) => {
+  if (event.target === screenshotDialog) {
+    const rect = screenshotDialog.getBoundingClientRect();
+    if (
+      event.clientX < rect.left ||
+      event.clientX > rect.right ||
+      event.clientY < rect.top ||
+      event.clientY > rect.bottom
+    )
+      screenshotDialog.close();
+  }
+});
+screenshotDialog.addEventListener("close", () => {
+  document.body.classList.remove("screenshot-open");
+  enlargeButton.focus({ preventScroll: true });
 });
 
 for (const [index, accordion] of [
