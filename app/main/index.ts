@@ -44,7 +44,7 @@ function createSettings(): void {
   settings = new BrowserWindow({
     width: 960, height: 720, minWidth: 720, minHeight: 520,
     maxWidth: 960, maxHeight: 720, maximizable: false, fullscreenable: false,
-    show: false, title: 'Voco', titleBarStyle: 'hiddenInset', backgroundColor: '#080808',
+    show: false, title: 'Voco', titleBarStyle: 'hiddenInset', backgroundColor: '#0A0A0A',
     webPreferences: { preload: join(__dirname, '../preload/index.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
   });
   loadWindow(settings, 'settings');

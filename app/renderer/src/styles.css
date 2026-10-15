@@ -11,9 +11,9 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --surface: #171819;
-  --surface-raised: #202123;
-  --surface-muted: #2b2d2f;
+  --surface: #0A0A0A;
+  --surface-raised: #141414;
+  --surface-muted: #202020;
   --accent: #FF742F;
   --accent-strong: #ffb58f;
   --accent-soft: #38251d;
@@ -21,7 +21,7 @@
   --text-secondary: #b9b8b5;
   --text-tertiary: #929497;
   --button-text: #1c1d1f;
-  --line: #303234;
+  --line: #282828;
   --success: #b9cbbd;
   --danger: #ff9d9d;
   --ease-out: cubic-bezier(.16, 1, .3, 1);
@@ -56,7 +56,7 @@ h1, h2, h3 { text-wrap: balance; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .window-drag { -webkit-app-region: drag; }
 .desktop-shell { display: flex; width: 100%; height: 100%; overflow: hidden; }
-.app-sidebar { display: flex; flex-direction: column; flex: 0 0 148px; width: 148px; padding: 0 10px 16px; background: #111213; }
+.app-sidebar { display: flex; flex-direction: column; flex: 0 0 148px; width: 148px; padding: 0 10px 16px; background: var(--surface); }
 .sidebar-titlebar { flex: 0 0 44px; }
 .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
 .brand-icon { width: 25px; height: 23px; }
@@ -82,7 +82,7 @@ h1, h2, h3 { text-wrap: balance; }
 .home-hero h1 { margin: 0; font-size: 32px; font-weight: 500; line-height: 1.25; letter-spacing: -.03em; }
 .user-name { color: var(--text-primary); }
 .home-introduction { margin-top: 8px; color: var(--text-secondary); font-size: 12px; }
-.voice-workspace { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 110px; margin-top: 22px; padding: 18px 20px; border-radius: 16px; background: var(--surface-raised); }
+.voice-workspace { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 110px; margin-top: 22px; padding: 18px 20px; border-radius: 16px; background: var(--surface); }
 .voice-instruction { max-width: 78%; position: relative; z-index: 1; min-width: 0; }
 .voice-art { position: absolute; z-index: 0; width: 300px; inset: -12px -24px -12px auto; overflow: hidden; color: var(--accent); opacity: .72; mask-image: linear-gradient(to right, transparent, #000 30%); pointer-events: none; }
 .voice-art pre { margin: 0; font: 6px/5px monospace; letter-spacing: 1px; white-space: pre; user-select: none; }
@@ -149,7 +149,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; gap: 6
 .row-title { margin: 0 0 5px; font-size: 13px; font-weight: 600; line-height: 1.5; }
 .row-description, .model-status, .model-section-note { color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
 .model-section-note { margin-bottom: 14px; }
-.output-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; padding: 4px; border-radius: 12px; background: #111213; }
+.output-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; padding: 4px; border-radius: 12px; background: var(--surface); }
 .output-option { position: relative; isolation: isolate; display: flex; align-items: center; justify-content: center; min-height: 40px; padding: 9px 8px; border-radius: 9px; color: var(--text-secondary); cursor: pointer; transition: color var(--motion-fast); }
 .output-option[data-selected='true'] { color: var(--text-primary); }
 .output-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -231,7 +231,14 @@ html[data-view='pill'], html[data-view='pill'] body, html[data-view='pill'] #roo
 .pill-shell { display: flex; flex-direction: column; min-height: 100%; align-items: center; justify-content: center; padding: 20px 24px; }
 .pill-shell > .preview-notice { position: absolute; top: 12px; left: 18px; margin: 0; max-width: calc(100% - 36px); }
 .pill-shell:has(> .preview-notice) { padding-top: 45px; }
-.pill-card { max-width: 100%; padding: 0 20px; border-radius: 999px; background: #292b2e; box-shadow: 0 8px 24px #0005, inset 0 1px 0 #ffffff12; }
+.pill-card { max-width: 100%; padding: 0 12px; border-radius: 999px; background: var(--surface); box-shadow: 0 8px 24px #0005, inset 0 1px 0 #ffffff12; }
+.pill-card:not(.pill-card-recovery) .pill-status { min-height: 36px; }
+.pill-card:not(.pill-card-recovery) .pill-visual { gap: 8px; }
+.pill-card:not(.pill-card-recovery) .pill-symbol { width: 42px; height: 28px; }
+.pill-card:not(.pill-card-recovery) .pill-label-slot { width: 92px; }
+.pill-card:not(.pill-card-recovery) .pill-indicator { display: none; }
+.pill-card .waveform-pill { gap: 2px; }
+.pill-card .waveform-pill > span { width: 2px; }
 .pill-status { display: flex; align-items: center; flex-shrink: 0; min-height: 48px; }
 .pill-visual { display: flex; align-items: center; gap: 13px; }
 .pill-symbol { position: relative; display: flex; align-items: center; justify-content: center; width: 58px; height: 32px; }
@@ -281,7 +288,7 @@ html[data-view='pill'], html[data-view='pill'] body, html[data-view='pill'] #roo
 .onboarding-copy > p { max-width: 47ch; margin: 14px auto 0; color: var(--text-secondary); font-size: 12px; line-height: 1.75; }
 .setup-workspace { width: 100%; max-width: 460px; min-height: 0; flex-shrink: 0; }
 .setup-workspace h3 { margin: 0 0 12px; font-size: 13px; font-weight: 600; }
-.setup-workspace-welcome { width: auto; padding: 23px 30px; border-radius: 16px; background: var(--surface-raised); }
+.setup-workspace-welcome { width: auto; padding: 23px 30px; border-radius: 16px; background: var(--surface); }
 .welcome-shortcut { display: flex; align-items: center; justify-content: center; gap: 15px; font-size: 12px; color: var(--text-secondary); }
 .welcome-shortcut kbd { width: 56px; height: 48px; font-size: 16px; border-radius: 12px; }
 .setup-note { margin-top: 12px; font-size: 11px; line-height: 1.6; color: var(--text-tertiary); }
@@ -389,7 +396,7 @@ html[data-view='pill'], html[data-view='pill'] body, html[data-view='pill'] #roo
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.workspace-status { flex-shrink: 0; background: #191b1d; }
+.workspace-status { flex-shrink: 0; background: var(--surface); }
 .live-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 0 26px; border-top: 1px solid var(--line); }
 .live-shortcut { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12px; }
 .live-shortcut kbd { min-height: 23px; font-size: 10px; }

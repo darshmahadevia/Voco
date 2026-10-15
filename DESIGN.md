@@ -2,10 +2,10 @@
 name: Voco
 description: A quiet local voice workspace for your Mac.
 colors:
-  surface: "#171819"
-  sidebar: "#111213"
-  surface-raised: "#202123"
-  surface-muted: "#2b2d2f"
+  surface: "#0A0A0A"
+  sidebar: "#0A0A0A"
+  surface-raised: "#141414"
+  surface-muted: "#202020"
   accent: "#FF742F"
   accent-strong: "#ffb58f"
   accent-soft: "#38251d"
@@ -13,7 +13,7 @@ colors:
   text-secondary: "#b9b8b5"
   text-tertiary: "#929497"
   button-text: "#1c1d1f"
-  line: "#303234"
+  line: "#282828"
   success: "#b9cbbd"
   danger: "#ff9d9d"
   text-selection: "#803c1b"
@@ -88,7 +88,7 @@ components:
     padding: "0 9px"
     height: "34px"
   voice-workspace:
-    backgroundColor: "{colors.surface-raised}"
+    backgroundColor: "{colors.surface}"
     rounded: "{rounded.workspace}"
     padding: "18px 20px"
   practice-field:
@@ -105,13 +105,13 @@ components:
 
 **Creative North Star: "Quiet Voice Workspace"**
 
-Graphite surfaces, soft white buttons, and restrained orange details establish the dark minimal direction. Voco feels calm and personal, with a clear place to speak and small, readable signs of readiness. Bundled Manrope supplies every text role.
+Black surfaces, soft white buttons, and restrained orange details establish the dark minimal direction. Voco feels calm and personal, with a clear place to speak and small, readable signs of readiness. Bundled Manrope supplies every text role.
 
 The visual direction draws on [vibrant.design](https://vibrant.design/) for restrained dark surfaces and controls. Motion adapts patterns from [transitions.dev](https://transitions.dev/): a moving navigation selection, brief page arrivals, and compact text and icon swaps. These are inspirations adapted to Voco’s desktop workflow.
 
 **Key Characteristics:**
 
-- Tonal graphite layers with compact shortcut guidance and a persistent live footer.
+- A uniform #0A0A0A canvas with compact shortcut guidance and a persistent live footer.
 - Fully rounded soft-white primary controls.
 - Orange used sparingly for voice activity, progress, and emphasis.
 - Flat statistics and divided transcript rows.
@@ -124,7 +124,7 @@ Orange `#FF742F` (`accent`) identifies live voice feedback, progress, the wordma
 
 ### Neutral
 
-`surface` is the main graphite canvas; `sidebar` is a deeper navigation plane. `surface-raised` holds the Home voice workspace and practice field. `surface-muted` supports secondary controls. Primary, secondary, and tertiary text form a deliberate reading hierarchy; `line` separates flat sections.
+`surface` and `sidebar` share the #0A0A0A canvas, including the live footer and voice workspace. Reserve graphite for small elements: `surface-raised` holds practice fields and `surface-muted` supports secondary controls. Primary, secondary, and tertiary text form a deliberate reading hierarchy; `line` separates flat sections.
 
 Sage (`success`) signals readiness and completed actions. Soft red (`danger`) identifies errors. Pair semantic color with text or an icon.
 
@@ -164,7 +164,7 @@ The sidebar selection moves between main navigation destinations using a shared 
 
 ### Voice guidance and live status
 
-Home uses a compact shortcut panel with a cropped orange ASCII voice ribbon inspired by the [Maple Research posters on Vibrant](https://vibrant.design/). The artwork slowly refolds through 80 precomputed glyph frames on an eight-second loop, capped at 10 updates per second. It is decorative and independent of microphone feedback. Its timer stops while offscreen, while the document is hidden, and under reduced motion. Keep a still frame in those states and keep the artwork hidden from assistive technology. The persistent live footer and floating dictation pill share their status language. Orange waveform bars respond only to measured microphone energy during capture. Silence returns them to a still baseline; processing uses a spinner and short status text. Do not show partial transcript text while capturing. Preserve recovery’s complete copy action and separately scrolling explanation and transcript. The standard pill reserves a 58px symbol slot and a 134px label slot so state changes keep its footprint stable. Keep one persistent polite live region outside the animated visual labels. The floating recovery panel changes shape with a spring using stiffness 380, damping 32, and mass 0.8.
+Home uses a compact shortcut panel with a cropped orange ASCII voice ribbon inspired by the [Maple Research posters on Vibrant](https://vibrant.design/). The artwork slowly refolds through 80 precomputed glyph frames on an eight-second loop, capped at 10 updates per second. It is decorative and independent of microphone feedback. Its timer stops while offscreen, while the document is hidden, and under reduced motion. Keep a still frame in those states and keep the artwork hidden from assistive technology. The persistent live footer and floating dictation pill share their status language. Orange waveform bars respond only to measured microphone energy during capture. Silence returns them to a still baseline; processing uses a spinner and short status text. Do not show partial transcript text while capturing. Preserve recovery’s complete copy action and separately scrolling explanation and transcript. The floating pill uses a 42px symbol slot, a 92px label slot, 12px horizontal padding, and a 36px height. Omit its redundant status dot and keep the footprint stable between capture and processing. The dashboard footer retains room for longer setup and loading labels. Keep one persistent polite live region outside the animated visual labels. The floating recovery panel changes shape with a spring using stiffness 380, damping 32, and mass 0.8.
 
 ### Setup and Settings
 
