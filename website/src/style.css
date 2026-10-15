@@ -497,7 +497,7 @@ button {
 .section-heading > p {
   max-width: 330px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 15px;
   padding-bottom: 5px;
 }
 .dark-chapter h2 span {
@@ -532,7 +532,7 @@ button {
   margin-bottom: 8px;
 }
 .steps p {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
   max-width: 290px;
 }
@@ -866,7 +866,7 @@ button {
   margin-bottom: 8px;
 }
 .privacy-list p {
-  font-size: 12px;
+  font-size: 14px;
   max-width: 390px;
   color: var(--muted);
 }
@@ -926,7 +926,7 @@ button {
   font-size: clamp(38px, 4.3vw, 54px);
 }
 .download-copy > p {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   margin-top: 23px;
 }
@@ -1024,7 +1024,7 @@ button {
   color: #f2c6a3;
 }
 .early-access-note p {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.8;
   color: #c3c9b9;
   margin-top: 8px;
@@ -1058,7 +1058,7 @@ button {
   font-size: clamp(38px, 4.2vw, 52px);
 }
 .faq-heading p {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
   margin-top: 25px;
 }
@@ -1103,7 +1103,7 @@ button {
   height: 16px;
 }
 .t-acc-panel-inner p {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.85;
   color: var(--muted);
   padding: 0 22px 25px 0;
@@ -1315,7 +1315,7 @@ button {
     font-size: 14px;
   }
   .steps p {
-    font-size: 11px;
+    font-size: 14px;
   }
   .privacy-intro > p {
     min-width: 240px;
@@ -1479,7 +1479,7 @@ button {
   .section-heading > p {
     padding-top: 20px;
     max-width: 350px;
-    font-size: 12px;
+    font-size: 15px;
   }
   .flow-layout {
     display: flex;
@@ -1497,7 +1497,7 @@ button {
     font-size: 17px;
   }
   .steps p {
-    font-size: 12px;
+    font-size: 14px;
     max-width: 340px;
   }
   .demo {
@@ -1599,7 +1599,7 @@ button {
     font-size: 17px;
   }
   .privacy-list p {
-    font-size: 12px;
+    font-size: 14px;
     max-width: 100%;
   }
   .manifesto {
@@ -1633,7 +1633,7 @@ button {
     font-size: 40px;
   }
   .download-copy > p {
-    font-size: 12px;
+    font-size: 14px;
     margin-top: 20px;
   }
   .download-price {
@@ -1954,4 +1954,8 @@ button {
   .demo-insertion {
     transition: none;
   }
+}
+
+.shortcut-key:active {
+  transform: translateY(11px) rotate(-9deg) rotateX(12deg) rotateY(-9deg);
 }
