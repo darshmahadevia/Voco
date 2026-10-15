@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron scripts/generate-brand.cjs
 mkdir -p build/Voco.iconset
 for size in 16 32 128 256 512; do
   sips -z "$size" "$size" Resources/Brand/voco-app.png --out "build/Voco.iconset/icon_${size}x${size}.png" >/dev/null
