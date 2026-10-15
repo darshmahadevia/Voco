@@ -283,5 +283,15 @@
     "id": "abbreviation-proper-name",
     "input": "Call U.S. Steel never mind call Acme.",
     "balanced": "Call Acme."
+  },
+  {
+    "id": "abbreviation-event-name",
+    "input": "Call U.S. Open, never mind, call Acme.",
+    "balanced": "Call Acme."
+  },
+  {
+    "id": "abbreviation-event-oneword",
+    "input": "Call U.S. Open nevermind call Acme.",
+    "balanced": "Call Acme."
   }
 ]

@@ -166,13 +166,18 @@ struct TranscriptPolisher: Sendable {
             }
             return true
         }
-        // Sentence tokenization treats dotted abbreviations as continuations. A new
-        // uppercase verb (or adjective-led fragment) supplies evidence for a restart.
+        // Keep dotted names such as U.S. Open together. Only a place abbreviation
+        // followed by a new clause supplies evidence beyond sentence tokenization.
+        let names = NLTagger(tagSchemes: [.nameType])
+        names.string = text
+        names.setLanguage(.english, range: text.startIndex..<text.endIndex)
         let source = text as NSString
         for range in matches(#"\b(?:[A-Z]\.){2,}[ \t]+(?=[A-Z])"#, in: text) {
             let location = NSMaxRange(range)
             guard let index = parts.firstIndex(where: { $0.range.location == location }),
                   !parts[index].protected else { continue }
+            guard let abbreviation = Range(range, in: text),
+                  names.tag(at: abbreviation.lowerBound, unit: .word, scheme: .nameType).0 == .placeName else { continue }
             let suffix = source.substring(from: location)
             if let tag = lexicalClass(suffix), [.verb, .adjective].contains(tag) { starts.insert(index) }
         }

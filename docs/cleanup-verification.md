@@ -14,7 +14,7 @@ npm test
 npm run verify:compact-ui
 ```
 
-The acceptance corpus has 47 fixed inputs and expected Balanced outputs. It checks Fast preservation, Accurate fallback when the model is unavailable or throws, and stable output when cleanup runs twice. Sixteen candidate edits must be rejected, including changed flags, paths, email addresses, quotations, numbers, negations, paragraph boundaries, leading decimals, and moved currency signs. The expected values live in `native/Tests/Fixtures` and the runner is `native/Tests/CleanupEvaluation.swift`.
+The acceptance corpus has 49 fixed inputs and expected Balanced outputs. It checks Fast preservation, Accurate fallback when the model is unavailable or throws, and stable output when cleanup runs twice. Sixteen candidate edits must be rejected, including changed flags, paths, email addresses, quotations, numbers, negations, paragraph boundaries, leading decimals, and moved currency signs. The expected values live in `native/Tests/Fixtures` and the runner is `native/Tests/CleanupEvaluation.swift`.
 
 ## Observed local results
 
