@@ -1,0 +1,3 @@
+ts	phase	decision	why	evidence	result
+2026-10-15T21:48:05Z	frame	Polish seven existing surfaces while preserving the black canvas and native dictation workflow	Improve clarity and consistency without adding features or changing recognition	PRODUCT.md; DESIGN.md; .audit/ui-polish-before/	baseline captured
+2026-10-15T21:49:57Z	styling	Align shortcut guidance with page content and standardize controls and supporting type across all screens	Readable labels and consistent grouping make the existing desktop workflow easier to scan	app/renderer/src/styles.css; /tmp/voco-polish-unit1/report.json	typecheck and 52 renderer layouts passed
