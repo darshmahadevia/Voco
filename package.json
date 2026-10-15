@@ -7,6 +7,7 @@
   "license": "MIT",
   "main": "out/main/index.js",
   "scripts": {
+    "setup:push-update": "bash scripts/setup-push-update.sh",
     "dev": "npm run build:native && env -u ELECTRON_RUN_AS_NODE electron-vite dev",
     "dev:ui": "vite --config vite.preview.config.ts --host 127.0.0.1",
     "build:icons": "bash scripts/build-icons.sh",

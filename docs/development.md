@@ -26,12 +26,39 @@ open ~/Applications/Voco.app
 
 Native dependencies are pinned to Moonshine 0.1.5, FluidAudio 0.9.1, and whisper.cpp 1.9.5. The build verifies the Moonshine archive checksum and Whisper source revision. It does not download speech models. Native artifacts live in `~/Library/Caches/Voco/Native`, with `native/build` linking there. Set `VOCO_NATIVE_BUILD_DIR` to choose another cache. Desktop artifacts live in `~/Library/Caches/Voco/Electron`, with `release` linking there. Installation keeps one app at `~/Applications/Voco.app` and moves the previous bundle to Trash.
 
+## Update the local app when pushing
+
+Enable automatic local updates once per checkout on your Mac:
+
+```sh
+npm run setup:push-update
+```
+
+Push the checked-out branch to GitHub as usual. The local `pre-push` hook builds, verifies, installs, and opens Voco before Git sends the commits. Builds take place on your Mac. A build failure stops the push before installation. Installation restarts Voco, which clears in-memory recent transcripts. Saved preferences and downloaded models remain available.
+
+Commit or stash changes before pushing so the app matches the pushed commit. Pushes of other branches, tags, and deletions do not update the app. A push with no ref updates does not rebuild. If GitHub rejects the push after the hook completes, the local app has already been updated. Changes pushed from another computer or made on GitHub do not update this Mac.
+
+To push once without updating the app:
+
+```sh
+VOCO_SKIP_LOCAL_UPDATE=1 git push
+```
+
+To disable automatic updates:
+
+```sh
+git config --local --unset core.hooksPath
+```
+
+Setup preserves existing hook configurations and reports a conflict rather than replacing them. After cloning another checkout, enable the hook there separately.
+
 ## Verify changes
 
 Run only the checks relevant to your change:
 
 ```sh
 npm run typecheck
+node --test scripts/push-update.test.mjs
 npm test -- app/main/native-bridge.test.ts app/shared/state.test.ts
 ./scripts/test.sh
 ./scripts/check-deferred-dictation.sh

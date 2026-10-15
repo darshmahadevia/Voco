@@ -1,0 +1,32 @@
+#!/bin/bash
+set -euo pipefail
+
+if test "${VOCO_SKIP_LOCAL_UPDATE:-0}" = 1; then
+    exit 0
+fi
+case "${2:-}" in
+    https://github.com/*|git@github.com:*|ssh://git@github.com/*) ;;
+    *) exit 0 ;;
+esac
+
+branch="$(git symbolic-ref -q HEAD || true)"
+head="$(git rev-parse HEAD)"
+update=false
+while read -r local_ref local_sha remote_ref remote_sha; do
+    if test "$local_ref" = "$branch" && test "$local_sha" = "$head"; then
+        update=true
+    fi
+done
+if test "$update" != true; then
+    exit 0
+fi
+if test -n "$(git status --porcelain --untracked-files=normal)"; then
+    printf 'Voco: commit or stash local changes before pushing so the installed app matches the pushed commit.\n' >&2
+    printf 'To push without updating the app: VOCO_SKIP_LOCAL_UPDATE=1 git push\n' >&2
+    exit 1
+fi
+
+printf 'Voco: building and installing the current commit before pushing…\n'
+./scripts/install.sh </dev/null
+open -g "$HOME/Applications/Voco.app"
+printf 'Voco: local app updated. Continuing push.\n'
