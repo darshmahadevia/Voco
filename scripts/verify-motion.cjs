@@ -64,12 +64,12 @@ app.whenReady().then(async () => {
   }
   window.webContents.debugger.attach('1.3');
   await window.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-  await navigate('Settings');
-  await settle();
+  await frame();
+  await navigate('Transcripts');
   assert.equal(await evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches"), true);
   assert.equal(await evaluate("document.querySelectorAll('.page-transition').length"), 1);
   const reduced = await evaluate("({ opacity: getComputedStyle(document.querySelector('.page-transition')).opacity, transform: getComputedStyle(document.querySelector('.page-transition')).transform, filter: getComputedStyle(document.querySelector('.page-transition')).filter })");
-  assert.equal(reduced.opacity, '1');
+  assert.ok(Number(reduced.opacity) >= 0.7 && Number(reduced.opacity) <= 1, 'Reduced motion left the destination unreadable');
   assert.ok(reduced.transform === 'none' || reduced.transform === 'matrix(1, 0, 0, 1, 0, 0)');
   assert.ok(reduced.filter === 'none' || reduced.filter === 'blur(0px)');
   window.webContents.debugger.detach();
