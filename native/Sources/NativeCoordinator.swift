@@ -28,7 +28,8 @@ final class NativeCoordinator {
     }
 
     private let state = NativeStateStore()
-    private var polisher = TranscriptPolisher.system
+    private var polisherOverride: TranscriptPolisher?
+    private var polisher: TranscriptPolisher { polisherOverride ?? .system }
     private var recognitionTimeout: Duration = .seconds(120)
     private var cleanupTimeout: Duration = .seconds(20)
     private var engine: any SpeechEngine

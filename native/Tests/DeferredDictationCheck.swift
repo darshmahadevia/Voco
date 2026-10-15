@@ -98,7 +98,7 @@ extension NativeCoordinator {
 
     fileprivate func shortDeadlines() { recognitionTimeout = .milliseconds(100); cleanupTimeout = .milliseconds(100) }
     fileprivate func chooseOutput(_ mode: OutputMode) { state.preferences.outputMode = mode }
-    fileprivate func usePolisher(_ value: TranscriptPolisher) { polisher = value }
+    fileprivate func usePolisher(_ value: TranscriptPolisher) { polisherOverride = value }
     fileprivate var rawText: String { state.lastRawTranscript }
     fileprivate var notice: String { state.polishNotice }
     fileprivate func press() { shortcutMonitor.onAction?(.pressed) }
