@@ -49,3 +49,19 @@ GitHub reports `darshmahadevia/Voco` as private and `darshmahadevia/voco-release
 ## Mechanical detector
 
 The Impeccable detector reported a flat typography hierarchy because it did not resolve the CSS imported by JavaScript. Actual desktop heading size is 94px, while supporting text is smaller. Its repeated short-sentence copy warning was passed to the independent finish reviewer.
+
+## Primary domain verification, October 15, 2026
+
+This section supersedes the pending domain reservation, ownership conflict, and previous production address recorded above. The live primary URL is https://getvoco.vercel.app.
+
+The default Vercel CLI identifies user `mahadeviadarsh-9908`. The project domains API, queried in personal workspace `mahadeviadarsh-gmailcoms-projects`, confirms that verified domain `getvoco.vercel.app` belongs to project `prj_hBlibLftP2NlCHgNJhPaLP1T4tIL`. The domain was transferred from the unused Qurvo project. The same API confirms that `voco-mac.vercel.app` belongs to the personal project and redirects to `getvoco.vercel.app` with status 308. Use `vercel api /v9/projects/prj_hBlibLftP2NlCHgNJhPaLP1T4tIL/domains --scope mahadeviadarsh-gmailcoms-projects` to inspect these project assignments. The CLI's `domains inspect` command did not resolve this Vercel subdomain.
+
+Anonymous HTTP requests verified:
+
+- The primary page returns HTTP 200. Its canonical URL and Open Graph URL are `https://getvoco.vercel.app/`.
+- Open Graph and Twitter image metadata use `https://getvoco.vercel.app/images/og-image.png`, which returns HTTP 200.
+- `/sitemap.xml` and `/robots.txt` return HTTP 200 and reference the primary hostname.
+- `/release.json` returns HTTP 200 and retains version `0.2.1`, the existing installer URL, size, and checksum. An anonymous HEAD request to that installer follows redirects to HTTP 200 with the expected 147,079,383-byte content length.
+- `https://voco-mac.vercel.app/` returns HTTP 308 with `Location: https://getvoco.vercel.app/`.
+
+This domain check required no application, design, version, or download changes. Browser and application tests were not repeated. No temporary account credentials were used for these checks.
