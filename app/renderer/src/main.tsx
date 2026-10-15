@@ -286,37 +286,9 @@ const SETTINGS_SECTIONS = [
 function SettingsView({ state, loadError }: { state: AppState; loadError: string }): React.JSX.Element {
   const { run, pending, error } = useCommands();
   const reducedMotion = useReducedMotion();
+  const tabRefs = useRef(new Map<SettingsSection, HTMLButtonElement>());
   const [section, setSection] = useState<SettingsSection>('output');
   const canCopyLast = state.preferences.keepLastTranscript && state.lastTranscript.length > 0;
-
-  useEffect(() => {
-    const scroller = document.querySelector('.workspace-main');
-    if (!scroller) return;
-    const updateSection = (): void => {
-      const bounds = scroller.getBoundingClientRect();
-      const focused = SETTINGS_SECTIONS.find(item => document.activeElement?.id === item.heading);
-      if (focused) {
-        const heading = document.getElementById(focused.heading)?.getBoundingClientRect();
-        if (heading && heading.top >= bounds.top + 64 && heading.bottom <= bounds.bottom) {
-          setSection(focused.id);
-          return;
-        }
-      }
-      if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) {
-        setSection('dictation');
-        return;
-      }
-      const threshold = bounds.top + 96;
-      let current: SettingsSection = 'output';
-      for (const item of SETTINGS_SECTIONS) {
-        const heading = document.getElementById(item.heading);
-        if (heading && heading.getBoundingClientRect().top <= threshold) current = item.id;
-      }
-      setSection(current);
-    };
-    scroller.addEventListener('scroll', updateSection, { passive: true });
-    return () => scroller.removeEventListener('scroll', updateSection);
-  }, []);
 
   return (
     <main className="settings-shell">
@@ -324,122 +296,149 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
         <div><h1 tabIndex={-1}>Settings</h1><p className="intro-copy">Make Voco work for you. Changes apply immediately.</p></div>
       </header>
 
-      <nav className="settings-index" aria-label="Settings sections">
-        {SETTINGS_SECTIONS.map(item => <a key={item.id} href={`#${item.heading}`} aria-current={section === item.id ? 'location' : undefined} onClick={event => {
-          event.preventDefault();
-          const heading = document.getElementById(item.heading);
-          heading?.focus({ preventScroll: true });
-          heading?.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'instant' : 'smooth' });
-          setSection(item.id);
-        }}>{item.label}</a>)}
-      </nav>
-      <section className="settings-section output-section" aria-labelledby="output-heading">
-        <h2 className="section-heading" tabIndex={-1} id="output-heading">Output quality</h2>
-        <p className="row-description model-section-note">Speech recognition and cleanup run on your Mac. Choose how Voco prepares your words before pasting.</p>
-        <div className="output-options" role="radiogroup" aria-labelledby="output-heading">
-          {OUTPUT_MODES.map(mode => <label className="output-option" key={mode.id} data-selected={state.preferences.outputMode === mode.id}>
-            <input type="radio" name="output-mode" aria-description={mode.description} value={mode.id} checked={state.preferences.outputMode === mode.id}
-              disabled={preview || pending !== null || state.session.kind !== 'idle'}
-              onChange={() => void updatePreferences(run, state.preferences, { outputMode: mode.id })} />
-            <span><strong>{mode.name}</strong></span>
-          </label>)}
+      <div className="settings-index" role="tablist" aria-label="Settings sections">
+        {SETTINGS_SECTIONS.map((item, index) => <button
+          key={item.id}
+          ref={element => { if (element) tabRefs.current.set(item.id, element); else tabRefs.current.delete(item.id); }}
+          type="button" role="tab" id={`settings-tab-${item.id}`}
+          aria-selected={section === item.id} aria-controls={`settings-panel-${item.id}`}
+          tabIndex={section === item.id ? 0 : -1}
+          onClick={() => setSection(item.id)}
+          onKeyDown={event => {
+            let nextIndex = index;
+            if (event.key === 'ArrowRight') nextIndex = (index + 1) % SETTINGS_SECTIONS.length;
+            else if (event.key === 'ArrowLeft') nextIndex = (index + SETTINGS_SECTIONS.length - 1) % SETTINGS_SECTIONS.length;
+            else if (event.key === 'Home') nextIndex = 0;
+            else if (event.key === 'End') nextIndex = SETTINGS_SECTIONS.length - 1;
+            else return;
+            event.preventDefault();
+            const next = SETTINGS_SECTIONS[nextIndex];
+            if (next) { setSection(next.id); tabRefs.current.get(next.id)?.focus(); }
+          }}
+        >
+          {section === item.id && <motion.span className="settings-tab-selection" layoutId="settings-tab-selection" transition={reducedMotion ? { duration: 0 } : NAV_TRANSITION} />}
+          {item.label}
+        </button>)}
+      </div>
+      <section className="settings-section output-section" role="tabpanel" id="settings-panel-output" aria-labelledby="settings-tab-output" hidden={section !== 'output'} tabIndex={0}>
+        <div className="settings-section-intro"><h2 className="section-heading" id="output-heading">Output quality</h2>
+          <p className="row-description">A finishing touch for your words. All processing stays on your Mac.</p></div>
+        <div className="settings-controls">
+          <div className="output-options" role="radiogroup" aria-labelledby="output-heading">
+            {OUTPUT_MODES.map(mode => <label className="output-option" key={mode.id} data-selected={state.preferences.outputMode === mode.id}>
+              <input className="visually-hidden" type="radio" name="output-mode" aria-description={mode.description} value={mode.id} checked={state.preferences.outputMode === mode.id}
+                disabled={preview || pending !== null || state.session.kind !== 'idle'}
+                onChange={() => void updatePreferences(run, state.preferences, { outputMode: mode.id })} />
+              {state.preferences.outputMode === mode.id && <motion.span className="output-selection" layoutId="output-selection" transition={reducedMotion ? { duration: 0 } : NAV_TRANSITION} />}
+              <span className="output-label"><strong>{mode.name}</strong></span>
+            </label>)}
         </div>
         <p className="output-mode-description">{OUTPUT_MODES.find(mode => mode.id === state.preferences.outputMode)?.description}</p>
-        <details className="output-details"><summary>What cleanup changes</summary>
+        <details className="output-details"><summary>About cleanup &amp; AI formatting</summary>
           {OUTPUT_MODES.map(mode => <p className="output-help" key={mode.id}><strong>{mode.name}.</strong> {mode.description}</p>)}
-        <p className="output-help">Balanced and Accurate remove spoken “um” and “uh” while preserving quotes, code, links, and units. Say “never mind” to restart the current sentence. Earlier completed sentences stay. Use Fast for literal dictation.</p></details>
-        <p className="output-availability" role="status">{state.polishing.message} {state.polishing.kind === 'unavailable' && 'Accurate still applies Balanced cleanup when AI formatting is unavailable.'}</p>
-        <p className="output-help">Cleanup can make mistakes. Review important text. Your selected speech model is used in every mode.</p>
+        <p className="output-help">Balanced and Accurate remove spoken “um” and “uh” while preserving quotes, code, links, and units. Say “never mind” to restart the current sentence. Earlier completed sentences stay. Use Fast for literal dictation.</p>
+        <p className="output-help">{state.polishing.message}</p>
+        <p className="output-help">Cleanup can make mistakes. Review important text. Your selected speech model is used in every mode.</p></details>
+        {state.preferences.outputMode === 'accurate' && state.polishing.kind === 'unavailable' && <p className="output-availability" role="status">{state.polishing.message} Accurate still applies Balanced cleanup.</p>}
+        </div>
       </section>
 
-      <section className="settings-section" aria-labelledby="model-heading">
-        <h2 className="section-heading" tabIndex={-1} id="model-heading">Speech model</h2>
-        <p className="row-description model-section-note">Choose which model Voco uses. Downloaded models stay available on this Mac.</p>
-        <ModelChoices state={state} pending={pending} run={run} />
+      <section className="settings-section" role="tabpanel" id="settings-panel-models" aria-labelledby="settings-tab-models" hidden={section !== 'models'} tabIndex={0}>
+        <div className="settings-section-intro"><h2 className="section-heading" id="model-heading">Speech model</h2>
+          <p className="row-description">Choose the model that transcribes your speech. Downloads stay on this Mac.</p></div>
+        <div className="settings-controls">
+          <ModelChoices state={state} pending={pending} run={run} />
+        </div>
       </section>
 
-      <section className="settings-section" aria-labelledby="access-heading">
-        <h2 className="section-heading" tabIndex={-1} id="access-heading">Access</h2>
-        <PermissionRow
-          icon={<Mic size={17} aria-hidden="true" />}
-          title="Microphone"
-          description="Needed to hear your dictation."
-          status={microphoneStatus(state.permissions.microphone)}
-          statusKind={state.permissions.microphone === 'granted' ? 'good' : 'neutral'}
-        >
-          {state.permissions.microphone === 'required' && (
-            <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'requestMicrophone' })}>
-              {pending === 'requestMicrophone' ? 'Opening…' : 'Allow'}
-            </Button>
-          )}
-          {state.permissions.microphone === 'denied' && (
-            <Button kind="secondary" disabled={preview || pending !== null} onClick={() => void run({ kind: 'openPrivacy', pane: 'microphone' })}>
-              Open Settings <ExternalLink size={13} aria-hidden="true" />
-            </Button>
-          )}
-        </PermissionRow>
-
-        <PermissionRow
-          icon={<Keyboard size={17} aria-hidden="true" />}
-          title="Keyboard access"
-          description="Allow your talk key and writing into other apps."
-          status={keyboardStatus(state)}
-          statusKind={state.permissions.accessibility && state.permissions.shortcut ? 'good' : 'neutral'}
-        >
-          {!state.permissions.accessibility && (
-            <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'requestAccessibility' })}>
-              {pending === 'requestAccessibility' ? 'Opening…' : 'Allow'}
-            </Button>
-          )}
-          {state.permissions.accessibility && !state.permissions.shortcut && (
-            <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'restart' })}>
-              <RotateCw size={13} aria-hidden="true" /> Restart
-            </Button>
-          )}
-        </PermissionRow>
-
-        {!state.permissions.accessibility && (
-          <details className="manual-access-help">
-            <summary>Keyboard access still says off?</summary>
-            <p>macOS may keep approval for an earlier Voco build. Remove the old Voco entry in Privacy &amp; Security, then add this copy from Finder and enable it.</p>
-            <div className="manual-access-actions">
-              <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'openPrivacy', pane: 'accessibility' })}>
+      <section className="settings-section" role="tabpanel" id="settings-panel-access" aria-labelledby="settings-tab-access" hidden={section !== 'access'} tabIndex={0}>
+        <div className="settings-section-intro"><h2 className="section-heading" id="access-heading">App permissions</h2>
+          <p className="row-description">Two permissions to hear your voice and write where you work.</p></div>
+        <div className="settings-controls">
+          <PermissionRow
+            icon={<Mic size={17} aria-hidden="true" />}
+            title="Microphone"
+            description="Needed to hear your dictation."
+            status={microphoneStatus(state.permissions.microphone)}
+            statusKind={state.permissions.microphone === 'granted' ? 'good' : 'neutral'}
+          >
+            {state.permissions.microphone === 'required' && (
+              <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'requestMicrophone' })}>
+                {pending === 'requestMicrophone' ? 'Opening…' : 'Allow'}
+              </Button>
+            )}
+            {state.permissions.microphone === 'denied' && (
+              <Button kind="secondary" disabled={preview || pending !== null} onClick={() => void run({ kind: 'openPrivacy', pane: 'microphone' })}>
                 Open Settings <ExternalLink size={13} aria-hidden="true" />
               </Button>
-              <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'showApp' })}>
-                <FolderOpen size={14} aria-hidden="true" /> Show app in Finder
+            )}
+          </PermissionRow>
+  
+          <PermissionRow
+            icon={<Keyboard size={17} aria-hidden="true" />}
+            title="Keyboard access"
+            description="Allow your talk key and writing into other apps."
+            status={keyboardStatus(state)}
+            statusKind={state.permissions.accessibility && state.permissions.shortcut ? 'good' : 'neutral'}
+          >
+            {!state.permissions.accessibility && (
+              <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'requestAccessibility' })}>
+                {pending === 'requestAccessibility' ? 'Opening…' : 'Allow'}
               </Button>
-            </div>
-          </details>
-        )}
+            )}
+            {state.permissions.accessibility && !state.permissions.shortcut && (
+              <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'restart' })}>
+                <RotateCw size={13} aria-hidden="true" /> Restart
+              </Button>
+            )}
+          </PermissionRow>
+  
+          {!state.permissions.accessibility && (
+            <details className="manual-access-help">
+              <summary>Keyboard access still says off?</summary>
+              <p>macOS may keep approval for an earlier Voco build. Remove the old Voco entry in Privacy &amp; Security, then add this copy from Finder and enable it.</p>
+              <div className="manual-access-actions">
+                <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'openPrivacy', pane: 'accessibility' })}>
+                  Open Settings <ExternalLink size={13} aria-hidden="true" />
+                </Button>
+                <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'showApp' })}>
+                  <FolderOpen size={14} aria-hidden="true" /> Show app in Finder
+                </Button>
+              </div>
+            </details>
+          )}
+        </div>
       </section>
 
-      <section className="settings-section dictation-section" aria-labelledby="dictation-heading">
-        <h2 className="section-heading" tabIndex={-1} id="dictation-heading">Dictation</h2>
-        <SettingRow title="Dictation shortcut" description="Hold Fn / Globe and release to paste. Or press Fn + Space to start, then again to paste.">
-          <kbd>Fn / Globe</kbd>
-        </SettingRow>
-        <SettingRow title="Keep recent transcripts" description="Keep this session’s transcripts in memory until you quit. Turning this off clears them.">
-          <button
-            className="switch"
-            type="button"
-            role="switch"
-            aria-checked={state.preferences.keepLastTranscript}
-            aria-label="Keep recent transcripts"
-            disabled={preview || pending !== null}
-            onClick={() => void updatePreferences(run, state.preferences, { keepLastTranscript: !state.preferences.keepLastTranscript })}
-          >
-            <span className="switch-thumb" />
-          </button>
-        </SettingRow>
-        {canCopyLast && (
-          <div className="copy-last-row">
-            <span>Latest transcript held in memory</span>
-            <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'copyLast' })}>
-              <Copy size={14} aria-hidden="true" /> Copy last transcript
-            </Button>
-          </div>
-        )}
+      <section className="settings-section dictation-section" role="tabpanel" id="settings-panel-dictation" aria-labelledby="settings-tab-dictation" hidden={section !== 'dictation'} tabIndex={0}>
+        <div className="settings-section-intro"><h2 className="section-heading" id="dictation-heading">Dictation</h2>
+          <p className="row-description">Your talk key and what Voco keeps during this session.</p></div>
+        <div className="settings-controls">
+          <SettingRow title="Dictation shortcut" description="Hold Fn / Globe and release to paste. Or press Fn + Space to start, then again to paste.">
+            <kbd>Fn / Globe</kbd>
+          </SettingRow>
+          <SettingRow title="Keep recent transcripts" description="Keep this session’s transcripts in memory until you quit. Turning this off clears them.">
+            <button
+              className="switch"
+              type="button"
+              role="switch"
+              aria-checked={state.preferences.keepLastTranscript}
+              aria-label="Keep recent transcripts"
+              disabled={preview || pending !== null}
+              onClick={() => void updatePreferences(run, state.preferences, { keepLastTranscript: !state.preferences.keepLastTranscript })}
+            >
+              <span className="switch-thumb" />
+            </button>
+          </SettingRow>
+          {canCopyLast && (
+            <div className="copy-last-row">
+              <span>Latest transcript held in memory</span>
+              <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'copyLast' })}>
+                <Copy size={14} aria-hidden="true" /> Copy last transcript
+              </Button>
+            </div>
+          )}
+        </div>
       </section>
 
       <ActionError message={error || loadError} />
@@ -464,11 +463,11 @@ function keyboardStatus(state: AppState): string {
 
 type SpeechModelState = AppState['models'][number]['state'];
 
-function ModelStatus({ model, selected }: { model: SpeechModelState | undefined; selected: boolean }): React.JSX.Element {
+function ModelStatus({ model, selected }: { model: SpeechModelState | undefined; selected: boolean }): React.JSX.Element | null {
   if (!model) return <p className="model-status">Status unavailable</p>;
   switch (model.kind) {
     case 'missing':
-      return <p className="model-status">Not downloaded</p>;
+      return null;
     case 'installed':
       return <p className="model-status">{selected ? 'Selected · not loaded' : 'Downloaded'}</p>;
     case 'downloading':
@@ -476,7 +475,7 @@ function ModelStatus({ model, selected }: { model: SpeechModelState | undefined;
     case 'loading':
       return <p className="model-status"><LoaderCircle className="spin" size={13} aria-hidden="true" /> Loading model…</p>;
     case 'ready':
-      return <p className="model-status status-good">{selected ? 'Active and ready' : 'Ready to use'}</p>;
+      return selected ? null : <p className="model-status status-good">Ready to use</p>;
     case 'error':
       return <p className="model-status status-error">{model.message}</p>;
   }
@@ -527,13 +526,14 @@ function ModelChoices({
         action = <span className="model-current">Selected</span>;
       }
 
-      return <div className="model-row" key={definition.id} data-model-id={definition.id}>
+      return <div className="model-row" key={definition.id} data-model-id={definition.id} data-selected={selected}>
         <div className="model-copy">
           <div className="model-name-line">
+            <span className="model-selection-mark" aria-hidden="true">{selected && <Check size={11} />}</span>
             <p className="row-title">{definition.name}</p>
-            <span className="model-version">{definition.version}</span>
             {recommended && <span className="model-recommended">Recommended</span>}
           </div>
+          <p className="model-version">{definition.version}<span aria-hidden="true"> · </span>{definition.downloadSize} download</p>
           <p className="row-description">{definition.description}</p>
           <ModelStatus model={modelState} selected={selected} />
         </div>
