@@ -10,7 +10,7 @@ const source = fileURLToPath(new URL('..', import.meta.url));
 
 test('push updates select the current branch, reject dirty builds, and propagate failures', () => {
   const root = mkdtempSync(join(tmpdir(), 'voco-push-'));
-  const env = { ...process.env, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null', PATH: `${root}/bin:${process.env.PATH}`, HOME: root };
+  const env = { ...process.env, ELECTRON_RUN_AS_NODE: '1', GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null', PATH: `${root}/bin:${process.env.PATH}`, HOME: root };
   delete env.VOCO_SKIP_LOCAL_UPDATE;
   const run = (command, args, options = {}) => spawnSync(command, args, { cwd: root, env, encoding: 'utf8', ...options });
   const git = (...args) => {
@@ -25,7 +25,7 @@ test('push updates select the current branch, reject dirty builds, and propagate
     mkdirSync(join(root, 'bin'));
     for (const file of ['scripts/setup-push-update.sh', '.githooks/pre-push']) copyFileSync(join(source, file), join(root, file));
     script(join(root, 'scripts/install.sh'), 'echo installed >> "$HOME/events"; exit "${INSTALL_EXIT:-0}"');
-    script(join(root, 'bin/open'), 'echo opened >> "$HOME/events"');
+    script(join(root, 'bin/open'), 'test -z "${ELECTRON_RUN_AS_NODE:-}" || exit 8; echo opened >> "$HOME/events"');
     script(join(root, 'bin/uname'), 'echo Darwin');
     git('init', '-b', 'main');
     git('config', 'user.email', 'test@example.com');
