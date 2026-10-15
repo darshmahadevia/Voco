@@ -48,6 +48,8 @@ try {
     id: 'invalid-preferences-1',
     command: { kind: 'setPreferences', preferences: { keepLastTranscript: 'yes' } },
   })}\n`);
+  processHandle.stdin.write(`${JSON.stringify({ id: 'output-mode-1', command: { kind: 'setPreferences', preferences: { keepLastTranscript: false, outputMode: 'balanced' } } })}\n`);
+  processHandle.stdin.write(`${JSON.stringify({ id: 'invalid-output-1', command: { kind: 'setPreferences', preferences: { keepLastTranscript: true, outputMode: 'cloud' } } })}\n`);
   processHandle.stdin.end();
 
   await exited;
@@ -55,8 +57,10 @@ try {
   assert.ok(messages.length >= 4, 'helper emitted startup states and command replies');
 
   const replies = messages.filter((message) => message.type === 'reply');
-  assert.deepEqual(replies.map((reply) => reply.id).sort(), ['invalid-preferences-1', 'refresh-1']);
+  assert.deepEqual(replies.map((reply) => reply.id).sort(), ['invalid-output-1', 'invalid-preferences-1', 'output-mode-1', 'refresh-1']);
   assert.equal(replies.find((reply) => reply.id === 'refresh-1').ok, true);
+  assert.equal(replies.find(reply => reply.id === 'output-mode-1').ok, true);
+  assert.equal(replies.find(reply => reply.id === 'invalid-output-1').ok, false);
   const rejected = replies.find((reply) => reply.id === 'invalid-preferences-1');
   assert.equal(rejected.ok, false);
   assert.equal(typeof rejected.error, 'string');
@@ -64,7 +68,7 @@ try {
   const states = messages.filter((message) => message.type === 'state').map((message) => message.state);
   assert.ok(states.length > 0, 'helper emitted state updates');
   for (const state of states) {
-    assert.deepEqual(Object.keys(state).sort(), ['audioLevel', 'audioWaveform', 'lastTranscript', 'model', 'models', 'permissions', 'preferences', 'recommendedModel', 'selectedModel', 'session', 'usage', 'userName']);
+    assert.deepEqual(Object.keys(state).sort(), ['audioLevel', 'audioWaveform', 'lastRawTranscript', 'lastTranscript', 'model', 'models', 'permissions', 'polishNotice', 'polishing', 'preferences', 'recommendedModel', 'selectedModel', 'session', 'usage', 'userName']);
     assert.equal(typeof state.userName, 'string');
     assert.deepEqual(state.usage, { days: {}, dailyGoal: 500, typingWpm: 40 });
     assert.ok(['moonshine', 'parakeet', 'whisper'].includes(state.selectedModel));
@@ -74,15 +78,20 @@ try {
     assert.equal(state.audioLevel, 0, 'the idle helper starts with a silent waveform');
     assert.deepEqual(state.audioWaveform, Array(11).fill(0), 'idle microphone measurements are silent');
     assert.equal(typeof state.lastTranscript, 'string');
+    assert.equal(state.lastRawTranscript, '');
+    assert.equal(state.polishNotice, '');
+    assert.ok(['available', 'unavailable'].includes(state.polishing.kind));
+    assert.equal(typeof state.polishing.message, 'string');
     assert.ok(['missing', 'installed', 'downloading', 'loading', 'ready', 'error'].includes(state.model.kind));
-    assert.ok(['idle', 'starting', 'listening', 'finishing', 'recovery'].includes(state.session.kind));
+    assert.ok(['idle', 'starting', 'listening', 'finishing', 'polishing', 'recovery'].includes(state.session.kind));
     assert.deepEqual(Object.keys(state.permissions).sort(), ['accessibility', 'microphone', 'shortcut']);
     assert.ok(['required', 'denied', 'granted'].includes(state.permissions.microphone));
     assert.equal(typeof state.permissions.accessibility, 'boolean');
     assert.equal(typeof state.permissions.shortcut, 'boolean');
-    assert.deepEqual(Object.keys(state.preferences).sort(), ['keepLastTranscript']);
+    assert.deepEqual(Object.keys(state.preferences).sort(), ['keepLastTranscript', 'outputMode']);
     assert.equal(typeof state.preferences.keepLastTranscript, 'boolean');
   }
+  assert.deepEqual(states.at(-1).preferences, { keepLastTranscript: false, outputMode: 'balanced' });
   assert.equal(states.at(-1).lastTranscript, '', 'transcripts are not restored from preferences');
   console.log('PASS — native JSONL protocol');
 } finally {
