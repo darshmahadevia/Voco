@@ -185,6 +185,30 @@ dialog.addEventListener("close", () => {
   enlarge.focus({ preventScroll: true });
 });
 
+const walkthrough = document.querySelector("#app-video");
+const walkthroughPlay = document.querySelector("#walkthrough-play");
+const walkthroughError = document.querySelector("#walkthrough-error");
+walkthrough.controls = false;
+walkthroughPlay.hidden = false;
+walkthroughPlay.addEventListener("click", async () => {
+  walkthroughPlay.disabled = true;
+  walkthroughError.hidden = true;
+  try {
+    await walkthrough.play();
+    walkthrough.controls = true;
+    walkthroughPlay.hidden = true;
+    walkthrough.focus({ preventScroll: true });
+  } catch {
+    walkthroughError.textContent =
+      "The walkthrough could not play. Try again or explore the screenshots below.";
+    walkthroughError.hidden = false;
+    document.querySelector("#walkthrough-action").firstChild.textContent =
+      "Try the walkthrough again";
+  } finally {
+    walkthroughPlay.disabled = false;
+  }
+});
+
 const canvas = document.querySelector("#voice-canvas");
 const ctx = canvas.getContext("2d");
 let frame = null;

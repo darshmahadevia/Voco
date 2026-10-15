@@ -235,24 +235,41 @@
             <span>Built for your Mac.<br />Made to stay out of the way.</span>
           </div>
           <div class="recording-frame">
-            <video
-              id="app-video"
-              controls
-              playsinline
-              preload="metadata"
-              poster="/videos/voco-walkthrough-poster.png"
-              aria-label="Voco interface walkthrough with sample data"
-            >
-              <source src="/videos/voco-walkthrough.webm" type="video/webm" />
-              <track
-                kind="captions"
-                src="/videos/walkthrough.vtt"
-                srclang="en"
-                label="English"
-              />
-              Your browser cannot play the walkthrough. Explore the screenshots
-              below.
-            </video>
+            <div class="recording-media">
+              <video
+                id="app-video"
+                controls
+                playsinline
+                preload="metadata"
+                poster="/videos/voco-walkthrough-poster.png"
+                aria-label="Voco interface walkthrough with sample data"
+              >
+                <source src="/videos/voco-walkthrough.webm" type="video/webm" />
+                <track
+                  kind="captions"
+                  src="/videos/walkthrough.vtt"
+                  srclang="en"
+                  label="English"
+                />
+                Your browser cannot play the walkthrough. Explore the
+                screenshots below.</video
+              ><button
+                id="walkthrough-play"
+                class="walkthrough-play"
+                type="button"
+                hidden
+              >
+                <span class="walkthrough-play-icon" aria-hidden="true"
+                  ><svg viewBox="0 0 24 24">
+                    <path d="m9 5 11 7-11 7Z" /></svg></span
+                ><span id="walkthrough-action"
+                  >Play the walkthrough<small
+                    >18 seconds inside Voco</small
+                  ></span
+                >
+              </button>
+            </div>
+            <p id="walkthrough-error" role="status" hidden></p>
             <p>
               Recorded interface preview · Sample data · Native dictation
               inactive

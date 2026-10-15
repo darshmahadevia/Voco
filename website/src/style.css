@@ -1763,3 +1763,54 @@ dialog > img {
     font-size: 10px;
   }
 }
+
+.recording-media {
+  position: relative;
+}
+.walkthrough-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 15px;
+  background: #10111222;
+  text-shadow: 0 2px 8px #000;
+  font-size: 15px;
+  font-weight: 600;
+}
+.walkthrough-play:hover {
+  background: #10111244;
+}
+.walkthrough-play-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #ff742f;
+  box-shadow: 0 10px 30px #0006;
+}
+.walkthrough-play-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: #151616;
+  stroke: none;
+  margin-left: 4px;
+}
+.walkthrough-play small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  margin-top: 6px;
+}
+.walkthrough-play:focus-visible {
+  outline-offset: 5px;
+  border-radius: 10px;
+}
+#walkthrough-error {
+  color: #ffb58f;
+  font-size: 12px;
+  margin-top: 14px;
+}
