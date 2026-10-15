@@ -40,7 +40,7 @@ The current models are Moonshine Medium Streaming, Parakeet TDT 0.6B v2, and Whi
 
 ## Output quality
 
-Settings offers **Fast**, **Balanced**, and **Accurate**. Fast keeps the speech model's words. Balanced removes fillers and spoken restarts with local rules. Accurate adds Apple's on-device language model for conservative cleanup when Apple Intelligence is available, and keeps the original on failure. The speech model is selected separately. These options do not promise error-free recognition or a measured accuracy ranking.
+Settings offers **Fast**, **Balanced**, and **Accurate**. Fast keeps the speech model's words. Balanced removes fillers and spoken restarts, tidies their punctuation, and protects literal text. Accurate adds Apple's on-device model for formatting when Apple Intelligence is available, and keeps Balanced cleanup if formatting fails. The speech model is selected separately. These options do not promise error-free recognition or a measured accuracy ranking.
 
 With transcript retention enabled, Home lets you inspect and copy the original when cleanup changes it. See [output modes, examples, and evaluation guidance](docs/local-dictation.md).
 
@@ -62,6 +62,7 @@ npm test -- app/main/native-bridge.test.ts app/shared/state.test.ts
 ./scripts/test.sh
 ./scripts/check-deferred-dictation.sh
 ./scripts/check-transcript-polisher.sh
+./scripts/evaluate-cleanup.sh
 ./scripts/check-whisper-cancellation.sh
 ./scripts/check-focus.sh
 ./scripts/check-insertion.sh

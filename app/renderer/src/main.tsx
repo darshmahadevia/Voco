@@ -262,8 +262,8 @@ function ActionError({ message }: { message: string }): React.JSX.Element | null
 
 const OUTPUT_MODES = [
   { id: 'fast', name: 'Fast', description: 'Paste the speech model’s words without a cleanup pass.' },
-  { id: 'balanced', name: 'Balanced', description: 'Fast + clean. Remove fillers and spoken restarts with local rules.' },
-  { id: 'accurate', name: 'Accurate', description: 'Add an on-device AI pass for punctuation and conservative cleanup. Takes longer.' },
+  { id: 'balanced', name: 'Balanced', description: 'Remove fillers, tidy their punctuation, and apply spoken restarts locally.' },
+  { id: 'accurate', name: 'Accurate', description: 'Start with Balanced, then add on-device AI formatting. Keep basic cleanup if AI cannot finish.' },
 ] satisfies { id: OutputMode; name: string; description: string }[];
 
 function SettingsView({ state, loadError }: { state: AppState; loadError: string }): React.JSX.Element {
@@ -279,7 +279,7 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
 
       <section className="settings-section output-section" aria-labelledby="output-heading">
         <h2 className="section-heading" id="output-heading">Output quality</h2>
-        <p className="row-description model-section-note">Speech recognition and cleanup run on your Mac. Choose how much Voco edits before pasting.</p>
+        <p className="row-description model-section-note">Speech recognition and cleanup run on your Mac. Choose how Voco prepares your words before pasting.</p>
         <div className="output-options" role="radiogroup" aria-labelledby="output-heading">
           {OUTPUT_MODES.map(mode => <label className="output-option" key={mode.id} data-selected={state.preferences.outputMode === mode.id}>
             <input type="radio" name="output-mode" value={mode.id} checked={state.preferences.outputMode === mode.id}
@@ -288,8 +288,8 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
             <span><strong>{mode.name}</strong><span>{mode.description}</span></span>
           </label>)}
         </div>
-        <p className="output-help">Balanced and Accurate remove “um” and “uh”. Say “never mind” to discard the current sentence and start again. Earlier completed sentences stay. Use Fast to dictate these words literally.</p>
-        <p className="output-availability" role="status">{state.polishing.message} {state.polishing.kind === 'unavailable' && 'Accurate keeps the original transcript when AI cleanup is unavailable.'}</p>
+        <p className="output-help">Balanced and Accurate remove spoken “um” and “uh” while preserving quotes, code, links, and units. Say “never mind” to restart the current sentence. Earlier completed sentences stay. Use Fast for literal dictation.</p>
+        <p className="output-availability" role="status">{state.polishing.message} {state.polishing.kind === 'unavailable' && 'Accurate still applies Balanced cleanup when AI formatting is unavailable.'}</p>
         <p className="output-help">Cleanup can make mistakes. Review important text. Your selected speech model is used in every mode.</p>
       </section>
 

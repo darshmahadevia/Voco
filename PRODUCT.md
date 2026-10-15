@@ -32,7 +32,7 @@ Dictate English directly into the text field you are using. Hold Fn or Globe to 
 
 ## Output quality
 
-Settings exposes Fast for the original speech-model transcript, Balanced for local filler and restart rules, and Accurate for an optional on-device FoundationModels cleanup pass. Speech-model choice stays independent. Preserve the original when AI cleanup is unavailable or fails validation. Retain the latest original in memory only while transcript retention is enabled. Show Polishing during cleanup. The product prioritizes local processing and recoverable text, without a guarantee of accuracy or speed.
+Settings exposes Fast for the original speech-model transcript, Balanced for local filler and restart rules with punctuation repair, and Accurate for an optional on-device FoundationModels cleanup pass. Speech-model choice stays independent. Accurate starts with Balanced cleanup and keeps that cleanup if AI formatting is unavailable or fails validation. Protect quotes, code, links, quantities, and line boundaries. Retain the latest original in memory only while transcript retention is enabled. Show Polishing during cleanup. The product prioritizes local processing and recoverable text, without a guarantee of accuracy or speed.
 
 ## Deferred work
 
