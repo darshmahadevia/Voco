@@ -12,7 +12,7 @@ Run `npm run build` to produce `dist/`. `npm run preview` serves the production 
 
 Run `npm run verify:build` after building. It checks the real deployment output, section links, local assets, installer metadata, and fallback download link.
 
-For browser verification, serve the production build on port 4174 with `npm run preview -- --port 4174`, then run `npm run verify:browser` in another terminal. The browser script uses installed Google Chrome and checks desktop, mobile, and 320px layouts, keyboard interactions, demo replay, reduced motion, offscreen animation pause, JavaScript-free content, release-metadata failure, and automated WCAG accessibility rules. It writes captures and a JSON report to the repository's ignored `.impeccable/review/` folder.
+For browser verification, serve the production build on port 4174 with `npm run preview -- --port 4174`, then run `npm run verify:browser` in another terminal. The browser script uses installed Google Chrome and checks 1440px, 1280px, 768px, 390px, and 320px layouts, keyboard interactions, demo samples, replay, cancellation, screenshot viewing, reduced motion, JavaScript-free content, release-metadata failure, and automated WCAG accessibility rules. It writes captures and a JSON report to the repository's ignored `.impeccable/review/` folder.
 
 Set `VOCO_WEBSITE_URL` to verify a deployed URL instead of the local server.
 
@@ -28,7 +28,11 @@ This writes optimized WebP screenshots to `public/images/` and requires `cwebp`.
 
 Run `env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron website/scripts/capture-social.cjs` from the repository root to regenerate the social preview image.
 
-The original animated voice ribbon takes its visual cue from [Maple Research's ASCII posters on Vibrant](https://vibrant.design/feed/xjwkcs7-maple-research-ascii-posters). Individual text-reveal and accordion recipes come from the [transitions.dev skill](https://github.com/Jakubantalik/transitions.dev/tree/main/skills/transitions-dev). No reference-site artwork is redistributed.
+The marketing page uses ivory and sage around a dark demonstration section. Its tactile Fn key draws on [Beside's spacious hero](https://vibrant.design/website/pcyiyzl-beside-s-hero-section). The dark editorial pacing draws on [Griffin](https://vibrant.design/website/yovgmpb-griffin-the-bank-you-can-build-on). Reference artwork is not redistributed. Site-specific tokens and behavior are documented in [DESIGN.md](DESIGN.md), independently of the desktop app's design system.
+
+The simulated demo has three sample records and one explicit phase: idle, listening, transcribing, or complete. The hero key and play control use the same state machine. Switching examples, pressing Cancel or Escape, or hiding the page cancels outstanding timers. Full text appears only when transcription completes. No audio plays and no browser microphone permission is requested. Reduced motion completes the demonstration immediately.
+
+The screenshot gallery supports arrow keys, Home, and End. View full size opens the selected screenshot in a native modal dialog with horizontal scrolling on small screens. Escape and Close restore focus to the opener. Keep sample-data notices in the source captures. Captures use an 1100 × 880 CSS-pixel viewport at the display's native scale. PNG metadata and WebP JSON sidecars record asset origins.
 
 ## Downloads
 
