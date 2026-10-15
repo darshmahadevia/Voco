@@ -64,7 +64,7 @@ private struct InvalidEdit: Decodable {
             print("Failed cases: \(failures.joined(separator: ", "))")
             exit(1)
         }
-        print("PASS cleanup fixture outputs")
+        print("PASS \(cases.count) cleanup fixtures, fallback behavior, repeat cleanup, and \(invalidEdits.count) unsafe edit rejections")
     }
 
 }
