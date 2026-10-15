@@ -1,7 +1,7 @@
 import vocoMark from '../../../Resources/Brand/voco-mark.svg';
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useReducedMotion, type Transition } from 'motion/react';
+import { AnimatePresence, MotionConfig, motion, useAnimationFrame, useMotionValue, useReducedMotion, type Transition } from 'motion/react';
 import {
   ArrowLeft,
   Home,
@@ -47,6 +47,10 @@ const previewScenario = parsePreviewScenario(query.get('preview'));
 const preview = window.voco === undefined;
 const previewState = createPreviewState(previewScenario);
 document.documentElement.dataset.view = view;
+
+const PAGE_TRANSITION = { duration: 0.16, ease: [0.16, 1, 0.3, 1] } satisfies Transition;
+const STATUS_TRANSITION = { duration: 0.12, ease: [0.16, 1, 0.3, 1] } satisfies Transition;
+const NAV_TRANSITION = { type: 'spring', stiffness: 420, damping: 36 } satisfies Transition;
 
 const PILL_RECOVERY_TRANSITION = {
   type: 'spring',
@@ -244,7 +248,7 @@ function AppSidebar({
           aria-current={currentPage === page ? 'page' : undefined}
           onClick={() => onNavigate(page)}
         >
-          {currentPage === page && <motion.span className="nav-selection" layoutId="navigation-selection" transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 36 }} />}
+          {currentPage === page && <motion.span className="nav-selection" layoutId="navigation-selection" transition={reducedMotion ? { duration: 0 } : NAV_TRANSITION} />}
           {item.icon}
           <span>{item.label}</span>
           {page === 'onboarding' && <span className="nav-dot" aria-hidden="true" />}
@@ -254,7 +258,7 @@ function AppSidebar({
     <div className="sidebar-spacer" />
     <div className="sidebar-local"><ShieldCheck size={14} aria-hidden="true" /><span>On your Mac.</span></div>
     <button className={`nav-item nav-settings${currentPage === 'settings' ? ' active' : ''}`} type="button" aria-label="Settings" title="Settings" aria-current={currentPage === 'settings' ? 'page' : undefined} onClick={() => onNavigate('settings')}>
-      {currentPage === 'settings' && <motion.span className="nav-selection" layoutId="navigation-selection" transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 36 }} />}
+      {currentPage === 'settings' && <motion.span className="nav-selection" layoutId="navigation-selection" transition={reducedMotion ? { duration: 0 } : NAV_TRANSITION} />}
       {NAVIGATION_ITEMS.settings.icon}<span>Settings</span>
     </button>
   </aside>;
@@ -271,41 +275,91 @@ const OUTPUT_MODES = [
   { id: 'accurate', name: 'Accurate', description: 'Start with Balanced, then add on-device AI formatting. Keep basic cleanup if AI cannot finish.' },
 ] satisfies { id: OutputMode; name: string; description: string }[];
 
+type SettingsSection = 'output' | 'models' | 'access' | 'dictation';
+const SETTINGS_SECTIONS = [
+  { id: 'output', label: 'Output', heading: 'output-heading' },
+  { id: 'models', label: 'Models', heading: 'model-heading' },
+  { id: 'access', label: 'Access', heading: 'access-heading' },
+  { id: 'dictation', label: 'Dictation', heading: 'dictation-heading' },
+] satisfies { id: SettingsSection; label: string; heading: string }[];
+
 function SettingsView({ state, loadError }: { state: AppState; loadError: string }): React.JSX.Element {
   const { run, pending, error } = useCommands();
-  const ready = isReady(state);
+  const reducedMotion = useReducedMotion();
+  const [section, setSection] = useState<SettingsSection>('output');
   const canCopyLast = state.preferences.keepLastTranscript && state.lastTranscript.length > 0;
+
+  useEffect(() => {
+    const scroller = document.querySelector('.workspace-main');
+    if (!scroller) return;
+    const updateSection = (): void => {
+      const bounds = scroller.getBoundingClientRect();
+      const focused = SETTINGS_SECTIONS.find(item => document.activeElement?.id === item.heading);
+      if (focused) {
+        const heading = document.getElementById(focused.heading)?.getBoundingClientRect();
+        if (heading && heading.top >= bounds.top + 64 && heading.bottom <= bounds.bottom) {
+          setSection(focused.id);
+          return;
+        }
+      }
+      if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) {
+        setSection('dictation');
+        return;
+      }
+      const threshold = bounds.top + 96;
+      let current: SettingsSection = 'output';
+      for (const item of SETTINGS_SECTIONS) {
+        const heading = document.getElementById(item.heading);
+        if (heading && heading.getBoundingClientRect().top <= threshold) current = item.id;
+      }
+      setSection(current);
+    };
+    scroller.addEventListener('scroll', updateSection, { passive: true });
+    return () => scroller.removeEventListener('scroll', updateSection);
+  }, []);
 
   return (
     <main className="settings-shell">
       <header className="settings-header">
-        <div><h1>Settings</h1><p className="intro-copy">Make Voco work for you. Changes apply immediately.</p></div>
+        <div><h1 tabIndex={-1}>Settings</h1><p className="intro-copy">Make Voco work for you. Changes apply immediately.</p></div>
       </header>
 
+      <nav className="settings-index" aria-label="Settings sections">
+        {SETTINGS_SECTIONS.map(item => <a key={item.id} href={`#${item.heading}`} aria-current={section === item.id ? 'location' : undefined} onClick={event => {
+          event.preventDefault();
+          const heading = document.getElementById(item.heading);
+          heading?.focus({ preventScroll: true });
+          heading?.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'instant' : 'smooth' });
+          setSection(item.id);
+        }}>{item.label}</a>)}
+      </nav>
       <section className="settings-section output-section" aria-labelledby="output-heading">
-        <h2 className="section-heading" id="output-heading">Output quality</h2>
+        <h2 className="section-heading" tabIndex={-1} id="output-heading">Output quality</h2>
         <p className="row-description model-section-note">Speech recognition and cleanup run on your Mac. Choose how Voco prepares your words before pasting.</p>
         <div className="output-options" role="radiogroup" aria-labelledby="output-heading">
           {OUTPUT_MODES.map(mode => <label className="output-option" key={mode.id} data-selected={state.preferences.outputMode === mode.id}>
-            <input type="radio" name="output-mode" value={mode.id} checked={state.preferences.outputMode === mode.id}
+            <input type="radio" name="output-mode" aria-description={mode.description} value={mode.id} checked={state.preferences.outputMode === mode.id}
               disabled={preview || pending !== null || state.session.kind !== 'idle'}
               onChange={() => void updatePreferences(run, state.preferences, { outputMode: mode.id })} />
-            <span><strong>{mode.name}</strong><span>{mode.description}</span></span>
+            <span><strong>{mode.name}</strong></span>
           </label>)}
         </div>
-        <p className="output-help">Balanced and Accurate remove spoken “um” and “uh” while preserving quotes, code, links, and units. Say “never mind” to restart the current sentence. Earlier completed sentences stay. Use Fast for literal dictation.</p>
+        <p className="output-mode-description">{OUTPUT_MODES.find(mode => mode.id === state.preferences.outputMode)?.description}</p>
+        <details className="output-details"><summary>What cleanup changes</summary>
+          {OUTPUT_MODES.map(mode => <p className="output-help" key={mode.id}><strong>{mode.name}.</strong> {mode.description}</p>)}
+        <p className="output-help">Balanced and Accurate remove spoken “um” and “uh” while preserving quotes, code, links, and units. Say “never mind” to restart the current sentence. Earlier completed sentences stay. Use Fast for literal dictation.</p></details>
         <p className="output-availability" role="status">{state.polishing.message} {state.polishing.kind === 'unavailable' && 'Accurate still applies Balanced cleanup when AI formatting is unavailable.'}</p>
         <p className="output-help">Cleanup can make mistakes. Review important text. Your selected speech model is used in every mode.</p>
       </section>
 
       <section className="settings-section" aria-labelledby="model-heading">
-        <h2 className="section-heading" id="model-heading">Speech model</h2>
+        <h2 className="section-heading" tabIndex={-1} id="model-heading">Speech model</h2>
         <p className="row-description model-section-note">Choose which model Voco uses. Downloaded models stay available on this Mac.</p>
         <ModelChoices state={state} pending={pending} run={run} />
       </section>
 
       <section className="settings-section" aria-labelledby="access-heading">
-        <h2 className="section-heading" id="access-heading">Access</h2>
+        <h2 className="section-heading" tabIndex={-1} id="access-heading">Access</h2>
         <PermissionRow
           icon={<Mic size={17} aria-hidden="true" />}
           title="Microphone"
@@ -361,7 +415,7 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
       </section>
 
       <section className="settings-section dictation-section" aria-labelledby="dictation-heading">
-        <h2 className="section-heading" id="dictation-heading">Dictation</h2>
+        <h2 className="section-heading" tabIndex={-1} id="dictation-heading">Dictation</h2>
         <SettingRow title="Dictation shortcut" description="Hold Fn / Globe and release to paste. Or press Fn + Space to start, then again to paste.">
           <kbd>Fn / Globe</kbd>
         </SettingRow>
@@ -389,14 +443,6 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
       </section>
 
       <ActionError message={error || loadError} />
-      {ready && (
-        <footer className="settings-footer">
-          <span className="dictation-status" data-ready="true" role="status">
-            <Mic size={14} aria-hidden="true" /> Ready to dictate
-          </span>
-          <span className="settings-shortcut">Hold <kbd>Fn / Globe</kbd> to speak</span>
-        </footer>
-      )}
     </main>
   );
 }
@@ -587,24 +633,20 @@ function PillView({ state, loadError }: { state: AppState; loadError: string }):
   return (
     <main className="pill-shell">
       {preview && <PreviewNotice />}
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.section
-          key={session.kind === 'recovery' ? 'recovery' : 'status'}
-          className={`pill-card ${session.kind === 'recovery' ? 'pill-card-recovery' : ''}`}
-          data-session={session.kind}
-          layout
-          initial={reducedMotion ? false : { opacity: 0, y: 7, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -5, scale: 0.985 }}
-          transition={reducedMotion ? { duration: 0 } : PILL_RECOVERY_TRANSITION}
-        >
-          {session.kind === 'recovery' ? (
-            <RecoveryContent session={session} preview={preview} pending={pending} run={run} error={error || loadError} />
-          ) : (
-            <PillStatus state={state} />
-          )}
-        </motion.section>
-      </AnimatePresence>
+      <motion.section
+        className={`pill-card ${session.kind === 'recovery' ? 'pill-card-recovery' : ''}`}
+        data-session={session.kind}
+        layout
+        initial={reducedMotion ? false : { opacity: 0, y: 7, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={reducedMotion ? { duration: 0 } : PILL_RECOVERY_TRANSITION}
+      >
+        {session.kind === 'recovery' ? (
+          <RecoveryContent session={session} preview={preview} pending={pending} run={run} error={error || loadError} />
+        ) : (
+          <PillStatus state={state} />
+        )}
+      </motion.section>
       {session.kind !== 'recovery' && <ActionError message={error || loadError} />}
     </main>
   );
@@ -666,69 +708,65 @@ function Waveform({ level, size, active = false, state }: { level: number; size:
 function PillStatus({ state }: { state: AppState }): React.JSX.Element {
   const { session } = state;
   const reducedMotion = useReducedMotion();
+  const loadingModel = session.kind === 'idle' && state.model.kind === 'loading' && isSetupComplete(state);
   let title: string;
   switch (session.kind) {
-    case 'idle': title = isReady(state) ? 'Ready' : 'Finish setup'; break;
+    case 'idle': title = isReady(state) ? 'Ready' : loadingModel ? 'Loading speech model' : 'Finish setup'; break;
     case 'starting': title = 'Starting…'; break;
     case 'listening': title = 'Listening…'; break;
     case 'finishing': title = 'Transcribing…'; break;
     case 'polishing': title = 'Polishing…'; break;
     case 'recovery': title = 'Words saved'; break;
   }
-  const processing = session.kind === 'starting' || session.kind === 'finishing' || session.kind === 'polishing';
-  return <div className="pill-status" role="status" aria-live="polite">
-    {processing ? <LoaderCircle className="spin pill-loader" size={18} aria-hidden="true" /> : <Waveform size="pill" state={state} level={session.kind === 'listening' ? state.audioLevel : 0} active={session.kind === 'listening'} />}
-    <AnimatePresence initial={false} mode="popLayout">
-      <motion.p className="pill-title" key={title}
-        initial={reducedMotion ? false : { opacity: 0, y: 5, filter: 'blur(3px)' }}
-        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-        exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -5, filter: 'blur(3px)' }}
-        transition={{ duration: reducedMotion ? 0 : 0.18 }}
-      >{title}</motion.p>
-    </AnimatePresence>
-    <span className="pill-indicator" data-active={session.kind === 'listening'} aria-hidden="true" />
+  const processing = loadingModel || session.kind === 'starting' || session.kind === 'finishing' || session.kind === 'polishing';
+  return <div className="pill-status">
+    <span className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{title}</span>
+    <span className="pill-visual" aria-hidden="true">
+      <span className="pill-symbol">
+        <AnimatePresence initial={false}>
+          <motion.span className="pill-symbol-item" key={processing ? 'processing' : 'waveform'}
+            initial={reducedMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={reducedMotion ? { duration: 0 } : STATUS_TRANSITION}>
+            {processing ? <LoaderCircle className="spin pill-loader" size={18} /> : <Waveform size="pill" state={state} level={session.kind === 'listening' ? state.audioLevel : 0} active={session.kind === 'listening'} />}
+          </motion.span>
+        </AnimatePresence>
+      </span>
+      <span className="pill-label-slot">
+        <AnimatePresence initial={false}>
+          <motion.span className="pill-title" key={title}
+            initial={reducedMotion ? false : { opacity: 0, y: 3 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -3 }}
+            transition={reducedMotion ? { duration: 0 } : STATUS_TRANSITION}
+          >{title}</motion.span>
+        </AnimatePresence>
+      </span>
+      <span className="pill-indicator" data-active={session.kind === 'listening'} />
+    </span>
   </div>;
 }
 
 function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onStats }: { state: AppState; transcripts: RecentTranscript[]; loadError: string; onSetup: () => void; onTranscripts: () => void; onStats: () => void }): React.JSX.Element {
-  const ready = isReady(state);
   const setupComplete = isSetupComplete(state);
-  const { run, pending, error } = useCommands();
-  let status: string;
-  switch (state.session.kind) {
-    case 'listening': status = 'Listening'; break;
-    case 'starting': status = 'Starting'; break;
-    case 'finishing': status = 'Transcribing'; break;
-    case 'polishing': status = 'Polishing locally'; break;
-    case 'recovery': status = 'Transcript needs attention'; break;
-    case 'idle': status = ready ? 'Ready to dictate' : setupComplete ? 'Loading speech model' : 'Setup needed'; break;
-  }
   return <main className="dashboard">
     <div className="dashboard-overview">
     <section className="home-hero" aria-labelledby="home-heading">
       <div className="home-heading-row">
-        <div><h1 id="home-heading">{state.userName ? <>Hello, <span className="user-name">{state.userName}.</span></> : 'Welcome to Voco.'}</h1>
+        <div><h1 id="home-heading" tabIndex={-1}>{state.userName ? <>Hello, <span className="user-name">{state.userName}.</span></> : 'Welcome to Voco.'}</h1>
         <p className="home-introduction">A little less typing. A little more you.</p></div>
-        <span className="dashboard-ready dictation-status" data-ready={ready && state.session.kind === 'idle'} role="status" aria-live="polite">
-          {state.session.kind === 'starting' || state.session.kind === 'finishing' || state.session.kind === 'polishing' || (setupComplete && !ready)
-            ? <LoaderCircle className="spin" size={14} aria-hidden="true" />
-            : state.session.kind === 'recovery' || !ready ? <Info size={14} aria-hidden="true" /> : <Mic size={14} aria-hidden="true" />}
-          {status}
-        </span>
+        <button type="button" className="text-link activity-link" onClick={onStats}>All stats <ArrowRight size={14} aria-hidden="true" /></button>
       </div>
       <div className="voice-workspace" data-session={state.session.kind}>
         <div className="voice-instruction"><h2>Your words, anywhere.</h2>
           <p>Hold <kbd>Fn <Globe size={13} aria-hidden="true" /></kbd> to speak. Release to paste.</p>
           <span className="shortcut-alternative">Or press Fn + Space to start and stop.</span>
         </div>
-        <div className="home-capsule" aria-label="Live dictation status"><PillStatus state={state} /></div>
+        <kbd className="voice-key" aria-hidden="true">fn <Globe size={19} /></kbd>
       </div>
       {!setupComplete && <button className="button button-primary setup-button" type="button" onClick={onSetup}>Finish setting up <ArrowRight size={16} /></button>}
     </section>
-    {state.session.kind === 'recovery' && <div className="home-recovery"><RecoveryContent session={state.session} preview={preview} pending={pending} run={run} error={error || loadError} /></div>}
     <div className="dashboard-summary">
       <UsageTotals usage={state.usage} />
-      <button type="button" className="text-link activity-link" onClick={onStats}>All stats <ArrowRight size={14} aria-hidden="true" /></button>
     </div>
     </div>
     {state.polishNotice && <p className="output-notice" role="status">{state.polishNotice}</p>}
@@ -738,7 +776,7 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
       <p>{state.lastRawTranscript}</p>
       <CopyTranscriptButton text={state.lastRawTranscript} disabled={preview} latest={false} />
     </details>}
-    {state.session.kind !== 'recovery' && <ActionError message={error || loadError} />}
+    <ActionError message={loadError} />
   </main>;
 }
 
@@ -763,9 +801,10 @@ function TranscriptPanel({ entries, latestText, enabled, fullPage = false, onSho
     {fullPage && entries.length > 0 && <label className="transcript-search"><Search size={16} aria-hidden="true" /><span className="visually-hidden">Search transcripts</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search this session" /></label>}
     {entries.length ? <><ol className="recent-transcript-list" id="recent-transcript-list">
       {visible.map((entry, index) => <li className="recent-transcript-row" key={entry.id}>
+        {fullPage && <time className="transcript-time" dateTime={new Date(entry.createdAt).toISOString()}>{new Date(entry.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}<span>{new Date(entry.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></time>}
         <div className="recent-transcript-copy">
           <p className="last-transcript">{entry.text}</p>
-          <div className="transcript-metadata"><span>{fullPage ? new Date(entry.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : index === 0 ? 'Latest' : new Date(entry.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span><span>{entry.text.trim().split(/\s+/).length} words</span></div>
+          <div className="transcript-metadata"><span>{index === 0 && entry.text === latestText ? 'Latest' : fullPage ? 'Session dictation' : new Date(entry.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span><span>{entry.text.trim().split(/\s+/).length} words</span></div>
         </div>
         <CopyTranscriptButton text={entry.text} disabled={false} latest={index === 0 && entry.text === latestText} />
       </li>)}
@@ -874,16 +913,17 @@ function CopyTranscriptButton({ text, disabled, latest = true }: { text: string;
         <span className="t-icon" data-icon="a"><Copy size={15} /></span>
         <span className="t-icon" data-icon="b"><Check size={15} /></span>
       </span>
-      <span className="copy-button-label-slot" aria-live="polite" aria-atomic="true">
-        <AnimatePresence initial={false} mode="wait">
+      <span className="visually-hidden" role="status" aria-atomic="true">{currentState.kind === 'idle' ? '' : label}</span>
+      <span className="copy-button-label-slot" aria-hidden="true">
+        <AnimatePresence initial={false}>
           <motion.span
             className="copy-button-label"
             key={currentState.kind}
-            initial={reducedMotion ? false : { opacity: 0, y: 4, filter: 'blur(2px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={reducedMotion ? { opacity: 0, y: 0, filter: 'blur(0px)' } : { opacity: 0, y: -4, filter: 'blur(2px)' }}
-            transition={reducedMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeInOut' }}
-          >{label}</motion.span>
+            initial={reducedMotion ? false : { opacity: 0, y: 3 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -3 }}
+            transition={reducedMotion ? { duration: 0 } : STATUS_TRANSITION}
+          >{currentState.kind === 'idle' ? 'Copy' : label}</motion.span>
         </AnimatePresence>
       </span>
     </button>
@@ -973,7 +1013,7 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
       goForward();
     }
   }}>
-    <h1 className="visually-hidden">Set up Voco</h1>
+    <h1 className="visually-hidden" tabIndex={-1}>Set up Voco</h1>
     <header className="setup-header"><span className="wordmark">voco<span className="wordmark-dot">.</span></span><span className="setup-count">{SETUP_STEPS[stepIndex]?.title} · {stepIndex + 1} of {SETUP_STEPS.length}</span></header>
     <div className="setup-stage">
       <div className="setup-direction setup-previous">
@@ -1089,6 +1129,19 @@ function RecoveryContent({
   );
 }
 
+function WorkspaceStatus({ state, loadError }: { state: AppState; loadError: string }): React.JSX.Element {
+  const { run, pending, error } = useCommands();
+  return <div className="workspace-status">
+    {state.session.kind === 'recovery' && <section className="workspace-recovery" aria-label="Transcript recovery">
+      <RecoveryContent session={state.session} preview={preview} pending={pending} run={run} error={error || loadError} />
+    </section>}
+    <footer className="live-footer">
+      <PillStatus state={state} />
+      <span className="live-shortcut">Hold <kbd>Fn / Globe</kbd> to speak</span>
+    </footer>
+  </div>;
+}
+
 function StartupView({ error }: { error: string }): React.JSX.Element {
   const { run, pending, error: commandError } = useCommands();
   return <main className="startup-shell">
@@ -1143,14 +1196,15 @@ function App(): React.JSX.Element {
       <div className="titlebar window-drag" aria-hidden="true" />
       <div className="workspace-main">
         <PreviewNotice />
-        <motion.div key={currentPage} className="page-transition" initial={reducedMotion ? false : { opacity: 0.65, y: 6, filter: 'blur(2px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: reducedMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}>
+        <motion.div key={currentPage} className="page-transition" initial={reducedMotion ? false : { opacity: 0.7, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={reducedMotion ? { duration: 0 } : PAGE_TRANSITION}>
         {currentPage === 'settings' ? <SettingsView state={state} loadError={error} /> : currentPage === 'onboarding' ? <OnboardingView state={state} loadError={error} onDone={finishSetup} /> : currentPage === 'transcripts' ? <TranscriptsView state={state} transcripts={transcripts} loadError={error} /> : currentPage === 'stats' ? <StatsView state={state} loadError={error} /> : <HomeView state={state} transcripts={transcripts} loadError={error} onSetup={() => setPage('onboarding')} onTranscripts={() => setPage('transcripts')} onStats={() => setPage('stats')} />}
         </motion.div>
       </div>
+      {(currentPage !== 'onboarding' || state.session.kind === 'recovery') && <WorkspaceStatus state={state} loadError={error} />}
     </div>
   </div>;
 }
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('The Voco renderer root is missing.');
-createRoot(rootElement).render(<App />);
+createRoot(rootElement).render(<MotionConfig reducedMotion="user"><App /></MotionConfig>);

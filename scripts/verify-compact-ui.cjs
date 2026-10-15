@@ -64,7 +64,7 @@ app.whenReady().then(async () => {
       assert.ok(await evaluate("!document.body.textContent.includes('Local by design')"));
       if (page === 'home') {
         assert.equal(await evaluate("document.querySelectorAll('.activity-calendar, .daily-goal, .milestones').length"), 0);
-        assert.ok(await evaluate("document.querySelector('.transcript-panel').getBoundingClientRect().top < innerHeight"), `${prefix}: transcripts are below the viewport`);
+        assert.ok(await evaluate("document.querySelector('.recent-transcript-row .copy-transcript-button').getBoundingClientRect().bottom <= document.querySelector('.live-footer').getBoundingClientRect().top"), `${prefix}: latest transcript action is below the viewport`);
         assert.ok(await evaluate("parseFloat(getComputedStyle(document.querySelector('#home-heading')).fontSize) >= 30"));
       }
       if (page === 'stats') assert.ok(await evaluate("Boolean(document.querySelector('.activity-calendar'))"));
@@ -76,7 +76,8 @@ app.whenReady().then(async () => {
         await evaluate("document.querySelector('.workspace-main').scrollTo({ top: 10000 })");
         await capture(`${prefix}-settings-footer`);
       }
-      if (page === 'home' || page === 'settings') assert.ok(await evaluate("Boolean(document.querySelector('.dictation-status[data-ready=\"true\"] svg'))"));
+      assert.equal(await evaluate("document.querySelector('.workspace-status [role=status]').textContent"), 'Ready');
+      assert.ok(await evaluate("(() => { const footer = document.querySelector('.live-footer').getBoundingClientRect(); return footer.top >= 0 && footer.bottom <= innerHeight; })()"), `${prefix}: live status is clipped`);
     }
     await load({ preview: 'ready', page: 'onboarding' });
     await capture(`${prefix}-welcome`);
@@ -164,7 +165,7 @@ app.whenReady().then(async () => {
   await load({ preview: 'listening', page: 'home' });
   assert.equal(await evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches"), true);
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.nav-item')).transitionDuration"), '0s');
-  assert.equal(await evaluate("getComputedStyle(document.querySelector('.page-transition')).filter"), 'blur(0px)');
+  assert.ok(await evaluate("['none', 'blur(0px)'].includes(getComputedStyle(document.querySelector('.page-transition')).filter)"));
   window.webContents.debugger.detach();
   assert.deepEqual(errors, [], 'Renderer console errors');
   await writeFile(join(output, 'report.json'), JSON.stringify({ screenshots: report, errors, interactions: 'Onboarding, blocked continuation, transcript search, empty results, copy feedback, calendar keyboard navigation, and goal adjustment passed.' }, null, 2));
