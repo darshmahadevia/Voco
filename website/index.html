@@ -3,24 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="canonical" href="https://getvoco.vercel.app/" />
-    <meta property="og:url" content="https://getvoco.vercel.app/" />
-    <meta name="theme-color" content="#171819" />
+    <title>Voco. Don't lose the thought.</title>
     <meta
       name="description"
-      content="A little less typing. Voco is free, local voice dictation for your Mac. Turn your voice into text locally, with no account or subscription."
+      content="Get the thought out of your head and into your work. Free, private voice dictation for Apple Silicon Macs. Hold Fn. Speak. Keep going."
     />
-    <meta property="og:title" content="Voco. Good ideas. Less typing." />
+    <meta name="theme-color" content="#111213" />
+    <link rel="canonical" href="https://getvoco.vercel.app/" />
+    <meta property="og:url" content="https://getvoco.vercel.app/" />
+    <meta property="og:title" content="Voco. Don't lose the thought." />
     <meta
       property="og:description"
-      content="Private voice dictation for your Mac. Free, private, and offline after setup."
+      content="Your voice, straight into your work. Free, local dictation for Mac."
     />
     <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
     <meta
       property="og:image"
       content="https://getvoco.vercel.app/images/og-image.png"
     />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:image"
       content="https://getvoco.vercel.app/images/og-image.png"
@@ -33,872 +34,512 @@
       type="font/ttf"
       crossorigin
     />
-    <title>Voco. Good ideas. Less typing.</title>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
-      <div class="header-inner">
-        <a class="wordmark" href="#" aria-label="Voco home"
-          >voco<span>.</span></a
-        >
-        <nav class="desktop-nav" aria-label="Main navigation">
-          <a href="#how-it-works">How it works</a>
-          <a href="#the-app">The app</a>
-          <a href="#privacy">Privacy</a>
-        </nav>
-        <div class="header-actions">
-          <a class="button button-small" href="#download"
-            >Download
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 3v10m-4-4 4 4 4-4M4 14v3h12v-3" /></svg
-          ></a>
-          <button
-            class="menu-toggle"
-            type="button"
-            aria-label="Open navigation"
-            aria-expanded="false"
-            aria-controls="mobile-nav"
-          >
-            <span></span><span></span>
-          </button>
-        </div>
-      </div>
-      <nav
-        id="mobile-nav"
-        class="mobile-nav"
-        aria-label="Mobile navigation"
-        hidden
+      <a class="wordmark" href="#main" aria-label="Voco home"
+        ><img
+          src="/images/voco-mark.svg"
+          alt=""
+          width="30"
+          height="24"
+        />voco<span>.</span></a
       >
-        <a href="#how-it-works">How it works</a><a href="#the-app">The app</a
-        ><a href="#privacy">Privacy</a><a href="#questions">Questions</a>
+      <nav class="desktop-nav" aria-label="Main navigation">
+        <a href="#how-it-works">The feeling</a><a href="#the-app">The app</a
+        ><a href="#privacy">Your privacy</a>
+      </nav>
+      <div class="header-actions">
+        <a class="button small" href="#download"
+          >Get Voco <span aria-hidden="true">↗</span></a
+        ><button
+          class="menu-toggle"
+          type="button"
+          aria-label="Open navigation"
+          aria-controls="mobile-nav"
+          aria-expanded="false"
+        >
+          <span></span><span></span>
+        </button>
+      </div>
+      <nav id="mobile-nav" aria-label="Mobile navigation" hidden>
+        <a href="#how-it-works">The feeling</a><a href="#the-app">The app</a
+        ><a href="#privacy">Your privacy</a><a href="#download">Get Voco</a>
       </nav>
     </header>
     <main id="main">
-      <section class="hero section-shell" aria-labelledby="hero-title">
-        <div class="hero-copy t-stagger is-shown">
-          <h1 id="hero-title" class="t-stagger-line t-stagger-line--1">
-            Good ideas.<br /><span>Less typing.</span>
-          </h1>
-          <p class="hero-description t-stagger-line t-stagger-line--2">
-            A little less keyboard.<br />A little more train of thought.
-          </p>
-          <p class="hero-detail t-stagger-line t-stagger-line--3">
-            Free voice dictation for your Mac. Hold Fn, speak your mind,<br
-              class="desktop-break"
-            />
-            and let your words land right where you’re working.
-          </p>
-          <div class="hero-actions t-stagger-line t-stagger-line--4">
-            <a class="button" href="#download"
-              ><svg class="apple-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  fill="currentColor"
-                  stroke="none"
-                  d="M17.3 12.8c0-2 1.6-3 1.7-3.1-1-1.5-2.5-1.7-3.1-1.7-1.3-.1-2.5.8-3.1.8-.7 0-1.7-.8-2.8-.7-1.4 0-2.7.8-3.5 2-1.5 2.5-.4 6.3 1 8.4.7 1 1.5 2.1 2.6 2 1-.1 1.4-.7 2.7-.7s1.7.7 2.8.7 1.8-1 2.5-2c.8-1.1 1.1-2.2 1.1-2.3-.1 0-1.9-.7-1.9-3.4ZM15.2 6.6c.6-.8 1.1-1.8 1-2.8-.9 0-2 .6-2.7 1.4-.6.6-1.1 1.7-1 2.7 1 .1 2-.5 2.7-1.3Z"
-                /></svg
-              >Download for Mac<svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M4 10h12m-5-5 5 5-5 5" /></svg
-            ></a>
-            <a class="text-link" href="#how-it-works"
-              >See it in action
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="m7 4 6 6-6 6" /></svg
-            ></a>
-          </div>
-          <p class="hero-meta t-stagger-line t-stagger-line--5">
-            <span class="status-dot"></span> macOS 26+ · Apple Silicon · Early
-            access
-          </p>
-        </div>
-        <div class="hero-art">
-          <svg class="shortcut-dial" viewBox="0 0 520 520" aria-hidden="true">
-            <circle cx="260" cy="260" r="201" />
-            <circle cx="260" cy="260" r="258" />
-            <line x1="260.00" y1="38.00" x2="260.00" y2="21.00" />
-            <line x1="284.25" y1="29.27" x2="284.98" y2="22.31" />
-            <line x1="308.24" y1="33.07" x2="309.69" y2="26.22" />
-            <line x1="331.69" y1="39.35" x2="333.86" y2="32.70" />
-            <line x1="354.36" y1="48.06" x2="357.21" y2="41.66" />
-            <line x1="371.00" y1="67.74" x2="379.50" y2="53.02" />
-            <line x1="396.37" y1="72.31" x2="400.48" y2="66.64" />
-            <line x1="415.24" y1="87.59" x2="419.92" y2="82.39" />
-            <line x1="432.41" y1="104.76" x2="437.61" y2="100.08" />
-            <line x1="447.69" y1="123.63" x2="453.36" y2="119.52" />
-            <line x1="452.26" y1="149.00" x2="466.98" y2="140.50" />
-            <line x1="471.94" y1="165.64" x2="478.34" y2="162.79" />
-            <line x1="480.65" y1="188.31" x2="487.30" y2="186.14" />
-            <line x1="486.93" y1="211.76" x2="493.78" y2="210.31" />
-            <line x1="490.73" y1="235.75" x2="497.69" y2="235.02" />
-            <line x1="482.00" y1="260.00" x2="499.00" y2="260.00" />
-            <line x1="490.73" y1="284.25" x2="497.69" y2="284.98" />
-            <line x1="486.93" y1="308.24" x2="493.78" y2="309.69" />
-            <line x1="480.65" y1="331.69" x2="487.30" y2="333.86" />
-            <line x1="471.94" y1="354.36" x2="478.34" y2="357.21" />
-            <line x1="452.26" y1="371.00" x2="466.98" y2="379.50" />
-            <line x1="447.69" y1="396.37" x2="453.36" y2="400.48" />
-            <line x1="432.41" y1="415.24" x2="437.61" y2="419.92" />
-            <line x1="415.24" y1="432.41" x2="419.92" y2="437.61" />
-            <line x1="396.37" y1="447.69" x2="400.48" y2="453.36" />
-            <line x1="371.00" y1="452.26" x2="379.50" y2="466.98" />
-            <line x1="354.36" y1="471.94" x2="357.21" y2="478.34" />
-            <line x1="331.69" y1="480.65" x2="333.86" y2="487.30" />
-            <line x1="308.24" y1="486.93" x2="309.69" y2="493.78" />
-            <line x1="284.25" y1="490.73" x2="284.98" y2="497.69" />
-            <line x1="260.00" y1="482.00" x2="260.00" y2="499.00" />
-            <line x1="235.75" y1="490.73" x2="235.02" y2="497.69" />
-            <line x1="211.76" y1="486.93" x2="210.31" y2="493.78" />
-            <line x1="188.31" y1="480.65" x2="186.14" y2="487.30" />
-            <line x1="165.64" y1="471.94" x2="162.79" y2="478.34" />
-            <line x1="149.00" y1="452.26" x2="140.50" y2="466.98" />
-            <line x1="123.63" y1="447.69" x2="119.52" y2="453.36" />
-            <line x1="104.76" y1="432.41" x2="100.08" y2="437.61" />
-            <line x1="87.59" y1="415.24" x2="82.39" y2="419.92" />
-            <line x1="72.31" y1="396.37" x2="66.64" y2="400.48" />
-            <line x1="67.74" y1="371.00" x2="53.02" y2="379.50" />
-            <line x1="48.06" y1="354.36" x2="41.66" y2="357.21" />
-            <line x1="39.35" y1="331.69" x2="32.70" y2="333.86" />
-            <line x1="33.07" y1="308.24" x2="26.22" y2="309.69" />
-            <line x1="29.27" y1="284.25" x2="22.31" y2="284.98" />
-            <line x1="38.00" y1="260.00" x2="21.00" y2="260.00" />
-            <line x1="29.27" y1="235.75" x2="22.31" y2="235.02" />
-            <line x1="33.07" y1="211.76" x2="26.22" y2="210.31" />
-            <line x1="39.35" y1="188.31" x2="32.70" y2="186.14" />
-            <line x1="48.06" y1="165.64" x2="41.66" y2="162.79" />
-            <line x1="67.74" y1="149.00" x2="53.02" y2="140.50" />
-            <line x1="72.31" y1="123.63" x2="66.64" y2="119.52" />
-            <line x1="87.59" y1="104.76" x2="82.39" y2="100.08" />
-            <line x1="104.76" y1="87.59" x2="100.08" y2="82.39" />
-            <line x1="123.63" y1="72.31" x2="119.52" y2="66.64" />
-            <line x1="149.00" y1="67.74" x2="140.50" y2="53.02" />
-            <line x1="165.64" y1="48.06" x2="162.79" y2="41.66" />
-            <line x1="188.31" y1="39.35" x2="186.14" y2="32.70" />
-            <line x1="211.76" y1="33.07" x2="210.31" y2="26.22" />
-            <line x1="235.75" y1="29.27" x2="235.02" y2="22.31" />
-          </svg>
-          <div class="key-platform">
-            <button
-              class="shortcut-key"
-              type="button"
-              aria-label="Play dictation demo"
-            >
-              <span class="key-light" aria-hidden="true"></span>
-              <span class="key-fn" aria-hidden="true">fn</span>
-              <svg viewBox="0 0 32 32" aria-hidden="true">
-                <circle cx="16" cy="16" r="12" />
-                <ellipse cx="16" cy="16" rx="5.5" ry="12" />
-                <path d="M4 16h24M6 9h20M6 23h20" />
-              </svg>
-            </button>
-          </div>
-          <div class="thought-fragment thought-one" aria-hidden="true">
-            <span class="fragment-icon">“</span> I was just thinking…
-          </div>
-          <div class="thought-fragment thought-two" aria-hidden="true">
-            <img src="/images/voco-mark.svg" width="30" height="20" alt="" />
-            Your words. Right here.
-          </div>
-          <p class="key-caption">
-            <span class="caption-rule"></span> Click Fn to preview dictation.
-          </p>
-        </div>
-        <div class="hero-baseline">
-          <span>Your voice. Your words. Your Mac.</span
-          ><a href="#how-it-works" aria-label="Explore how Voco works"
-            ><svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 3v14m-5-5 5 5 5-5" /></svg></a
-          ><span>No account. No subscription. Just you.</span>
-        </div>
-      </section>
-
-      <div class="dark-chapter">
-        <section
-          id="how-it-works"
-          class="flow-section section-shell"
-          aria-labelledby="flow-title"
-        >
-          <div class="section-heading">
-            <h2 id="flow-title">
-              Think it.<br /><span>Say it. Send it.</span>
-            </h2>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-heading">
+          <h1 id="hero-title">Don't lose<br />the <span>thought.</span></h1>
+          <div class="hero-aside">
             <p>
-              A reply, a first draft, that idea you don't want to lose. Get it
-              into words without breaking your train of thought.
+              You know what you want to say.<br />Let your voice do the typing.
             </p>
+            <p class="supporting">
+              Free, on-device dictation for Mac.<br />In the text field you're
+              already using.
+            </p>
+            <a class="button" href="#download"
+              >Download for Mac <span aria-hidden="true">↗</span></a
+            >
+            <p class="micro">Apple Silicon · macOS 26+ · Free</p>
           </div>
-          <div class="flow-layout">
-            <ol class="steps">
-              <li>
-                <span class="step-number">01</span>
-                <div>
-                  <h3>Hold your shortcut.</h3>
-                  <p>
-                    Put your cursor in a text field. Hold Fn or Globe to start
-                    recording.
-                  </p>
-                </div>
-              </li>
-              <li>
-                <span class="step-number">02</span>
-                <div>
-                  <h3>Speak naturally.</h3>
-                  <p>
-                    Take a breath. Say what you mean. Voco captures your voice
-                    on your Mac.
-                  </p>
-                </div>
-              </li>
-              <li>
-                <span class="step-number">03</span>
-                <div>
-                  <h3>Release. There's your text.</h3>
-                  <p>
-                    Voco transcribes when you finish, then inserts the completed
-                    text where your cursor is.
-                  </p>
-                </div>
-              </li>
-            </ol>
-            <div class="demo" data-phase="idle">
-              <div class="demo-topline">
-                <span class="demo-label"
-                  ><span class="status-dot"></span> Voco in action</span
-                ><span>Illustrative demo</span>
+        </div>
+        <div class="voice-stage" data-phase="idle">
+          <canvas id="voice-canvas" aria-hidden="true"></canvas>
+          <div class="stage-corner">
+            <span class="status-dot"></span>A thought, finding its way.
+          </div>
+          <div class="demo-window">
+            <div class="window-toolbar">
+              <div class="traffic-lights" aria-hidden="true">
+                <i></i><i></i><i></i>
               </div>
-              <div
-                class="demo-samples"
-                role="group"
-                aria-label="Choose a demo example"
-              >
-                <button type="button" data-sample="email" aria-pressed="true">
-                  An email
-                </button>
-                <button type="button" data-sample="note" aria-pressed="false">
-                  A quick note
-                </button>
-                <button
-                  type="button"
-                  data-sample="message"
-                  aria-pressed="false"
-                >
-                  A message
-                </button>
-              </div>
-              <div class="demo-paper">
-                <div class="paper-toolbar">
-                  <span class="demo-to" id="demo-context"
-                    >A little breathing room</span
-                  ><svg viewBox="0 0 20 20" aria-hidden="true">
-                    <path d="M4 4h12M4 8h12M4 12h8M4 16h10" />
-                  </svg>
-                </div>
-                <p id="demo-output">Your next good idea goes here.</p>
-                <span class="demo-insertion" aria-hidden="true"
-                  >Inserted at your cursor
-                  <svg viewBox="0 0 20 20"><path d="m4 10 4 4 8-8" /></svg
-                ></span>
-              </div>
-              <div class="demo-bottom">
-                <div class="demo-indicator">
-                  <span class="demo-bars" aria-hidden="true"
-                    ><i></i><i></i><i></i><i></i><i></i
-                  ></span>
-                  <span id="demo-status" role="status" aria-live="polite"
-                    >Ready when you are</span
-                  >
-                </div>
-                <div class="demo-controls">
-                  <button
-                    id="demo-cancel"
-                    class="demo-cancel"
-                    type="button"
-                    hidden
-                  >
-                    Cancel
-                  </button>
-                  <button id="demo-play" class="demo-button" type="button">
-                    <svg viewBox="0 0 20 20" aria-hidden="true">
-                      <path d="m7 4 9 6-9 6Z" /></svg
-                    ><span>Play demo</span>
-                  </button>
-                </div>
-              </div>
-              <p class="demo-caption">
-                A simulated example. No audio plays. Your microphone stays off.
+              <span id="demo-destination">A message to your team</span
+              ><span aria-hidden="true">↗</span>
+            </div>
+            <div class="demo-document">
+              <p class="document-to" id="demo-context">
+                To the people building with you
               </p>
-              <noscript
-                ><p class="demo-noscript">
-                  Hold your shortcut, speak, then release. Voco inserts your
-                  completed words into the active text field.
-                </p></noscript
-              >
+              <h2 id="demo-title">A little room to think</h2>
+              <div class="document-line"></div>
+              <p id="demo-output">
+                I have an idea. Let's take the complicated part out and make the
+                first five minutes feel effortless.
+              </p>
+              <span class="text-caret" aria-hidden="true"></span>
+            </div>
+            <div class="demo-bottom">
+              <span>Written by voice. Still entirely you.</span
+              ><img src="/images/voco-mark.svg" alt="" width="27" height="20" />
             </div>
           </div>
-        </section>
-      </div>
-
+          <div class="voice-control">
+            <button id="demo-play" type="button">
+              <span class="play-symbol" aria-hidden="true">▶</span
+              ><span id="demo-action">Replay the thought</span
+              ><kbd>fn</kbd></button
+            ><button id="demo-cancel" type="button" hidden>Cancel</button>
+            <div class="voice-bars" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+          <div class="stage-bottom">
+            <p id="demo-status" role="status" aria-live="polite">
+              Illustrative demo. Microphone access is off.
+            </p>
+            <div
+              class="sample-selector"
+              aria-label="Choose a dictation example"
+            >
+              <button data-sample="message" aria-pressed="true" type="button">
+                A message</button
+              ><button data-sample="note" aria-pressed="false" type="button">
+                An idea</button
+              ><button data-sample="email" aria-pressed="false" type="button">
+                An email
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="hero-footnote">
+          <span>Less between you and what you mean.</span
+          ><a href="#how-it-works"
+            >Keep going <span aria-hidden="true">↓</span></a
+          >
+        </div>
+      </section>
+      <section
+        id="how-it-works"
+        class="thought-section shell"
+        aria-labelledby="thought-title"
+      >
+        <h2 id="thought-title" class="thought-copy">
+          The reply you've rewritten in your head. The idea you'll forget by
+          lunch. The blank page staring back.<br /><span
+            >Your voice already knows where to start.</span
+          >
+        </h2>
+        <div class="thought-note">
+          <span class="little-line" aria-hidden="true"></span>
+          <p>
+            Voco gets your words into your work,<br />before you talk yourself
+            out of them.
+          </p>
+        </div>
+      </section>
+      <section class="flow-section shell" aria-labelledby="flow-title">
+        <div class="flow-intro">
+          <h2 id="flow-title">One key.<br />No detour.</h2>
+          <p>
+            Stay in your email, your document, your conversation. Voco lives in
+            your menu bar, ready when a thought arrives.
+          </p>
+          <a class="text-link" href="#main"
+            >Try the example <span aria-hidden="true">↗</span></a
+          >
+        </div>
+        <div class="flow-steps">
+          <article class="flow-step">
+            <div class="step-symbol"><kbd>fn</kbd></div>
+            <div>
+              <h3>Hold the key.</h3>
+              <p>
+                Click into a text field. Hold Fn or Globe and start speaking.
+              </p>
+            </div>
+          </article>
+          <article class="flow-step">
+            <div class="step-symbol waveform-symbol" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <div>
+              <h3>Follow the thought.</h3>
+              <p>
+                A small floating pill lets you know Voco is listening. Your
+                focus stays where it was.
+              </p>
+            </div>
+          </article>
+          <article class="flow-step">
+            <div class="step-symbol" aria-hidden="true">↵</div>
+            <div>
+              <h3>Release. It's written.</h3>
+              <p>
+                Voco finishes transcribing, then inserts your words together.
+                You decide what happens next.
+              </p>
+            </div>
+          </article>
+          <p class="flow-tip">
+            Prefer hands-free? Fn + Space starts and stops dictation.
+          </p>
+        </div>
+      </section>
       <section id="the-app" class="app-section" aria-labelledby="app-title">
-        <div class="section-shell">
-          <div class="section-heading app-heading">
-            <h2 id="app-title">
-              Feels right at home.<br /><span>Because it is.</span>
-            </h2>
+        <div class="shell app-intro">
+          <h2 id="app-title">
+            A small app.<br /><span>A lot off your mind.</span>
+          </h2>
+          <p>
+            A shortcut you remember. A clear sign you're ready. Your recent
+            words, there if you need them.
+          </p>
+        </div>
+        <div class="app-theater shell">
+          <div class="theater-side">
+            <img src="/images/voco-mark.svg" width="50" height="40" alt="" />
+            <p>Meet your<br />new voice<br />workspace.</p>
+            <span>Built for your Mac.<br />Made to stay out of the way.</span>
+          </div>
+          <div class="recording-frame">
+            <video
+              id="app-video"
+              controls
+              playsinline
+              preload="metadata"
+              poster="/videos/voco-walkthrough-poster.png"
+              aria-label="Voco interface walkthrough with sample data"
+            >
+              <source src="/videos/voco-walkthrough.webm" type="video/webm" />
+              <track
+                kind="captions"
+                src="/videos/walkthrough.vtt"
+                srclang="en"
+                label="English"
+              />
+              Your browser cannot play the walkthrough. Explore the screenshots
+              below.
+            </video>
             <p>
-              A quiet corner of your Mac for your words. Choose your model, make
-              it yours, then get back to what you were doing.
+              Recorded interface preview · Sample data · Native dictation
+              inactive
             </p>
           </div>
-          <div
-            class="gallery-tabs"
-            role="tablist"
-            aria-label="Explore the Voco app"
-          >
-            <button
-              type="button"
-              role="tab"
-              id="tab-home"
-              aria-controls="panel-home"
-              aria-selected="true"
-              tabindex="0"
-              data-gallery="home"
-            >
-              Your workspace
-            </button>
-            <button
-              type="button"
-              role="tab"
-              id="tab-settings"
-              aria-controls="panel-settings"
-              aria-selected="false"
-              tabindex="-1"
-              data-gallery="settings"
-            >
-              Make it yours
-            </button>
-            <button
-              type="button"
-              role="tab"
-              id="tab-stats"
-              aria-controls="panel-stats"
-              aria-selected="false"
-              tabindex="-1"
-              data-gallery="stats"
-            >
-              Your progress
-            </button>
-          </div>
-          <div class="gallery-stage">
+        </div>
+        <div class="gallery shell">
+          <div class="gallery-heading">
+            <h3>Take a closer look.</h3>
             <div
-              class="gallery-panel"
-              role="tabpanel"
-              id="panel-home"
-              aria-labelledby="tab-home"
-              tabindex="0"
+              class="gallery-tabs"
+              role="tablist"
+              aria-label="App screenshots"
             >
+              <button
+                id="tab-home"
+                role="tab"
+                data-gallery="home"
+                aria-controls="panel-home"
+                aria-selected="true"
+                tabindex="0"
+              >
+                Workspace</button
+              ><button
+                id="tab-settings"
+                role="tab"
+                data-gallery="settings"
+                aria-controls="panel-settings"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                Your preferences</button
+              ><button
+                id="tab-stats"
+                role="tab"
+                data-gallery="stats"
+                aria-controls="panel-stats"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                Your progress
+              </button>
+            </div>
+          </div>
+          <div class="gallery-image">
+            <div id="panel-home" role="tabpanel" aria-labelledby="tab-home">
               <img
                 src="/images/app-home.webp"
-                alt="Voco Home showing the dictation shortcut, voice workspace, usage totals, and recent transcripts."
-                width="1100"
-                height="880"
+                width="1760"
+                height="1408"
                 loading="lazy"
+                alt="Voco's real Home interface with shortcut guidance, recent transcripts, and clearly labeled sample statistics."
               />
             </div>
             <div
-              class="gallery-panel"
-              role="tabpanel"
               id="panel-settings"
+              role="tabpanel"
               aria-labelledby="tab-settings"
-              tabindex="0"
               hidden
             >
               <img
                 src="/images/app-settings.webp"
-                alt="Voco Settings with output preferences, speech models, access permissions, and dictation controls."
-                width="1100"
-                height="880"
+                width="1760"
+                height="1408"
                 loading="lazy"
+                alt="Voco Settings with local output quality preferences and model, access, and dictation tabs."
               />
             </div>
             <div
-              class="gallery-panel"
-              role="tabpanel"
               id="panel-stats"
+              role="tabpanel"
               aria-labelledby="tab-stats"
-              tabindex="0"
               hidden
             >
               <img
                 src="/images/app-stats.webp"
-                alt="Voco Stats with a daily activity calendar, dictation totals, goals, and milestones."
-                width="1100"
-                height="880"
+                width="1760"
+                height="1408"
                 loading="lazy"
+                alt="Voco Stats showing sample activity history and sample estimates of typing time saved."
               />
             </div>
           </div>
           <div class="gallery-caption">
             <p id="gallery-description">
-              Your shortcut, recent words, and a clear sign you're ready to
-              speak.
+              The actual Voco interface. Example transcripts and statistics are
+              sample data.
             </p>
-            <div class="gallery-tools">
-              <span>Actual interface · Sample data</span
-              ><button id="gallery-enlarge" class="text-link" type="button">
-                View full size
-                <svg viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4" />
-                </svg>
-              </button>
-            </div>
+            <button id="gallery-enlarge" class="text-link" type="button">
+              View full size <span aria-hidden="true">↗</span>
+            </button>
           </div>
         </div>
       </section>
-
       <section
         id="privacy"
-        class="privacy-section section-shell"
+        class="privacy-section shell"
         aria-labelledby="privacy-title"
       >
-        <div class="privacy-intro">
+        <div class="privacy-heading">
           <h2 id="privacy-title">
-            Some thoughts<br />are just <span>yours.</span>
+            Your Mac.<br />Your words.<br /><span>Your business.</span>
           </h2>
-          <p>So your voice stays on your Mac.<br />Exactly where it belongs.</p>
-        </div>
-        <div class="privacy-detail">
-          <div
-            class="local-diagram"
-            aria-label="Your voice is processed into text locally on your Mac"
-          >
-            <div class="diagram-top">
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <rect x="6" y="2" width="8" height="11" rx="4" />
-                <path d="M3 9v1a7 7 0 0 0 14 0V9m-7 8v2m-4 0h8" /></svg
-              ><span>Your voice</span>
+          <div class="local-device" aria-hidden="true">
+            <div class="device-screen">
+              <img
+                src="/images/voco-mark.svg"
+                width="100"
+                height="70"
+                alt=""
+              /><span>ON DEVICE</span>
+              <div class="device-orbit"></div>
             </div>
-            <span class="diagram-line" aria-hidden="true"></span>
-            <div class="diagram-mac">
-              <svg viewBox="0 0 56 44" aria-hidden="true">
-                <rect x="8" y="3" width="40" height="28" rx="3" />
-                <path d="M2 36h52l-4 5H6ZM23 36h10" />
-                <path class="diagram-wave" d="M18 18h4l3-7 5 14 3-9h5" /></svg
-              ><span>YOUR MAC</span
-              ><span class="local-tag">Processed here</span>
-            </div>
-            <span class="diagram-line" aria-hidden="true"></span>
-            <div class="diagram-bottom">
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M4 4h12M4 8h12M4 12h8M4 16h10" /></svg
-              ><span>Your words</span>
-            </div>
+            <div class="device-base"></div>
+            <span class="device-caption">The processing happens here.</span>
           </div>
-          <div class="privacy-list">
-            <div>
-              <h3>Your voice stays local.</h3>
-              <p>
-                Speech recognition runs on your device. Your recordings aren't
-                sent to a transcription service.
-              </p>
-            </div>
-            <div>
-              <h3>Download once. Dictate offline.</h3>
-              <p>
-                Choose and download a speech model during setup. After that,
-                dictation works without an internet connection.
-              </p>
-            </div>
-            <div>
-              <h3>No account. No monthly bill.</h3>
-              <p>
-                No sign-up or API key. Voco is free to download and use. Your
-                words don't need a monthly plan.
-              </p>
-              <a
-                class="text-link"
-                href="https://github.com/darshmahadevia/voco-releases"
-                target="_blank"
-                rel="noopener noreferrer"
-                >See the releases
-                <svg viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M5 15 15 5M5 5h10v10" /></svg
-              ></a>
-            </div>
+        </div>
+        <div class="privacy-details">
+          <p>
+            Your half-formed ideas don't need a round trip to a server. Speech
+            recognition runs on your Mac.
+          </p>
+          <div>
+            <h3>Offline after setup.</h3>
+            <p>
+              Download a speech model once. Then dictate without a connection,
+              an account, or an API key.
+            </p>
+          </div>
+          <div>
+            <h3>Words without a paper trail.</h3>
+            <p>
+              Audio isn't saved. Optional recent transcripts stay in memory and
+              clear when you quit.
+            </p>
           </div>
         </div>
       </section>
-
-      <section class="manifesto" aria-label="Voco's philosophy">
-        <div class="section-shell">
-          <img
-            src="/images/voco-mark.svg"
-            width="130"
-            height="75"
-            alt=""
-            loading="lazy"
-          />
-          <p>Less between<br />a thought<br />and <span>the page.</span></p>
-          <div class="manifesto-note">
-            For the long emails.<br />The messy first drafts.<br />The words
-            that come more easily out loud.
-          </div>
-        </div>
-      </section>
-
-      <section
-        id="download"
-        class="download-section section-shell"
-        aria-labelledby="download-title"
-      >
-        <div class="download-copy">
-          <img
-            class="app-icon"
-            src="/images/voco-app.png"
-            width="88"
-            height="88"
-            alt="Voco app icon"
-            loading="lazy"
-          />
-          <h2 id="download-title">
-            Give your fingers<br /><span>a little time off.</span>
+      <section class="maker-section shell" aria-labelledby="maker-title">
+        <span class="maker-mark" aria-hidden="true">“</span>
+        <div>
+          <h2 id="maker-title">
+            A thought shouldn't need<br />a subscription.
           </h2>
           <p>
-            Your next draft starts with your voice.<br />Voco is free. No
-            subscription required.
+            Voco is an independent project by Darsh Mahadevia. A focused tool
+            for getting words out of your head and onto your Mac, with local
+            speech models and no monthly bill.
           </p>
-          <div class="download-price">
-            <span>$0</span
-            ><span>No subscription.<br />Just your Mac and your voice.</span>
+          <div class="maker-signature">
+            <span class="signature-dot"></span
+            ><span>Darsh Mahadevia<small>Maker of Voco</small></span>
           </div>
-        </div>
-        <div class="download-panel">
-          <div class="release-line">
-            <span class="release-badge">EARLY ACCESS</span
-            ><span id="release-version">Mac release</span>
-          </div>
-          <h3>Meet your new<br />writing shortcut.</h3>
-          <a
-            id="release-download"
-            class="button download-button"
-            href="https://github.com/darshmahadevia/voco-releases/releases/download/v0.2.1/Voco-0.2.1-arm64.dmg"
-            target="_blank"
-            rel="noopener noreferrer"
-            ><svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 3v10m-4-4 4 4 4-4M4 14v3h12v-3" /></svg
-            ><span id="download-label">Get Voco for Mac</span
-            ><svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M4 10h12m-5-5 5 5-5 5" /></svg
-          ></a>
-          <p id="download-meta" class="download-meta">
-            Apple Silicon · macOS 26 or later
-          </p>
-          <ul class="download-facts">
-            <li>
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="m4 10 4 4 8-8" /></svg
-              >English dictation
-            </li>
-            <li>
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="m4 10 4 4 8-8" /></svg
-              >Speech model downloaded during setup
-            </li>
-            <li>
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="m4 10 4 4 8-8" /></svg
-              >Microphone and Accessibility permissions
-            </li>
-          </ul>
-          <div class="early-access-note">
-            <strong>A note before you download</strong>
-            <p>
-              This early access build is not notarized by Apple. macOS may block
-              it from opening. Read the release notes before installing. Only
-              continue if you trust the download.
-            </p>
-            <a
-              id="release-notes"
-              class="text-link"
-              href="https://github.com/darshmahadevia/voco-releases/releases/tag/v0.2.1"
-              target="_blank"
-              rel="noopener noreferrer"
-              >Release notes and installation help
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M5 15 15 5M5 5h10v10" /></svg
-            ></a>
-          </div>
-          <p id="release-status" class="release-status" role="status"></p>
         </div>
       </section>
-
       <section
         id="questions"
-        class="faq-section section-shell"
-        aria-labelledby="faq-title"
+        class="questions-section shell"
+        aria-labelledby="questions-title"
       >
-        <div class="faq-heading">
-          <h2 id="faq-title">A few<br /><span>good questions.</span></h2>
-          <p>
-            Want the latest release details?<br /><a
-              class="text-link"
-              href="https://github.com/darshmahadevia/voco-releases"
-              target="_blank"
-              rel="noopener noreferrer"
-              >Find them on GitHub
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M5 15 15 5M5 5h10v10" /></svg
-            ></a>
-          </p>
+        <h2 id="questions-title">A few things<br />before you speak.</h2>
+        <div class="questions">
+          <details>
+            <summary>What do I need to run Voco?</summary>
+            <p>
+              An Apple Silicon Mac running macOS 26 or newer. Voco currently
+              supports English dictation. Setup includes a speech-model download
+              and microphone and keyboard access.
+            </p>
+          </details>
+          <details>
+            <summary>Does my voice leave my Mac?</summary>
+            <p>
+              Speech recognition runs locally. After the initial model download,
+              dictation works offline. Voco does not save audio. Optional recent
+              transcripts stay in memory until you quit.
+            </p>
+          </details>
+          <details>
+            <summary>Where can I use it?</summary>
+            <p>
+              In text fields across your Mac. Click where you want your words,
+              hold Fn or Globe, speak, then release. Voco does not write into
+              password fields or submit forms for you. Some apps may restrict
+              text insertion. If insertion fails, your transcript remains
+              available to copy.
+            </p>
+          </details>
+          <details>
+            <summary>Is Voco really free?</summary>
+            <p>
+              Yes. Voco is free to download and use. No account, subscription,
+              or paid API key is required.
+            </p>
+          </details>
+          <details>
+            <summary>What should I know about early access?</summary>
+            <p>
+              This build is not notarized by Apple. macOS may block it from
+              opening. Read the release notes and installation instructions
+              before installing. Only proceed if you trust the download.
+              Accuracy and processing time depend on your model, speech, and
+              Mac.
+            </p>
+          </details>
         </div>
-        <div class="faq-list">
-          <div class="t-acc" data-open="true">
-            <h3>
-              <button
-                class="t-acc-head"
-                type="button"
-                aria-expanded="true"
-                aria-controls="faq-1"
-                id="faq-head-1"
-              >
-                What exactly does Voco do?<span class="t-acc-chevron"
-                  ><svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M4 6.5L8 10.5L12 6.5" /></svg
-                ></span>
-              </button>
-            </h3>
-            <div
-              id="faq-1"
-              class="t-acc-panel"
-              role="region"
-              aria-labelledby="faq-head-1"
-            >
-              <div class="t-acc-panel-inner">
-                <p>
-                  Voco turns speech into text on your Mac. Put your cursor in a
-                  text field, hold your dictation shortcut, speak, and release.
-                  Once transcription finishes, Voco inserts the completed words
-                  into that field.
-                </p>
-              </div>
-            </div>
+      </section>
+      <section
+        id="download"
+        class="download-section shell"
+        aria-labelledby="download-title"
+      >
+        <div>
+          <h2 id="download-title">
+            Your next good idea<br />is <span>one key away.</span>
+          </h2>
+          <p>Make a little less work of getting it out.</p>
+        </div>
+        <div class="download-action">
+          <a
+            id="release-download"
+            class="button"
+            href="https://github.com/darshmahadevia/voco-releases/releases/download/v0.2.1/Voco-0.2.1-arm64.dmg"
+            ><span id="download-label">Download for Mac</span
+            ><span aria-hidden="true">↓</span></a
+          >
+          <p id="download-meta">Apple Silicon · macOS 26+ · 147 MB</p>
+          <div class="release-line">
+            <span id="release-version">v0.2.1</span
+            ><span>Free · Early access</span>
           </div>
-          <div class="t-acc" data-open="true">
-            <h3>
-              <button
-                class="t-acc-head"
-                type="button"
-                aria-expanded="true"
-                aria-controls="faq-2"
-                id="faq-head-2"
-              >
-                Does my voice leave my Mac?<span class="t-acc-chevron"
-                  ><svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M4 6.5L8 10.5L12 6.5" /></svg
-                ></span>
-              </button>
-            </h3>
-            <div
-              id="faq-2"
-              class="t-acc-panel"
-              role="region"
-              aria-labelledby="faq-head-2"
-            >
-              <div class="t-acc-panel-inner">
-                <p>
-                  Dictation is processed locally. Your audio is not uploaded to
-                  a remote transcription service. You need an internet
-                  connection to download a speech model during setup, then you
-                  can dictate offline.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="t-acc" data-open="true">
-            <h3>
-              <button
-                class="t-acc-head"
-                type="button"
-                aria-expanded="true"
-                aria-controls="faq-3"
-                id="faq-head-3"
-              >
-                Which Macs can run it?<span class="t-acc-chevron"
-                  ><svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M4 6.5L8 10.5L12 6.5" /></svg
-                ></span>
-              </button>
-            </h3>
-            <div
-              id="faq-3"
-              class="t-acc-panel"
-              role="region"
-              aria-labelledby="faq-head-3"
-            >
-              <div class="t-acc-panel-inner">
-                <p>
-                  The current build requires an Apple Silicon Mac running macOS
-                  26 or later. Intel Macs and Windows are not supported by this
-                  release. Dictation currently supports English.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="t-acc" data-open="true">
-            <h3>
-              <button
-                class="t-acc-head"
-                type="button"
-                aria-expanded="true"
-                aria-controls="faq-4"
-                id="faq-head-4"
-              >
-                Is it really free?<span class="t-acc-chevron"
-                  ><svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M4 6.5L8 10.5L12 6.5" /></svg
-                ></span>
-              </button>
-            </h3>
-            <div
-              id="faq-4"
-              class="t-acc-panel"
-              role="region"
-              aria-labelledby="faq-head-4"
-            >
-              <div class="t-acc-panel-inner">
-                <p>
-                  Yes. Voco is free to download and use. There is no account,
-                  subscription, usage credit, or API key to set up. Your Mac
-                  runs the speech model.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="t-acc" data-open="true">
-            <h3>
-              <button
-                class="t-acc-head"
-                type="button"
-                aria-expanded="true"
-                aria-controls="faq-5"
-                id="faq-head-5"
-              >
-                Why does macOS warn me when I open it?<span
-                  class="t-acc-chevron"
-                  ><svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M4 6.5L8 10.5L12 6.5" /></svg
-                ></span>
-              </button>
-            </h3>
-            <div
-              id="faq-5"
-              class="t-acc-panel"
-              role="region"
-              aria-labelledby="faq-head-5"
-            >
-              <div class="t-acc-panel-inner">
-                <p>
-                  This is an early access build and is not notarized by Apple.
-                  macOS may prevent it from opening by default. Read the release
-                  notes and review the project before choosing to install. Only
-                  bypass the warning if you trust the source.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="t-acc" data-open="true">
-            <h3>
-              <button
-                class="t-acc-head"
-                type="button"
-                aria-expanded="true"
-                aria-controls="faq-6"
-                id="faq-head-6"
-              >
-                What permissions does it need?<span class="t-acc-chevron"
-                  ><svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M4 6.5L8 10.5L12 6.5" /></svg
-                ></span>
-              </button>
-            </h3>
-            <div
-              id="faq-6"
-              class="t-acc-panel"
-              role="region"
-              aria-labelledby="faq-head-6"
-            >
-              <div class="t-acc-panel-inner">
-                <p>
-                  Microphone access lets Voco hear you while you dictate.
-                  Accessibility access lets it insert the completed text into
-                  your active app. Voco walks you through both permissions
-                  during setup.
-                </p>
-              </div>
-            </div>
-          </div>
+          <a
+            id="release-notes"
+            class="text-link"
+            href="https://github.com/darshmahadevia/voco-releases/releases/tag/v0.2.1"
+            >Release notes & installation help
+            <span aria-hidden="true">↗</span></a
+          >
+          <p class="installation-note">
+            Not notarized by Apple. Review installation help before opening.
+          </p>
+          <p id="release-status" role="status"></p>
         </div>
       </section>
     </main>
     <footer class="site-footer">
-      <div class="section-shell">
-        <div class="footer-top">
-          <p>A little more voice.<br />A little more you.</p>
-          <div class="footer-links">
-            <a href="#download"
-              >Download for Mac
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M5 15 15 5M5 5h10v10" /></svg></a
-            ><a
-              href="https://github.com/darshmahadevia/voco-releases"
-              target="_blank"
-              rel="noopener noreferrer"
-              >Releases
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M5 15 15 5M5 5h10v10" /></svg></a
-            ><a
-              href="https://github.com/darshmahadevia/voco-releases/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              >Feedback
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M5 15 15 5M5 5h10v10" /></svg
-            ></a>
-          </div>
-        </div>
-        <div class="footer-wordmark" aria-hidden="true">voco<span>.</span></div>
-        <div class="footer-bottom">
-          <span>© <span id="year">2026</span> Voco. Made for your Mac.</span
-          ><span>Free to speak your mind.</span
-          ><a href="#"
-            >Back to top
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 17V3m-5 5 5-5 5 5" /></svg
-          ></a>
+      <div class="footer-top shell">
+        <a class="wordmark" href="#main" aria-label="Back to Voco home"
+          ><img
+            src="/images/voco-mark.svg"
+            alt=""
+            width="30"
+            height="24"
+          />voco<span>.</span></a
+        >
+        <p>For everything<br />you've been meaning to say.</p>
+        <a class="back-top" href="#main"
+          >Back to the thought <span aria-hidden="true">↑</span></a
+        >
+      </div>
+      <div class="footer-wordmark" aria-hidden="true">voco<span>.</span></div>
+      <div class="footer-bottom shell">
+        <span>Made by Darsh. Runs on your Mac.</span>
+        <div>
+          <a href="#privacy">Privacy, by design</a
+          ><a href="https://github.com/darshmahadevia/voco-releases/releases"
+            >Release history <span aria-hidden="true">↗</span></a
+          ><span>© <span id="year">2026</span> Voco</span>
         </div>
       </div>
     </footer>
     <dialog id="screenshot-dialog" aria-labelledby="screenshot-title">
-      <div class="screenshot-toolbar">
+      <div class="dialog-bar">
         <h2 id="screenshot-title">Voco workspace</h2>
-        <button id="screenshot-close" type="button" class="button button-small">
-          Close
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="m5 5 10 10M5 15 15 5" />
-          </svg>
+        <button
+          id="screenshot-close"
+          type="button"
+          aria-label="Close screenshot"
+        >
+          Close <span aria-hidden="true">×</span>
         </button>
       </div>
-      <div class="screenshot-scroll">
-        <img
-          id="screenshot-image"
-          src="/images/app-home.webp"
-          alt="Voco workspace screenshot with sample data"
-          width="1100"
-          height="880"
-        />
-      </div>
-      <p>
-        Actual Voco interface with sample data. Scroll to explore the full
-        screenshot.
-      </p>
+      <img
+        id="screenshot-image"
+        src="/images/app-home.webp"
+        alt="Voco workspace"
+      />
     </dialog>
     <script type="module" src="/src/main.js"></script>
   </body>

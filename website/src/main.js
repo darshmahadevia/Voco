@@ -1,35 +1,96 @@
-import "./transitions.css";
 import "./style.css";
 
-/** @typedef {{version: string, downloadUrl: string, releaseUrl: string, fileSize?: string, notarized: boolean}} ReleaseManifest */
-/** @typedef {'idle' | 'listening' | 'transcribing' | 'complete'} DemoPhase */
-
-const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-const gallery = [
-  {
-    id: "home",
-    description:
-      "Your shortcut, recent words, and a clear sign you're ready to speak.",
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+const samples = {
+  message: {
+    destination: "A message to your team",
+    context: "To the people building with you",
+    title: "A little room to think",
+    text: "I have an idea. Let's take the complicated part out and make the first five minutes feel effortless.",
   },
-  {
-    id: "settings",
-    description:
-      "Choose your output preferences, speech model, permissions, and dictation shortcut.",
+  note: {
+    destination: "A note for your future self",
+    context: "Before this one gets away",
+    title: "An idea worth keeping",
+    text: "What if the best version is the one with fewer steps? Start with the moment someone needs help, and work backwards.",
   },
-  {
-    id: "stats",
-    description:
-      "A little perspective on the words you put into the world. Sample data is labeled in the preview.",
+  email: {
+    destination: "An email, without the overthinking",
+    context: "To Alex · A fresh pair of eyes",
+    title: "About that first draft",
+    text: "I've been thinking about your feedback. You were right about the opening. Let's give the idea more room and the introduction fewer words.",
   },
-];
-
-const heroCopy = document.querySelector(".hero-copy");
-if (!reducedMotion.matches) {
-  heroCopy.classList.remove("is-shown");
-  void heroCopy.offsetHeight;
-  requestAnimationFrame(() => heroCopy.classList.add("is-shown"));
+};
+const phases = {
+  idle: {
+    label: "Illustrative demo. Microphone access is off.",
+    action: "Replay the thought",
+  },
+  listening: {
+    label: "Example listening. Your text field stays untouched.",
+    action: "Following the thought",
+    delay: 2300,
+    next: "transcribing",
+  },
+  transcribing: {
+    label: "Example transcription. Finishing on your Mac.",
+    action: "Finishing the words",
+    delay: 850,
+    next: "complete",
+  },
+  complete: {
+    label: "Words inserted together. Illustrative demo.",
+    action: "Replay the thought",
+  },
+};
+const state = { sample: "message", phase: "idle", timer: null };
+const stage = document.querySelector(".voice-stage");
+const play = document.querySelector("#demo-play");
+const cancel = document.querySelector("#demo-cancel");
+const sampleButtons = [...document.querySelectorAll("[data-sample]")];
+function setPhase(phase) {
+  clearTimeout(state.timer);
+  state.timer = null;
+  state.phase = phase;
+  stage.dataset.phase = phase;
+  const current = phases[phase];
+  const sample = samples[state.sample];
+  const active = phase === "listening" || phase === "transcribing";
+  document.querySelector("#demo-action").textContent = current.action;
+  document.querySelector("#demo-status").textContent = current.label;
+  document.querySelector("#demo-destination").textContent = sample.destination;
+  document.querySelector("#demo-context").textContent = sample.context;
+  document.querySelector("#demo-title").textContent = sample.title;
+  document.querySelector("#demo-output").textContent = active
+    ? "Your thought is on its way."
+    : sample.text;
+  if (!active && document.activeElement === cancel)
+    play.focus({ preventScroll: true });
+  play.disabled = active;
+  cancel.hidden = !active;
+  if (current.delay)
+    state.timer = setTimeout(() => setPhase(current.next), current.delay);
 }
-
+play.addEventListener("click", () => {
+  setPhase(reducedMotion.matches ? "complete" : "listening");
+  if (!cancel.hidden) cancel.focus({ preventScroll: true });
+});
+cancel.addEventListener("click", () => setPhase("idle"));
+stage.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !cancel.hidden) {
+    setPhase("idle");
+    play.focus({ preventScroll: true });
+  }
+});
+sampleButtons.forEach((button) =>
+  button.addEventListener("click", () => {
+    state.sample = button.dataset.sample;
+    sampleButtons.forEach((item) =>
+      item.setAttribute("aria-pressed", String(item === button)),
+    );
+    setPhase("idle");
+  }),
+);
 const menuButton = document.querySelector(".menu-toggle");
 const mobileMenu = document.querySelector("#mobile-nav");
 function setMenu(open) {
@@ -50,163 +111,49 @@ document.addEventListener("keydown", (event) => {
     menuButton.focus();
   }
 });
-window.matchMedia("(min-width: 641px)").addEventListener("change", (event) => {
+matchMedia("(min-width: 641px)").addEventListener("change", (event) => {
   if (event.matches) setMenu(false);
 });
-
-const demo = document.querySelector(".demo");
-const playButton = document.querySelector("#demo-play");
-const demoStatus = document.querySelector("#demo-status");
-const demoOutput = document.querySelector("#demo-output");
-const demoSamples = {
-  email: {
-    context: "A little breathing room",
-    text: "Let's give this idea a little room to grow. I'll send over a first draft this afternoon.",
-  },
-  note: {
-    context: "An idea for later",
-    text: "An idea for the next release: make the first five minutes feel as thoughtful as the rest of the app.",
-  },
-  message: {
-    context: "A message to the team",
-    text: "Thanks for the thoughtful feedback. Let's pick this up tomorrow when we've both had a little time to think.",
-  },
-};
-const sampleButtons = [...document.querySelectorAll("[data-sample]")];
-const cancelButton = document.querySelector("#demo-cancel");
-const demoContext = document.querySelector("#demo-context");
-const demoPhases = {
-  idle: {
-    label: "Ready when you are",
-    action: "Play demo",
-    delay: 0,
-    next: "listening",
-  },
-  listening: {
-    label: "Simulating listening…",
-    action: "Playing…",
-    delay: 2600,
-    next: "transcribing",
-  },
-  transcribing: {
-    label: "Transcribing the example…",
-    action: "Finishing…",
-    delay: 1100,
-    next: "complete",
-  },
-  complete: {
-    label: "Your words, ready to go",
-    action: "Play again",
-    delay: 0,
-    next: "listening",
-  },
-};
-/** @type {{phase: DemoPhase, sample: keyof typeof demoSamples, timer: ReturnType<typeof setTimeout> | null}} */
-const demoState = { phase: "idle", sample: "email", timer: null };
-function setDemoPhase(phase) {
-  clearTimeout(demoState.timer);
-  demoState.phase = phase;
-  const current = demoPhases[phase];
-  demo.dataset.phase = phase;
-  demoStatus.textContent = current.label;
-  playButton.querySelector("span").textContent = current.action;
-  playButton.disabled = phase === "listening" || phase === "transcribing";
-  if (
-    (phase === "complete" || phase === "idle") &&
-    document.activeElement === cancelButton
-  )
-    playButton.focus({ preventScroll: true });
-  cancelButton.hidden = !(phase === "listening" || phase === "transcribing");
-  demoContext.textContent = demoSamples[demoState.sample].context;
-  demoOutput.textContent =
-    phase === "complete"
-      ? demoSamples[demoState.sample].text
-      : "Your next good idea goes here.";
-  if (current.delay)
-    demoState.timer = setTimeout(
-      () => setDemoPhase(current.next),
-      current.delay,
-    );
-}
-function playDemo() {
-  setDemoPhase(reducedMotion.matches ? "complete" : "listening");
-  (cancelButton.hidden ? playButton : cancelButton).focus({
-    preventScroll: true,
-  });
-}
-playButton.addEventListener("click", playDemo);
-cancelButton.addEventListener("click", () => {
-  setDemoPhase("idle");
-  playButton.focus();
-});
-sampleButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    demoState.sample = button.dataset.sample;
-    sampleButtons.forEach((item) =>
-      item.setAttribute("aria-pressed", String(item === button)),
-    );
-    setDemoPhase("idle");
-  });
-});
-document.querySelector(".shortcut-key").addEventListener("click", () => {
-  demo.scrollIntoView({
-    behavior: reducedMotion.matches ? "instant" : "smooth",
-    block: "center",
-  });
-  playDemo();
-});
-demo.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !cancelButton.hidden) {
-    setDemoPhase("idle");
-    playButton.focus();
-  }
-});
-reducedMotion.addEventListener("change", (event) => {
-  if (event.matches && ["listening", "transcribing"].includes(demoState.phase))
-    setDemoPhase("complete");
-});
-document.addEventListener("visibilitychange", () => {
-  if (
-    document.hidden &&
-    ["listening", "transcribing"].includes(demoState.phase)
-  )
-    setDemoPhase("idle");
-});
-
 const galleryButtons = [...document.querySelectorAll("[data-gallery]")];
+const descriptions = {
+  home: "The actual Voco interface. Example transcripts and statistics are sample data.",
+  settings:
+    "Choose your output quality, local speech model, permissions, and dictation preferences.",
+  stats:
+    "A real interface capture with sample activity and estimated typing time saved.",
+};
 function selectGallery(index, focus = false) {
-  galleryButtons.forEach((button, buttonIndex) => {
-    const selected = index === buttonIndex;
+  galleryButtons.forEach((button, position) => {
+    const selected = position === index;
     button.setAttribute("aria-selected", String(selected));
     button.tabIndex = selected ? 0 : -1;
-    document.querySelector(`#panel-${gallery[buttonIndex].id}`).hidden =
+    document.querySelector(`#panel-${button.dataset.gallery}`).hidden =
       !selected;
   });
   document.querySelector("#gallery-description").textContent =
-    gallery[index].description;
+    descriptions[galleryButtons[index].dataset.gallery];
   if (focus) galleryButtons[index].focus();
 }
 galleryButtons.forEach((button, index) => {
   button.addEventListener("click", () => selectGallery(index));
   button.addEventListener("keydown", (event) => {
-    let next;
-    if (event.key === "ArrowRight") next = (index + 1) % gallery.length;
-    if (event.key === "ArrowLeft")
-      next = (index + gallery.length - 1) % gallery.length;
-    if (event.key === "Home") next = 0;
-    if (event.key === "End") next = gallery.length - 1;
-    if (next !== undefined) {
+    const navigation = {
+      ArrowRight: (index + 1) % galleryButtons.length,
+      ArrowLeft: (index + galleryButtons.length - 1) % galleryButtons.length,
+      Home: 0,
+      End: galleryButtons.length - 1,
+    };
+    if (event.key in navigation) {
       event.preventDefault();
-      selectGallery(next, true);
+      selectGallery(navigation[event.key], true);
     }
   });
 });
-
-const screenshotDialog = document.querySelector("#screenshot-dialog");
-const enlargeButton = document.querySelector("#gallery-enlarge");
-enlargeButton.addEventListener("click", () => {
-  const selected = document.querySelector(
-    "[data-gallery][aria-selected='true']",
+const dialog = document.querySelector("#screenshot-dialog");
+const enlarge = document.querySelector("#gallery-enlarge");
+enlarge.addEventListener("click", () => {
+  const selected = galleryButtons.find(
+    (button) => button.getAttribute("aria-selected") === "true",
   );
   const original = document.querySelector(
     `#panel-${selected.dataset.gallery} img`,
@@ -215,87 +162,128 @@ enlargeButton.addEventListener("click", () => {
   image.src = original.src;
   image.alt = original.alt;
   document.querySelector("#screenshot-title").textContent =
-    selected.textContent.trim();
-  screenshotDialog.showModal();
+    selected.textContent;
+  dialog.showModal();
   document.body.classList.add("screenshot-open");
 });
 document
   .querySelector("#screenshot-close")
-  .addEventListener("click", () => screenshotDialog.close());
-screenshotDialog.addEventListener("click", (event) => {
-  if (event.target === screenshotDialog) {
-    const rect = screenshotDialog.getBoundingClientRect();
-    if (
-      event.clientX < rect.left ||
-      event.clientX > rect.right ||
-      event.clientY < rect.top ||
-      event.clientY > rect.bottom
-    )
-      screenshotDialog.close();
-  }
+  .addEventListener("click", () => dialog.close());
+dialog.addEventListener("click", (event) => {
+  if (event.target !== dialog) return;
+  const rect = dialog.getBoundingClientRect();
+  if (
+    event.clientX < rect.left ||
+    event.clientX > rect.right ||
+    event.clientY < rect.top ||
+    event.clientY > rect.bottom
+  )
+    dialog.close();
 });
-screenshotDialog.addEventListener("close", () => {
+dialog.addEventListener("close", () => {
   document.body.classList.remove("screenshot-open");
-  enlargeButton.focus({ preventScroll: true });
+  enlarge.focus({ preventScroll: true });
 });
 
-for (const [index, accordion] of [
-  ...document.querySelectorAll(".t-acc"),
-].entries()) {
-  const head = accordion.querySelector(".t-acc-head");
-  const panel = accordion.querySelector(".t-acc-panel");
-  const state = { open: index === 0 };
-  function setOpen(open) {
-    state.open = open;
-    if (!open && panel.contains(document.activeElement)) head.focus();
-    accordion.setAttribute("data-open", String(open));
-    head.setAttribute("aria-expanded", String(open));
-    panel.inert = !open;
-    panel.setAttribute("aria-hidden", String(!open));
+const canvas = document.querySelector("#voice-canvas");
+const ctx = canvas.getContext("2d");
+let frame = null;
+let visible = false;
+let width = 1;
+let height = 1;
+let lastFrame = 0;
+function draw(time = 0) {
+  if (!ctx) return;
+  if (time && time - lastFrame < 32) {
+    frame = requestAnimationFrame(draw);
+    return;
   }
-  setOpen(state.open);
-  head.addEventListener("click", () => setOpen(!state.open));
-}
-
-function parseRelease(value) {
-  if (
-    !value ||
-    typeof value !== "object" ||
-    !/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(value.version)
-  )
-    throw new Error("Invalid release version");
-  for (const property of ["downloadUrl", "releaseUrl"]) {
-    const url = new URL(value[property]);
-    if (
-      url.protocol !== "https:" ||
-      url.hostname !== "github.com" ||
-      !url.pathname.startsWith("/darshmahadevia/voco-releases/releases/")
-    )
-      throw new Error("Invalid release link");
+  lastFrame = time;
+  ctx.clearRect(0, 0, width, height);
+  const phase = reducedMotion.matches ? 0 : time * 0.00025;
+  const energy = state.phase === "listening" ? 1.3 : 0.65;
+  for (let strand = 0; strand < 22; strand++) {
+    ctx.beginPath();
+    ctx.lineWidth = strand % 5 === 0 ? 1.15 : 0.55;
+    ctx.strokeStyle = `rgba(255,116,47,${0.09 + (strand % 5) * 0.026})`;
+    for (let x = -5; x <= width + 5; x += 4) {
+      const position = x / width;
+      const envelope = Math.sin(position * Math.PI) * 90 + 20;
+      const y =
+        height * 0.46 +
+        Math.sin(position * Math.PI * 3.5 + phase + strand * 0.09) *
+          envelope *
+          energy +
+        Math.cos(position * Math.PI * 2 - phase + strand * 0.12) * 32 +
+        (strand - 11) * 5;
+      if (x === -5) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
   }
-  if (
-    value.notarized !== false ||
-    (value.fileSize !== undefined && typeof value.fileSize !== "string")
-  )
-    throw new Error("Invalid release details");
-  return /** @type {ReleaseManifest} */ (value);
+  frame = null;
+  if (visible && !document.hidden && !reducedMotion.matches)
+    frame = requestAnimationFrame(draw);
 }
+function syncAnimation() {
+  if (frame !== null) cancelAnimationFrame(frame);
+  frame = null;
+  draw();
+}
+new ResizeObserver((entries) => {
+  width = entries[0].contentRect.width;
+  height = entries[0].contentRect.height;
+  const ratio = Math.min(devicePixelRatio || 1, 2);
+  canvas.width = width * ratio;
+  canvas.height = height * ratio;
+  ctx?.setTransform(ratio, 0, 0, ratio, 0, 0);
+  syncAnimation();
+}).observe(stage);
+new IntersectionObserver((entries) => {
+  visible = entries[0].isIntersecting;
+  syncAnimation();
+}).observe(stage);
+reducedMotion.addEventListener("change", () => {
+  if (
+    reducedMotion.matches &&
+    ["listening", "transcribing"].includes(state.phase)
+  )
+    setPhase("complete");
+  syncAnimation();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && ["listening", "transcribing"].includes(state.phase))
+    setPhase("idle");
+  syncAnimation();
+});
 async function loadRelease() {
   try {
     const response = await fetch("/release.json");
-    if (!response.ok) throw new Error("Release details unavailable");
-    const release = parseRelease(await response.json());
+    if (!response.ok) throw new Error("Release manifest unavailable");
+    const release = await response.json();
+    if (!/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(release.version))
+      throw new Error("Invalid version");
+    for (const key of ["downloadUrl", "releaseUrl"]) {
+      const url = new URL(release[key]);
+      if (
+        url.protocol !== "https:" ||
+        url.hostname !== "github.com" ||
+        !url.pathname.startsWith("/darshmahadevia/voco-releases/releases/")
+      )
+        throw new Error("Invalid release link");
+    }
+    if (release.notarized !== false || typeof release.fileSize !== "string")
+      throw new Error("Invalid release details");
     document.querySelector("#release-version").textContent =
       `v${release.version}`;
     document.querySelector("#release-download").href = release.downloadUrl;
     document.querySelector("#release-notes").href = release.releaseUrl;
-    document.querySelector("#download-label").textContent = "Download for Mac";
     document.querySelector("#download-meta").textContent =
-      `Apple Silicon · macOS 26+${release.fileSize ? ` · ${release.fileSize}` : ""}`;
+      `Apple Silicon · macOS 26+ · ${release.fileSize}`;
   } catch {
     document.querySelector("#release-status").textContent =
-      "Latest release details are unavailable. The download and installation notes above are still available.";
+      "Latest release details are unavailable. The download and installation help above are still available.";
   }
 }
 loadRelease();
-document.querySelector("#year").textContent = String(new Date().getFullYear());
+document.querySelector("#year").textContent = new Date().getFullYear();
