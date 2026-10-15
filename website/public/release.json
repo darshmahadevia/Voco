@@ -1,0 +1,11 @@
+{
+  "version": "0.2.1",
+  "downloadUrl": "https://github.com/darshmahadevia/voco-releases/releases/download/v0.2.1/Voco-0.2.1-arm64.dmg",
+  "releaseUrl": "https://github.com/darshmahadevia/voco-releases/releases/tag/v0.2.1",
+  "requirements": "Apple Silicon Mac · macOS 26 or newer · English dictation",
+  "notarized": false,
+  "fileSize": "147 MB",
+  "sizeBytes": 147079383,
+  "sha256": "7497fd359e1fb7556207de84605dad9a6eb0f71af6b14557360493020be0fa99",
+  "sourceCommit": "a707ff737392c03a0acaa58f57df54a308ae1755"
+}
