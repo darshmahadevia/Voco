@@ -1,0 +1,4 @@
+ts	phase	decision	why	evidence	result
+2026-10-15T16:54:00Z	frame	Build a separate static website inside website	Keep website deployment independent of Electron and native builds	package.json; vite.preview.config.ts	Website does not exist yet
+2026-10-15T16:54:00Z	design	Use original orange ASCII voice ribbons with the existing graphite and Manrope brand	Maple Research voice posters fit the product and the existing app artwork	https://vibrant.design/feed/xjwkcs7-maple-research-ascii-posters; DESIGN.md	Direction selected under user grant
+2026-10-15T16:56:10Z	assets	Capture current app renderer and build the early-access DMG	Visitors need real product proof and a real downloadable build	website/scripts/capture-app.cjs; release/Voco-0.2.1-arm64.dmg	Renderer captures and desktop build passed
