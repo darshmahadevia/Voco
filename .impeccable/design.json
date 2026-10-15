@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-15T14:16:12.432461+00:00",
+  "title": "Design System: Voco",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Warm voice orange"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Graphite canvas"
+      },
+      "sidebar": {
+        "role": "neutral",
+        "displayName": "Deep graphite"
+      }
+    },
+    "shadows": [
+      {
+        "name": "home-capsule",
+        "value": "0 8px 18px #0003",
+        "purpose": "Separate the live capsule from the voice workspace."
+      },
+      {
+        "name": "floating-capsule",
+        "value": "0 8px 24px #0005, inset 0 1px 0 #ffffff12",
+        "purpose": "Give the floating status pill presence over other apps."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(.16, 1, .3, 1)",
+        "purpose": "Control movement and page arrival."
+      },
+      {
+        "name": "control",
+        "value": "160ms",
+        "purpose": "Control color and press feedback."
+      },
+      {
+        "name": "standard",
+        "value": "250ms",
+        "purpose": "General state changes."
+      },
+      {
+        "name": "page-arrival",
+        "value": "240ms",
+        "purpose": "Resolve opacity, 6px vertical travel, and 2px blur; remove under reduced motion."
+      },
+      {
+        "name": "status-swap",
+        "value": "180ms",
+        "purpose": "Resolve status text through 5px travel and 3px blur; remove under reduced motion."
+      },
+      {
+        "name": "navigation-selection",
+        "value": "spring(stiffness: 420, damping: 36)",
+        "purpose": "Move the shared sidebar selection; immediate under reduced motion."
+      },
+      {
+        "name": "switch",
+        "value": "350ms cubic-bezier(.34, 1.35, .64, 1)",
+        "purpose": "Switch thumb feedback; immediate under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "1200px"
+      },
+      {
+        "name": "compact",
+        "value": "800px"
+      },
+      {
+        "name": "narrow",
+        "value": "600px"
+      },
+      {
+        "name": "short-height",
+        "value": "580px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Rounded primary action.",
+      "html": "<button class=\"ds-button-primary\">Continue</button>",
+      "css": ".ds-button-primary{font-family:Manrope,-apple-system,sans-serif;font-size:11px;background:var(--text-primary, #f2f0ec);color:var(--button-text, #1c1d1f);border:0;border-radius:999px;min-height:34px;padding:0 15px;font-weight:650;cursor:pointer;transition:background 160ms,transform 160ms}.ds-button-primary:hover{background:#fff}.ds-button-primary:focus-visible{outline:2px solid var(--accent,#f49667);outline-offset:4px}.ds-button-primary:active{transform:scale(.97)}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none}.ds-button-primary:active{transform:none}}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Rounded secondary action.",
+      "html": "<button class=\"ds-button-secondary\">Continue</button>",
+      "css": ".ds-button-secondary{font-family:Manrope,-apple-system,sans-serif;font-size:11px;background:var(--surface-muted, #26282b);color:var(--text-primary, #f2f0ec);border:0;border-radius:999px;min-height:34px;padding:0 15px;font-weight:650;cursor:pointer;transition:background 160ms,transform 160ms}.ds-button-secondary:hover{background:#383a3e}.ds-button-secondary:focus-visible{outline:2px solid var(--accent,#f49667);outline-offset:4px}.ds-button-secondary:active{transform:scale(.97)}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none}.ds-button-secondary:active{transform:none}}"
+    },
+    {
+      "name": "Quiet button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Rounded quiet action.",
+      "html": "<button class=\"ds-button-quiet\">Continue</button>",
+      "css": ".ds-button-quiet{font-family:Manrope,-apple-system,sans-serif;font-size:11px;background:transparent;color:var(--text-secondary, #b2b1b0);border:0;border-radius:999px;min-height:34px;padding:0 15px;font-weight:650;cursor:pointer;transition:background 160ms,transform 160ms}.ds-button-quiet:hover{background:var(--surface-muted, #26282b)}.ds-button-quiet:focus-visible{outline:2px solid var(--accent,#f49667);outline-offset:4px}.ds-button-quiet:active{transform:scale(.97)}@media(prefers-reduced-motion:reduce){.ds-button-quiet{transition:none}.ds-button-quiet:active{transform:none}}"
+    },
+    {
+      "name": "Practice field",
+      "kind": "input",
+      "refersTo": "practice-field",
+      "description": "A fixed-height field for first dictation.",
+      "html": "<textarea class=\"ds-practice\" aria-label=\"Try your first dictation\" placeholder=\"Your words appear here\"></textarea>",
+      "css": ".ds-practice{font-family:Manrope,-apple-system,sans-serif;font-size:11px;height:100px;padding:16px;resize:none;border:1px solid var(--line,#303235);border-radius:12px;background:var(--surface-raised,#1c1e20);color:var(--text-primary,#f2f0ec);line-height:1.7}.ds-practice:focus-visible{outline:2px solid var(--accent,#f49667);outline-offset:4px}.ds-practice::placeholder{color:var(--text-tertiary,#929497)}"
+    },
+    {
+      "name": "Sidebar navigation",
+      "kind": "nav",
+      "description": "A rounded tonal selection within the deep sidebar.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Workspace\"><button aria-current=\"page\">Home</button><button>Transcripts</button></nav>",
+      "css": ".ds-nav{display:grid;gap:7px;padding:14px;background:#111213}.ds-nav button{font-family:Manrope,-apple-system,sans-serif;font-size:11px;border:0;border-radius:999px;min-height:42px;padding:0 14px;text-align:left;background:transparent;color:var(--text-secondary,#b2b1b0);cursor:pointer}.ds-nav button[aria-current]{background:#2b2d30;color:var(--text-primary,#f2f0ec)}.ds-nav button:hover{background:#202224;color:var(--text-primary,#f2f0ec)}.ds-nav button:focus-visible{outline:2px solid var(--accent,#f49667);outline-offset:4px}"
+    },
+    {
+      "name": "Status chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "Compact noninteractive readiness or session label.",
+      "html": "<span class=\"ds-chip\">Ready to dictate</span>",
+      "css": ".ds-chip{font-family:Manrope,-apple-system,sans-serif;font-size:11px;display:inline-flex;align-items:center;padding:7px 11px;border-radius:999px;background:#242e28;color:var(--success,#b9cbbd);font-size:10px;line-height:1.5}"
+    },
+    {
+      "name": "Voice workspace",
+      "kind": "card",
+      "refersTo": "voice-workspace",
+      "description": "The main tonal Home surface with keyboard guidance.",
+      "html": "<section class=\"ds-workspace\"><h2>Your words, anywhere.</h2><p>Hold <kbd>Fn / Globe</kbd> to speak.</p></section>",
+      "css": ".ds-workspace{font-family:Manrope,-apple-system,sans-serif;min-height:104px;padding:25px;border-radius:16px;background:var(--surface-raised,#1c1e20);color:var(--text-primary,#f2f0ec)}.ds-workspace h2{margin:0 0 14px;font-size:19px;font-weight:500;letter-spacing:-.025em}.ds-workspace p{margin:0;font-size:11px;color:var(--text-secondary,#b2b1b0)}.ds-workspace kbd{display:inline-flex;padding:3px 8px;border:1px solid #45474a;border-bottom-width:2px;border-radius:7px;background:#2b2d30;font:inherit;color:var(--text-primary,#f2f0ec)}"
+    },
+    {
+      "name": "Live status capsule",
+      "kind": "custom",
+      "description": "Quiet status with a static silent waveform preview.",
+      "html": "<div class=\"ds-capsule\" role=\"status\"><span class=\"ds-wave\" aria-hidden=\"true\"><i></i><i></i><i></i><i></i><i></i></span><span>Ready</span></div>",
+      "css": ".ds-capsule{font-family:Manrope,-apple-system,sans-serif;font-size:11px;display:inline-flex;align-items:center;gap:13px;min-height:48px;padding:0 20px;border-radius:999px;background:#292b2e;color:var(--text-primary,#f2f0ec);box-shadow:0 8px 24px #0005,inset 0 1px 0 #ffffff12}.ds-wave{display:flex;align-items:center;gap:2.5px;height:28px}.ds-wave i{display:block;width:3px;height:1px;border-radius:999px;background:var(--accent,#f49667)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Quiet Voice Workspace",
+    "overview": "Dark minimal: graphite surfaces, soft white buttons, restrained orange details. Voco feels calm and personal, with a clear place to speak and small, readable signs of readiness. Bundled Manrope supplies every text role. Tonal surfaces draw inspiration from vibrant.design, and compact motion patterns are adapted from transitions.dev for the desktop workflow.",
+    "keyCharacteristics": [
+      "Tonal graphite layers",
+      "Fully rounded soft-white primary controls",
+      "Restrained orange voice feedback",
+      "Flat statistics and divided transcript rows"
+    ],
+    "rules": [
+      {
+        "name": "Measured voice feedback",
+        "body": "Animate waveform bars only from measured microphone energy. Silence has a still baseline.",
+        "section": "components"
+      },
+      {
+        "name": "Tonal depth",
+        "body": "Use graphite layering for structural depth; reserve shadows for status capsules.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do retain visible keyboard focus and reduced-motion behavior.",
+      "Do keep setup actions reachable while task content scrolls.",
+      "Do preserve optional session transcripts in memory until quit."
+    ],
+    "donts": [
+      "Don't reintroduce pixel or serif accent fonts or orange primary buttons.",
+      "Don't synthesize microphone activity or show partial transcript text during capture.",
+      "Don't persist audio or transcript history."
+    ]
+  }
+}
