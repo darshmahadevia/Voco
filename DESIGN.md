@@ -14,6 +14,8 @@ colors:
   text-tertiary: "#929497"
   button-text: "#1c1d1f"
   line: "#282828"
+  line-strong: "#414141"
+  control-hover: "#2b2b2b"
   success: "#b9cbbd"
   danger: "#ff9d9d"
   text-selection: "#803c1b"
@@ -62,7 +64,7 @@ rounded:
   pill: "999px"
 spacing:
   sidebar: "148px"
-  gutter: "26px"
+  gutter: "32px"
   gutter-compact: "24px"
   gutter-narrow: "18px"
   section: "26px"
@@ -89,8 +91,8 @@ components:
     height: "34px"
   voice-workspace:
     backgroundColor: "{colors.surface}"
-    rounded: "{rounded.workspace}"
-    padding: "18px 20px"
+    rounded: "0px"
+    padding: "20px 0"
   practice-field:
     backgroundColor: "{colors.surface-raised}"
     textColor: "{colors.text-primary}"
@@ -132,13 +134,13 @@ Sage (`success`) signals readiness and completed actions. Soft red (`danger`) id
 
 Use the bundled Manrope variable font (200–800), with -apple-system and sans-serif fallbacks. All headings, labels, keyboard hints, and transcript text share this family.
 
-Setup headlines use the display role, with orange on the second line. Home uses the greeting role; other page headings use headline. Voice workspace headings use title. Supporting text is usually 10–12px and transcript rows use 13px with 1.7 line-height. Metrics use 28px with tabular numerals. Preserve readable text wrapping and selectable transcripts.
+Setup headlines use the display role, with orange on the second line. Home uses the greeting role; other page headings use headline. Voice workspace headings use title. Supporting text is usually 11–12px and transcript rows use 13px with 1.7 line-height. Metrics use 28px with tabular numerals. Preserve readable text wrapping and selectable transcripts.
 
 ## Layout
 
-The desktop shell has a 148px sidebar and a separately scrolling content area with 26px horizontal gutters. Content is centered up to 860px wide. At widths of 800px and below, gutters become 24px. At 600px and below, the sidebar becomes a 64px icon rail and gutters 18px; retain accessible navigation labels. Wide previews at 1200px use 52px gutters. Short windows reduce vertical spacing. Below 580px in height, Home omits its introductory tagline and secondary voice heading so the latest copy action fits above the footer.
+The desktop shell has a 148px sidebar and a separately scrolling content area with 32px horizontal gutters. Content is centered up to 860px wide. At widths of 800px and below, gutters become 24px. At 600px and below, the sidebar becomes a 64px icon rail and gutters 18px; retain accessible navigation labels. Wide previews at 1200px use 52px gutters. Short windows reduce vertical spacing. Below 580px in height, Home omits its introductory tagline and secondary voice heading so the latest copy action fits above the footer.
 
-Home starts with a personalized greeting and an All stats link, followed by compact tonal keyboard guidance. Three flat usage totals and recent transcript rows follow. The dedicated Stats page owns the activity calendar, daily goal, and milestones. The Transcripts page provides session search, complete selectable text, and a 64px time gutter that stacks above the text on narrow screens.
+Home starts with a personalized greeting and an All stats link, followed by keyboard guidance aligned to the content edge and separated with fine horizontal rules. Three flat usage totals and recent transcript rows follow. The dedicated Stats page owns the activity calendar, daily goal, and milestones. The Transcripts page provides session search, complete selectable text, and a 64px time gutter that stacks above the text on narrow screens. Search reports the filtered count, clears with Escape or a named clear button, and keeps focus in the field. Copy buttons describe their associated transcript for assistive technology. Empty states distinguish a new session from disabled retention, with a direct route to Dictation settings when retention is off.
 
 A live footer sits outside the scrolling page on Home, Transcripts, Stats, and Settings. Guided setup uses its own action rail and omits the footer unless a transcript needs recovery. Its normal state has a minimum height of 52px, with microphone status and shortcut guidance. Recovery adds a bounded transcript panel above the live footer and keeps the copy action reachable across pages.
 
@@ -146,13 +148,13 @@ Setup has four steps: Welcome, Speech model, App permissions, and Your first wor
 
 ## Elevation & Depth
 
-Use tonal layering for structural depth. Home’s workspace is lighter than the canvas, and navigation is darker. Settings, statistics, and transcript lists stay flat with fine dividers. The floating pill uses `0 8px 24px #0005, inset 0 1px 0 #ffffff12`. The live footer uses a border and a tonal background. Avoid decorative glow.
+Keep the main canvas and Home shortcut workspace black. A fine sidebar divider separates navigation from the workspace; muted graphite identifies the selected navigation item. Settings, statistics, and transcript lists stay flat with fine dividers. Thin vertical separators distinguish the three usage totals. Transcript copy controls use quiet outlines and a graphite hover state. The floating pill uses `0 8px 24px #0005, inset 0 1px 0 #ffffff12`. The live footer uses a border and a tonal background. Avoid decorative glow.
 
 ## Shapes
 
 Voco’s brand mark is a continuous voice wave with a cursive v at its center. A short entry wave flows into the deep v and rises into a smaller trailing wave. Use the single smooth orange stroke in `Resources/Brand/voco-mark.svg`, with rounded terminals and continuous curves. Keep it static, preserve its proportions, and leave the viewBox’s clear space intact. The wordmark remains Manrope with its orange dot. The Dock icon places the mark on a graphite tile; the menu bar uses a monochrome template. Run `npm run build:icons` to regenerate the app and menu-bar assets from the master SVG.
 
-Primary and secondary actions, search fields, chips, and status capsules are fully rounded. Navigation selections use 10px corners. Voice and recovery workspaces use 16px corners; practice fields use 12px corners and selected output options use 9px. Keyboard keys use 7px corners and a doubled lower border. Keep visible orange focus outlines offset from controls.
+Primary and secondary actions, search fields, chips, and status capsules are fully rounded. Navigation selections use 10px corners. The Home voice workspace stays flat; recovery panels use 16px corners; practice fields use 12px corners and selected output options use 9px. Keyboard keys use 7px corners and a doubled lower border. Keep visible orange focus outlines offset from controls.
 
 ## Components
 
@@ -164,11 +166,11 @@ The sidebar selection moves between main navigation destinations using a shared 
 
 ### Voice guidance and live status
 
-Home uses a compact shortcut panel with a cropped orange ASCII voice ribbon inspired by the [Maple Research posters on Vibrant](https://vibrant.design/). The artwork slowly refolds through 80 precomputed glyph frames on an eight-second loop, capped at 10 updates per second. It is decorative and independent of microphone feedback. Its timer stops while offscreen, while the document is hidden, and under reduced motion. Keep a still frame in those states and keep the artwork hidden from assistive technology. The persistent live footer and floating dictation pill share their status language. Orange waveform bars respond only to measured microphone energy during capture. Silence returns them to a still baseline; processing uses a spinner and short status text. Do not show partial transcript text while capturing. Preserve recovery’s complete copy action and separately scrolling explanation and transcript. The floating pill uses a 42px symbol slot, a 92px label slot, 12px horizontal padding, and a 36px height. Omit its redundant status dot and keep the footprint stable between capture and processing. The dashboard footer retains room for longer setup and loading labels. Keep one persistent polite live region outside the animated visual labels. The floating recovery panel changes shape with a spring using stiffness 380, damping 32, and mass 0.8.
+Home uses a compact shortcut panel with a cropped orange ASCII voice ribbon inspired by the [Maple Research posters on Vibrant](https://vibrant.design/). The artwork slowly refolds through 80 precomputed glyph frames on an eight-second loop, capped at 10 updates per second. It is decorative and independent of microphone feedback. Its timer stops while offscreen, while the document is hidden, and under reduced motion. Keep a still frame in those states and keep the artwork hidden from assistive technology. The persistent live footer and floating dictation pill share their status language. Orange waveform bars respond only to measured microphone energy during capture. Silence returns them to a still baseline; processing uses a spinner and short status text. Do not show partial transcript text while capturing. Preserve recovery’s complete copy action and separately scrolling explanation and transcript. The floating pill uses a 42px symbol slot, a 92px label slot, 12px horizontal padding, and a 36px height. Omit its redundant status dot and keep the footprint stable between capture and processing. The dashboard footer retains room for longer setup and loading labels. Keep one persistent polite live region outside the animated visual labels. The footer offers Escape cancellation during recording and processing, loading guidance while the model starts, and copy guidance during recovery. An empty recovery explains the error instead of claiming words are available. Recovery copy shows its pending state, and dismissal has a 32px target. Inside the compact recovery pill, show the saved words before the error explanation and keep both in the scrolling body. The floating recovery panel changes shape with a spring using stiffness 380, damping 32, and mass 0.8.
 
 ### Setup and Settings
 
-Model rows separate the name and description from version and download size. An orange selection indicator identifies the current model. Show one action per row and avoid duplicate readiness labels. Preserve permission guidance, loading, retry, cancellation, and practice blockers. Settings apply immediately, with no save or Done action. Output, Models, Access, and Dictation are labeled tabs with one visible panel. Arrow keys wrap between tabs; Home and End select the first and last tabs. Keep inactive panels hidden and preserve command state above them. An orange underline moves between tabs, with immediate changes under reduced motion. Above 1000px, each panel pairs a compact introduction column with its controls. Smaller windows stack these groups. Output quality uses a three-part segmented radio group, a quiet selected background, and one selected description below the choices. Detailed cleanup behavior and caveats stay in a disclosure. All help and preference disclosures share native details and summary semantics, a quiet divider, and a trailing chevron. Opening and closing interpolate the full intrinsic content height over 240ms, with a short opacity transition and a rotating chevron. Reversing mid-transition follows the latest open state. Closing immediately makes the body inert and returns focus to the summary when a descendant held focus. Older preview browsers retain an instant native disclosure fallback. The transcript switch has a 44px by 34px hit area and a 180ms thumb transition using the standard movement easing.
+Model rows separate the name and description from version and download size. An orange selection indicator identifies the current model. Show one action per row and avoid duplicate readiness labels. Preserve permission guidance, loading, retry, cancellation, and practice blockers. Settings apply immediately, with no save or Done action. Output, Models, Access, and Dictation are labeled tabs with one visible panel. The selected tab survives page navigation for the current window session. During dictation, explain why output choices are temporarily unavailable. Arrow keys wrap between tabs; Home and End select the first and last tabs. Keep inactive panels hidden and preserve command state above them. An orange underline moves between tabs, with immediate changes under reduced motion. Above 1000px, each panel pairs a compact introduction column with its controls. Smaller windows stack these groups. Output quality uses a three-part segmented radio group, a quiet selected background, and one selected description below the choices. Detailed cleanup behavior and caveats stay in a disclosure. All help and preference disclosures share native details and summary semantics, a quiet divider, and a trailing chevron. Opening and closing interpolate the full intrinsic content height over 240ms, with a short opacity transition and a rotating chevron. Reversing mid-transition follows the latest open state. Closing immediately makes the body inert and returns focus to the summary when a descendant held focus. Older preview browsers retain an instant native disclosure fallback. The transcript switch has a 44px by 34px hit area and a 180ms thumb transition using the standard movement easing.
 
 ### Motion and accessibility
 
