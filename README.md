@@ -56,7 +56,7 @@ You choose the speech model separately. These settings describe the cleanup Voco
 
 ## Your audio and text
 
-Audio is processed on your Mac. Voco doesn't save recordings or transcript history to disk. Recent transcripts stay in memory until you quit. Turning off **Keep last transcript** clears retained text. If insertion fails, Voco keeps the completed text available for copying.
+Audio is processed on your Mac. Voco doesn't save recordings or transcript history to disk. Recent transcripts stay in memory until you quit. Turning off **Keep recent transcripts** clears retained text. If insertion fails, Voco keeps the completed text available for copying.
 
 Preferences and usage totals are saved locally. Speech models are stored in `~/Library/Application Support/Voco/models`. Model downloads use the internet. Dictation works offline once a model is installed.
 
