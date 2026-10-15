@@ -285,11 +285,10 @@ const SETTINGS_SECTIONS = [
   { id: 'dictation', label: 'Dictation', heading: 'dictation-heading' },
 ] satisfies { id: SettingsSection; label: string; heading: string }[];
 
-function SettingsView({ state, loadError }: { state: AppState; loadError: string }): React.JSX.Element {
+function SettingsView({ state, loadError, section, onSectionChange }: { state: AppState; loadError: string; section: SettingsSection; onSectionChange: (section: SettingsSection) => void }): React.JSX.Element {
   const { run, pending, error } = useCommands();
   const reducedMotion = useReducedMotion();
   const tabRefs = useRef(new Map<SettingsSection, HTMLButtonElement>());
-  const [section, setSection] = useState<SettingsSection>('output');
   const canCopyLast = state.preferences.keepLastTranscript && state.lastTranscript.length > 0;
 
   return (
@@ -305,7 +304,7 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
           type="button" role="tab" id={`settings-tab-${item.id}`}
           aria-selected={section === item.id} aria-controls={`settings-panel-${item.id}`}
           tabIndex={section === item.id ? 0 : -1}
-          onClick={() => setSection(item.id)}
+          onClick={() => onSectionChange(item.id)}
           onKeyDown={event => {
             let nextIndex = index;
             if (event.key === 'ArrowRight') nextIndex = (index + 1) % SETTINGS_SECTIONS.length;
@@ -315,7 +314,7 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
             else return;
             event.preventDefault();
             const next = SETTINGS_SECTIONS[nextIndex];
-            if (next) { setSection(next.id); tabRefs.current.get(next.id)?.focus(); }
+            if (next) { onSectionChange(next.id); tabRefs.current.get(next.id)?.focus(); }
           }}
         >
           {section === item.id && <motion.span className="settings-tab-selection" layoutId="settings-tab-selection" transition={reducedMotion ? { duration: 0 } : NAV_TRANSITION} />}
@@ -335,6 +334,7 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
               <span className="output-label"><strong>{mode.name}</strong></span>
             </label>)}
         </div>
+        {state.session.kind !== 'idle' && <p className="output-availability" role="status">Finish or dismiss this dictation to change output settings.</p>}
         <motion.p key={state.preferences.outputMode} className="output-mode-description" initial={reducedMotion ? false : { opacity: 0.5, y: 3 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.16 }}>{OUTPUT_MODES.find(mode => mode.id === state.preferences.outputMode)?.description}</motion.p>
         <Disclosure className="output-details" title={<>About cleanup &amp; AI formatting</>}>
           {OUTPUT_MODES.map(mode => <p className="output-help" key={mode.id}><strong>{mode.name}.</strong> {mode.description}</p>)}
@@ -747,7 +747,7 @@ function PillStatus({ state }: { state: AppState }): React.JSX.Element {
   </div>;
 }
 
-function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onStats }: { state: AppState; transcripts: RecentTranscript[]; loadError: string; onSetup: () => void; onTranscripts: () => void; onStats: () => void }): React.JSX.Element {
+function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onStats, onDictationSettings }: { state: AppState; transcripts: RecentTranscript[]; loadError: string; onSetup: () => void; onTranscripts: () => void; onStats: () => void; onDictationSettings: () => void }): React.JSX.Element {
   const setupComplete = isSetupComplete(state);
   return <main className="dashboard">
     <div className="dashboard-overview">
@@ -771,7 +771,7 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
     </div>
     </div>
     {state.polishNotice && <p className="output-notice" role="status">{state.polishNotice}</p>}
-    <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} onShowMore={onTranscripts} />
+    <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} onShowMore={onTranscripts} onDictationSettings={onDictationSettings} />
     {state.preferences.keepLastTranscript && state.lastRawTranscript && state.lastRawTranscript !== state.lastTranscript && <Disclosure className="original-transcript" title={<>Original speech transcript</>}>
       <p>{state.lastRawTranscript}</p>
       <CopyTranscriptButton text={state.lastRawTranscript} disabled={preview} latest={false} />
@@ -786,31 +786,44 @@ type TranscriptCopyState =
   | { kind: 'copied'; text: string }
   | { kind: 'error'; text: string; message: string };
 
-function TranscriptPanel({ entries, latestText, enabled, fullPage = false, onShowMore }: { entries: RecentTranscript[]; latestText: string; enabled: boolean; fullPage?: boolean; onShowMore?: () => void }): React.JSX.Element {
+function TranscriptPanel({ entries, latestText, enabled, fullPage = false, onShowMore, onDictationSettings }: { entries: RecentTranscript[]; latestText: string; enabled: boolean; fullPage?: boolean; onShowMore?: () => void; onDictationSettings: () => void }): React.JSX.Element {
   const [search, setSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const filtered = entries.filter(entry => entry.text.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   const visible = fullPage ? filtered : entries.slice(0, 3);
   return <section className="transcript-panel" aria-labelledby="transcript-panel-heading">
     <div className="transcript-panel-header">
       <div className="transcript-heading-copy">
-        <h2 id="transcript-panel-heading" tabIndex={-1}>Recent transcripts</h2>
+        <h2 id="transcript-panel-heading" tabIndex={-1}>{fullPage ? 'This session' : 'Recent transcripts'}</h2>
         <span className="transcript-panel-status">{preview ? 'Sample transcripts · preview' : enabled ? 'Kept in memory until you quit' : 'Off in Settings'}</span>
       </div>
       <span className="transcript-count">{entries.length} {entries.length === 1 ? 'transcript' : 'transcripts'}</span>
     </div>
-    {fullPage && entries.length > 0 && <label className="transcript-search"><Search size={16} aria-hidden="true" /><span className="visually-hidden">Search transcripts</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search this session" /></label>}
+    {fullPage && entries.length > 0 && <>
+      <div className="transcript-search" role="search" aria-label="Session transcripts">
+        <Search size={16} aria-hidden="true" />
+        <label className="visually-hidden" htmlFor="transcript-search">Search transcripts</label>
+        <input id="transcript-search" ref={searchInputRef} type="search" value={search} onChange={event => setSearch(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setSearch(''); } }} placeholder="Search this session" />
+        {search && <button type="button" className="clear-search" aria-label="Clear transcript search" onClick={() => { setSearch(''); searchInputRef.current?.focus(); }}><X size={14} aria-hidden="true" /></button>}
+      </div>
+      <p className="search-results-count" role="status">{search.trim() ? `${filtered.length} of ${entries.length} transcripts` : ''}</p>
+    </>}
     {entries.length ? <><ol className="recent-transcript-list" id="recent-transcript-list">
       {visible.map((entry, index) => <li className="recent-transcript-row" key={entry.id}>
         {fullPage && <time className="transcript-time" dateTime={new Date(entry.createdAt).toISOString()}>{new Date(entry.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}<span>{new Date(entry.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></time>}
         <div className="recent-transcript-copy">
-          <p className="last-transcript">{entry.text}</p>
+          <p className="last-transcript" id={`transcript-${entry.id}`}>{entry.text}</p>
           <div className="transcript-metadata"><span>{index === 0 && entry.text === latestText ? 'Latest' : fullPage ? 'Session dictation' : new Date(entry.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span><span>{entry.text.trim().split(/\s+/).length} words</span></div>
         </div>
-        <CopyTranscriptButton text={entry.text} disabled={false} latest={index === 0 && entry.text === latestText} />
+        <CopyTranscriptButton text={entry.text} describedBy={`transcript-${entry.id}`} disabled={false} latest={index === 0 && entry.text === latestText} />
       </li>)}
     </ol>{visible.length === 0 && <p className="transcript-search-empty" role="status">No transcripts match your search.</p>}</> : <div className="transcript-body transcript-empty">
       <FileText size={24} strokeWidth={1.4} aria-hidden="true" />
-      <p className="transcript-empty-copy">{enabled ? 'Your dictations will appear here. Hold Fn / Globe to start.' : 'Turn on Keep recent transcripts in Settings to see them here.'}</p>
+      <div>
+        <h3 className="transcript-empty-title">{enabled ? 'No transcripts yet' : 'Recent transcripts are off'}</h3>
+        <p className="transcript-empty-copy">{enabled ? 'Your dictations will appear here. Hold Fn / Globe to start.' : 'Turn on Keep recent transcripts in Settings to see them here.'}</p>
+        {!enabled && <button type="button" className="text-link" onClick={onDictationSettings}>Open Dictation settings <ArrowRight size={14} aria-hidden="true" /></button>}
+      </div>
     </div>}
     {!fullPage && entries.length > 3 && <button type="button" className="show-transcripts" onClick={onShowMore}>
       View all {entries.length} transcripts<ArrowRight size={15} aria-hidden="true" />
@@ -818,10 +831,10 @@ function TranscriptPanel({ entries, latestText, enabled, fullPage = false, onSho
   </section>;
 }
 
-function TranscriptsView({ state, transcripts, loadError }: { state: AppState; transcripts: RecentTranscript[]; loadError: string }): React.JSX.Element {
+function TranscriptsView({ state, transcripts, loadError, onDictationSettings }: { state: AppState; transcripts: RecentTranscript[]; loadError: string; onDictationSettings: () => void }): React.JSX.Element {
   return <main className="detail-page transcripts-page">
     <header className="detail-page-heading"><h1 tabIndex={-1}>Transcripts</h1><p>All your dictations from this session, ready to read and copy.</p></header>
-    <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} fullPage />
+    <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} fullPage onDictationSettings={onDictationSettings} />
     <ActionError message={loadError} />
   </main>;
 }
@@ -835,7 +848,7 @@ function StatsView({ state, loadError }: { state: AppState; loadError: string })
   </main>;
 }
 
-function CopyTranscriptButton({ text, disabled, latest = true }: { text: string; disabled: boolean; latest?: boolean }): React.JSX.Element {
+function CopyTranscriptButton({ text, disabled, latest = true, describedBy }: { text: string; disabled: boolean; latest?: boolean; describedBy?: string }): React.JSX.Element {
   const reducedMotion = useReducedMotion();
   const [state, setState] = useState<TranscriptCopyState>({ kind: 'idle' });
   const activeRef = useRef(false);
@@ -906,6 +919,7 @@ function CopyTranscriptButton({ text, disabled, latest = true }: { text: string;
       data-state={currentState.kind}
       disabled={disabled || state.kind === 'copying'}
       aria-label={label}
+      aria-describedby={describedBy}
       title={label}
       onClick={() => void copyTranscript()}
     >
@@ -1112,7 +1126,7 @@ function RecoveryContent({
         <p className="recovery-message">{session.message}</p>
         {session.text && (
           <div className="recovery-transcript">
-            {isPreview && <span className="preview-transcript-label">Example transcript · preview</span>}
+            {isPreview && view !== 'pill' && <span className="preview-transcript-label">Example transcript · preview</span>}
             <p>{session.text}</p>
           </div>
         )}
@@ -1120,7 +1134,8 @@ function RecoveryContent({
       </div>
       <div className="recovery-actions">
         <Button kind="secondary" disabled={isPreview || pending !== null || session.text.length === 0} onClick={() => void run({ kind: 'copyRecovery' })}>
-          <Copy size={14} aria-hidden="true" /> Copy transcript
+          {pending === 'copyRecovery' ? <LoaderCircle className="spin" size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+          {pending === 'copyRecovery' ? 'Copying…' : 'Copy transcript'}
         </Button>
       </div>
     </div>
@@ -1129,13 +1144,21 @@ function RecoveryContent({
 
 function WorkspaceStatus({ state, loadError }: { state: AppState; loadError: string }): React.JSX.Element {
   const { run, pending, error } = useCommands();
+  const guidance = {
+    idle: isReady(state) ? <>Hold <kbd>Fn / Globe</kbd> to speak</> : state.model.kind === 'loading' && isSetupComplete(state) ? 'Your speech model is getting ready' : 'Complete setup to start dictating',
+    starting: <>Press <kbd>Esc</kbd> to cancel</>,
+    listening: <>Press <kbd>Esc</kbd> to cancel</>,
+    finishing: <>Press <kbd>Esc</kbd> to cancel</>,
+    polishing: <>Press <kbd>Esc</kbd> to cancel</>,
+    recovery: state.session.kind === 'recovery' && state.session.text ? 'Your transcript is ready to copy' : 'Review the error above to continue',
+  } satisfies Record<AppState['session']['kind'], React.ReactNode>;
   return <div className="workspace-status">
     {state.session.kind === 'recovery' && <section className="workspace-recovery" aria-label="Transcript recovery">
       <RecoveryContent session={state.session} preview={preview} pending={pending} run={run} error={error || loadError} />
     </section>}
     <footer className="live-footer">
       <PillStatus state={state} />
-      <span className="live-shortcut">Hold <kbd>Fn / Globe</kbd> to speak</span>
+      <span className="live-shortcut">{guidance[state.session.kind]}</span>
     </footer>
   </div>;
 }
@@ -1160,6 +1183,7 @@ function App(): React.JSX.Element {
     const requested = navigationPageSchema.safeParse(query.get('page'));
     return requested.success ? requested.data : 'auto';
   });
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>('output');
   const [setupSeen, setSetupSeen] = useState(() => { try { return localStorage.getItem('voco.setup.v1') === 'seen'; } catch { return false; } });
   useEffect(() => {
     if (view === 'pill') return;
@@ -1178,6 +1202,10 @@ function App(): React.JSX.Element {
   if (!state) return view === 'pill' ? <main className="pill-shell" /> : <StartupView error={error} />;
   if (view === 'pill') return <PillView state={state} loadError={error} />;
   const currentPage: NavigationPage = page === 'auto' ? canResumeHome(state, setupSeen) ? 'home' : 'onboarding' : page;
+  function openDictationSettings(): void {
+    setSettingsSection('dictation');
+    setPage('settings');
+  }
   function finishSetup(): void {
     if (!state || state.model.kind !== 'ready') return;
     try { localStorage.setItem('voco.setup.v1', 'seen'); } catch { /* Setup remains accessible without local storage. */ }
@@ -1195,7 +1223,7 @@ function App(): React.JSX.Element {
       <div className="workspace-main">
         <PreviewNotice />
         <motion.div key={currentPage} className="page-transition" initial={reducedMotion ? false : { opacity: 0.7, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={reducedMotion ? { duration: 0 } : PAGE_TRANSITION}>
-        {currentPage === 'settings' ? <SettingsView state={state} loadError={error} /> : currentPage === 'onboarding' ? <OnboardingView state={state} loadError={error} onDone={finishSetup} /> : currentPage === 'transcripts' ? <TranscriptsView state={state} transcripts={transcripts} loadError={error} /> : currentPage === 'stats' ? <StatsView state={state} loadError={error} /> : <HomeView state={state} transcripts={transcripts} loadError={error} onSetup={() => setPage('onboarding')} onTranscripts={() => setPage('transcripts')} onStats={() => setPage('stats')} />}
+        {currentPage === 'settings' ? <SettingsView state={state} loadError={error} section={settingsSection} onSectionChange={setSettingsSection} /> : currentPage === 'onboarding' ? <OnboardingView state={state} loadError={error} onDone={finishSetup} /> : currentPage === 'transcripts' ? <TranscriptsView state={state} transcripts={transcripts} loadError={error} onDictationSettings={openDictationSettings} /> : currentPage === 'stats' ? <StatsView state={state} loadError={error} /> : <HomeView state={state} transcripts={transcripts} loadError={error} onSetup={() => setPage('onboarding')} onTranscripts={() => setPage('transcripts')} onStats={() => setPage('stats')} onDictationSettings={openDictationSettings} />}
         </motion.div>
       </div>
       {(currentPage !== 'onboarding' || state.session.kind === 'recovery') && <WorkspaceStatus state={state} loadError={error} />}

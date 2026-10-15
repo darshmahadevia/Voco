@@ -130,10 +130,17 @@ kbd { display: inline-flex; align-items: center; justify-content: center; gap: 6
 .t-icon-swap[data-state='a'] [data-icon='b'], .t-icon-swap[data-state='b'] [data-icon='a'] { opacity: 0; filter: blur(2px); transform: scale(.25); }
 .show-transcripts { margin-top: 10px; }
 .transcript-empty { display: flex; align-items: flex-start; gap: 14px; padding: 28px 0; color: var(--text-tertiary); }
+.transcript-empty-title { margin: 0 0 6px; color: var(--text-primary); font-size: 14px; font-weight: 550; }
+.transcript-empty .text-link { margin-top: 12px; }
 .transcript-empty-copy { max-width: 46ch; font-size: 12px; line-height: 1.7; }
 .transcript-search { display: flex; align-items: center; gap: 10px; margin: 20px 0 6px; padding: 0 15px; border-radius: 999px; background: var(--surface-muted); color: var(--text-secondary); }
 .transcript-search:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
 .transcript-search input { min-width: 0; width: 100%; height: 40px; border: 0; outline: none; background: transparent; font-size: 12px; }
+.transcript-search input::-webkit-search-cancel-button { display: none; }
+.clear-search { display: grid; place-items: center; flex: 0 0 30px; height: 30px; margin-right: -8px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-secondary); }
+.clear-search:hover { background: var(--control-hover); color: var(--text-primary); }
+.search-results-count { min-height: 18px; margin-top: 8px; color: var(--text-tertiary); font-size: 11px; }
+.search-results-count:empty { display: none; }
 .transcript-search-empty { padding: 24px 0; color: var(--text-secondary); }
 .detail-page-heading, .settings-header { margin-bottom: 26px; }
 .detail-page-heading h1, .settings-header h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.3; font-weight: 500; letter-spacing: -.035em; }
@@ -258,8 +265,11 @@ html[data-view='pill'], html[data-view='pill'] body, html[data-view='pill'] #roo
 .waveform-pill { height: 28px; }
 .waveform-large { height: 54px; gap: 5px; }
 .waveform-large > span { height: 52px; width: 4px; }
-.pill-card-recovery { display: flex; width: min(100%, 352px); max-height: calc(100vh - 40px); padding: 16px; border-radius: 16px; overflow: hidden; }
-.pill-shell:has(> .preview-notice) .pill-card-recovery { max-height: calc(100vh - 65px); }
+.pill-card-recovery { display: flex; width: min(100%, 352px); max-height: calc(100vh - 32px); padding: 12px; border-radius: 16px; overflow: hidden; }
+.pill-shell:has(> .preview-notice) .pill-card-recovery { max-height: calc(100vh - 50px); }
+.pill-card-recovery .recovery-body { display: flex; flex-direction: column; gap: 8px; }
+.pill-card-recovery .recovery-body > * { flex-shrink: 0; }
+.pill-card-recovery .recovery-transcript { order: -1; margin-top: 0; padding: 8px 10px; }
 .recovery-content { display: flex; flex-direction: column; min-height: 0; width: 100%; gap: 10px; }
 .recovery-heading { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .recovery-heading > div { flex: 1; min-width: 0; }
@@ -401,7 +411,7 @@ html[data-view='pill'], html[data-view='pill'] body, html[data-view='pill'] #roo
 
 .workspace-status { flex-shrink: 0; background: var(--surface); }
 .live-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 0 32px; border-top: 1px solid var(--line); }
-.live-shortcut { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12px; }
+.live-shortcut { max-width: 55%; flex-wrap: wrap; justify-content: flex-end; text-align: right; display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12px; }
 .live-shortcut kbd { min-height: 23px; font-size: 10px; }
 .live-footer .pill-visual { gap: 8px; }
 .live-footer .pill-symbol { width: 45px; }

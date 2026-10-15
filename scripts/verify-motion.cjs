@@ -99,6 +99,14 @@ app.whenReady().then(async () => {
     assert.equal(await evaluate("document.activeElement.textContent.trim()"), expected, `${key}: tab keyboard focus is wrong`);
     assert.equal(await evaluate("document.querySelector('[role=tab][aria-selected=true]').textContent.trim()"), expected, `${key}: selected panel did not follow focus`);
   }
+  await evaluate("document.querySelector('#settings-tab-models').click()");
+  await navigate('Home');
+  await settle();
+  await navigate('Settings');
+  await settle();
+  assert.equal(await evaluate("document.querySelector('[role=tab][aria-selected=true]').textContent.trim()"), 'Models', 'Settings forgot the selected tab after navigation');
+  await evaluate("document.querySelector('#settings-tab-output').click()");
+  await frame();
   async function key(keyCode) {
     window.webContents.sendInputEvent({ type: 'keyDown', keyCode });
     if (keyCode === 'Return' || keyCode === 'Space') window.webContents.sendInputEvent({ type: 'char', keyCode: keyCode === 'Return' ? '\r' : ' ' });
@@ -223,6 +231,8 @@ app.whenReady().then(async () => {
   }
   await publish({ session: { kind: 'listening' }, audioLevel: 0.5, audioWaveform: Array(11).fill(0.1) });
   await settle();
+  assert.equal(await evaluate("document.querySelector('.live-shortcut').textContent"), 'Press Esc to cancel');
+  assert.equal(await evaluate("document.querySelector('.output-availability').textContent"), 'Finish or dismiss this dictation to change output settings.');
   await evaluate("window.__statusNode = document.querySelector('.workspace-status')");
   await publish({ audioLevel: 0.7, audioWaveform: Array(11).fill(0.2) });
   assert.equal(await evaluate("window.__statusNode === document.querySelector('.workspace-status')"), true, 'Audio frames remounted persistent status');
@@ -251,6 +261,16 @@ app.whenReady().then(async () => {
   await settle();
   assert.equal(await evaluate("document.querySelectorAll('.recent-transcript-row').length"), 0);
   assert.ok(await evaluate("!document.body.innerText.includes('Words retained only for this session.')"), 'Turning off retention left transcript text visible');
+  await evaluate("[...document.querySelectorAll('button')].find(button => button.textContent.trim() === 'Open Dictation settings').click()");
+  await settle();
+  assert.equal(await evaluate("document.querySelector('[role=tab][aria-selected=true]').textContent.trim()"), 'Dictation');
+  assert.equal(await evaluate("document.querySelector('button[role=switch]').getAttribute('aria-checked')"), 'false');
+  assert.equal(commands.length, 2, 'Opening preferences changed transcript retention');
+  await navigate('Home');
+  await settle();
+  await evaluate("[...document.querySelectorAll('button')].find(button => button.textContent.trim() === 'Open Dictation settings').click()");
+  await settle();
+  assert.equal(await evaluate("document.querySelector('[role=tab][aria-selected=true]').textContent.trim()"), 'Dictation');
   await publish({ session: { kind: 'recovery', message: 'The destination changed.', text: 'Recover all of these words.' } });
   await settle();
   for (const label of ['Settings', 'Transcripts']) {
@@ -258,7 +278,12 @@ app.whenReady().then(async () => {
     await settle();
     assert.ok(await evaluate("document.querySelector('.recovery-content').innerText.includes('Recover all of these words.')"), `${label}: recovery is inaccessible`);
   }
+  assert.equal(await evaluate("document.querySelector('.live-shortcut').textContent"), 'Your transcript is ready to copy');
   await capture('native-recovery');
+  await publish({ session: { kind: 'recovery', message: 'The helper stopped before transcription.', text: '' } });
+  await settle();
+  assert.equal(await evaluate("document.querySelector('.live-shortcut').textContent"), 'Review the error above to continue');
+  assert.equal(await evaluate("document.querySelector('.recovery-actions button').disabled"), true);
   await publish({ session: { kind: 'idle' } });
   await navigate('Settings');
   await settle();

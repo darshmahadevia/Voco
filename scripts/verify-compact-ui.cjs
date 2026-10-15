@@ -118,9 +118,20 @@ app.whenReady().then(async () => {
   await evaluate(`(() => { const input = document.querySelector('input[type=search]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'meeting'); input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
   await settle();
   assert.equal(await evaluate("document.querySelectorAll('.recent-transcript-row').length"), 1);
+  assert.equal(await evaluate("document.querySelector('.search-results-count').textContent"), '1 of 4 transcripts');
+  assert.equal(await evaluate("(() => { const button = document.querySelector('.copy-transcript-button'); return document.getElementById(button.getAttribute('aria-describedby')).textContent; })()"), 'Could you send me the notes from our meeting? I would like to review them before tomorrow.');
+  await click('Clear transcript search');
+  assert.equal(await evaluate("document.querySelectorAll('.recent-transcript-row').length"), 4);
+  assert.equal(await evaluate("document.activeElement.id"), 'transcript-search');
   await evaluate(`(() => { const input = document.querySelector('input[type=search]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'no matching words'); input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
   await settle();
   assert.match(await evaluate("document.querySelector('.transcript-search-empty').textContent"), /No transcripts match/);
+  await evaluate("document.querySelector('#transcript-search').focus()");
+  window.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+  window.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+  await settle();
+  assert.equal(await evaluate("document.querySelector('#transcript-search').value"), '');
+  assert.equal(await evaluate("document.querySelectorAll('.recent-transcript-row').length"), 4);
   await load({ preview: 'ready', page: 'home' });
   await click('All stats');
   assert.ok(await evaluate("Boolean(document.querySelector('.stats-page .activity-calendar'))"));
@@ -157,7 +168,10 @@ app.whenReady().then(async () => {
     const bounds = await evaluate("(() => { const r = document.querySelector('.pill-card').getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: innerWidth, height: innerHeight }; })()");
     assert.ok(bounds.left >= 0 && bounds.right <= bounds.width && bounds.top >= 0 && bounds.bottom <= bounds.height, `${scenario}: capsule is clipped`);
     if (scenario === 'finishing' || scenario === 'polishing') assert.ok(await evaluate("Boolean(document.querySelector('.pill-loader'))"));
-    if (scenario === 'recovery') assert.ok(await evaluate("(() => { const r = document.querySelector('.recovery-actions').getBoundingClientRect(); return r.bottom <= innerHeight; })()"));
+    if (scenario === 'recovery') {
+      assert.ok(await evaluate("(() => { const r = document.querySelector('.recovery-actions').getBoundingClientRect(); return r.bottom <= innerHeight; })()"));
+      assert.ok(await evaluate("(() => { const text = document.querySelector('.recovery-transcript p'); const r = text.getBoundingClientRect(); const body = document.querySelector('.recovery-body').getBoundingClientRect(); return r.top >= body.top && r.top + parseFloat(getComputedStyle(text).lineHeight) <= body.bottom; })()"), 'Recovery transcript starts below the visible area');
+    }
     await writeFile(join(output, `pill-${scenario}.png`), (await window.webContents.capturePage()).toPNG());
   }
   window.setContentSize(390, 844);
