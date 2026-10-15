@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
@@ -113,6 +114,8 @@ struct TranscriptPolisher: Sendable {
         ).map(\.range)
     }
 
+    private static let quantityPattern = #"(?:[+\-−][ \t]*)?(?:\p{N}+(?:[.,:/\-]\p{N}+)*|[.,]\p{N}+)(?:[ \t]*%)?"#
+
     // These ranges belong to the source, before any edits. Never normalize their contents.
     private static func protectedRanges(_ text: String) -> [NSRange] {
         let patterns = [
@@ -121,7 +124,9 @@ struct TranscriptPolisher: Sendable {
             #"(?:https?://|www\.)[^\s<>"`]+|[\p{L}\p{N}._%+\-]+@[\p{L}\p{N}.\-]+\.[\p{L}]{2,}"#,
             #"(?<![\p{L}\p{N}])(?:[~/]|[A-Za-z]:\\)[^\s,;!?"`]+|(?<!\w)--?[\p{L}][\w=\-]*"#,
             #"\b[\p{L}\p{N}]+(?:[_./:\\-][\p{L}\p{N}]+)+\b|\b(?:[A-Z]\.){2,}|[$@#][\p{L}_][\p{L}\p{N}_]*|\b[\p{L}_][\p{L}\p{N}_]*(?=\()"#,
-            #"(?:[+\-−][ \t]*)?\p{N}+(?:[.,:/\-]\p{N}+)*(?:[ \t]*%)?(?:[ \t]+(?:um|uh)\b)?|\b(?:UM|UH)\b"#,
+            // Common message options consume a value; bare switches such as --force do not.
+            #"(?<!\w)(?:-m|--message)(?:[ \t]+|=)[^\s]+"#,
+            quantityPattern + #"(?:[ \t]+(?:um|uh)\b)?|\b(?:UM|UH)\b"#,
         ]
         return patterns.flatMap { matches($0, in: text) }
     }
@@ -139,9 +144,45 @@ struct TranscriptPolisher: Sendable {
         text.contains("\r") || text.contains("\n")
     }
 
+    private static func lexicalClass(_ text: String) -> NLTag? {
+        guard !text.isEmpty else { return nil }
+        let tagger = NLTagger(tagSchemes: [.lexicalClass])
+        tagger.string = text
+        tagger.setLanguage(.english, range: text.startIndex..<text.endIndex)
+        return tagger.tag(at: text.startIndex, unit: .word, scheme: .lexicalClass).0
+    }
+
+    private static func sentenceStarts(_ text: String, parts: [Token]) -> IndexSet {
+        let tokenizer = NLTokenizer(unit: .sentence)
+        tokenizer.string = text
+        tokenizer.setLanguage(.english)
+        let protected = protectedRanges(text)
+        var starts = IndexSet()
+        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
+            let location = NSRange(range, in: text).location
+            if !protected.contains(where: { $0.location < location && location < NSMaxRange($0) }),
+               let index = parts.firstIndex(where: { $0.range.location >= location }) {
+                starts.insert(index)
+            }
+            return true
+        }
+        // Sentence tokenization treats dotted abbreviations as continuations. A new
+        // uppercase verb (or adjective-led fragment) supplies evidence for a restart.
+        let source = text as NSString
+        for range in matches(#"\b(?:[A-Z]\.){2,}[ \t]+(?=[A-Z])"#, in: text) {
+            let location = NSMaxRange(range)
+            guard let index = parts.firstIndex(where: { $0.range.location == location }),
+                  !parts[index].protected else { continue }
+            let suffix = source.substring(from: location)
+            if let tag = lexicalClass(suffix), [.verb, .adjective].contains(tag) { starts.insert(index) }
+        }
+        return starts
+    }
+
     static func clean(_ raw: String) -> String {
         let source = raw as NSString
         let parts = tokens(raw)
+        let boundaries = sentenceStarts(raw, parts: parts)
         var removed = IndexSet()
         var exposed = IndexSet()
         var sentenceStart = 0
@@ -155,15 +196,31 @@ struct TranscriptPolisher: Sendable {
         }
         while index < parts.count {
             let token = parts[index]
-            if index > 0, hasLineBreak(gap(index - 1, index)) { sentenceStart = index }
+            if boundaries.contains(index) || (index > 0 && hasLineBreak(gap(index - 1, index))) { sentenceStart = index }
             let lower = token.text.lowercased()
             if !token.protected {
                 let pair = lower == "never" && index + 1 < parts.count
                     && !parts[index + 1].protected && parts[index + 1].text.lowercased() == "mind"
                     && !hasLineBreak(gap(index, index + 1))
-                // "I never mind waiting" and "they never mind" are ordinary prose.
-                let subjectBefore = index > sentenceStart && ["i", "we", "you", "they", "he", "she", "it"].contains(parts[index - 1].text.lowercased())
-                if lower == "nevermind" || (pair && !subjectBefore) {
+                // Two-word "never mind" also occurs in ordinary prose. Delete only
+                // with a delimiter, a repeated action head, or a short replacement.
+                let restart = pair && {
+                    let prefix = (sentenceStart..<index).filter { !removed.contains($0) }
+                    let next = index + 2
+                    let delimiters = [",", ";", ":", "—"]
+                    if prefix.isEmpty || (index > 0 && delimiters.contains(parts[index - 1].text))
+                        || (next < parts.count && delimiters.contains(parts[next].text)) { return true }
+                    guard let first = prefix.first, next < parts.count,
+                          ordinaryWord(parts[first]), ordinaryWord(parts[next]) else { return false }
+                    let headClass = lexicalClass(parts[first].text.lowercased())
+                    if parts[first].text.lowercased() == parts[next].text.lowercased(),
+                       headClass != .pronoun, headClass != .determiner { return true }
+                    return prefix.count == 1
+                        && (next + 1 == parts.count || [".", "!", "?"].contains(parts[next + 1].text)
+                            || parts[next + 1].text.lowercased() == "never" || parts[next + 1].text.lowercased() == "nevermind")
+                        && headClass.map { [.adjective, .adverb].contains($0) } == true
+                }()
+                if lower == "nevermind" || restart {
                     var end = index + (pair ? 1 : 0)
                     while end + 1 < parts.count, !parts[end + 1].protected,
                           [",", ".", "!", "?", ";", ":"].contains(parts[end + 1].text) { end += 1 }
@@ -200,17 +257,6 @@ struct TranscriptPolisher: Sendable {
                     index = end
                 }
             }
-            if [".", "!", "?"].contains(token.text), !removed.contains(index) {
-                let nextHasSpace = index + 1 == parts.count || !gap(index, index + 1).isEmpty
-                let previous = index > 0 ? parts[index - 1].text.lowercased() : ""
-                let dotted = index >= 3 && previous.count == 1 && parts[index - 2].text == "." && parts[index - 3].text.count == 1
-                let nextUppercase = index + 1 < parts.count && parts[index + 1].text.first?.isUppercase == true
-                let abbreviation = token.text == "." && (["dr", "mr", "mrs", "ms", "prof", "sr", "jr"].contains(previous) || (dotted && !nextUppercase))
-                if nextHasSpace && !abbreviation && (!token.protected || dotted) { sentenceStart = index + 1 }
-            }
-            if token.protected, ["\"", "'", "”", "’"].contains(token.text), index > 0,
-               [".", "!", "?"].contains(parts[index - 1].text),
-               index + 1 == parts.count || !gap(index, index + 1).isEmpty { sentenceStart = index + 1 }
             index += 1
         }
         guard !removed.isEmpty else { return raw }
@@ -268,7 +314,7 @@ struct TranscriptPolisher: Sendable {
         }
         func quantities(_ text: String) -> [String] {
             let source = text as NSString
-            return matches(#"(?:[+\-−][ \t]*)?\p{N}+(?:[.,:/\-]\p{N}+)*(?:[ \t]*%)?"#, in: text).map {
+            return matches(quantityPattern, in: text).map {
                 source.substring(with: $0).replacingOccurrences(of: #"[ \t]"#, with: "", options: .regularExpression)
             }
         }
@@ -277,11 +323,11 @@ struct TranscriptPolisher: Sendable {
         func literals(_ text: String) -> [String] {
             let source = text as NSString
             let wordRanges = matches(wordPattern, in: text)
-            let quantityPattern = #"^(?:[+\-−][ \t]*)?\p{N}+(?:[.,:/\-]\p{N}+)*(?:[ \t]*%)?$"#
+            let wholeQuantity = "^(?:" + quantityPattern + ")$"
             return protectedRanges(text).compactMap { range in
                 let literal = source.substring(with: range)
                 // Quantities have a separate sign/punctuation check; spacing outside literals may change.
-                if literal.range(of: quantityPattern, options: .regularExpression) != nil { return nil }
+                if literal.range(of: wholeQuantity, options: .regularExpression) != nil { return nil }
                 let position = wordRanges.filter { $0.location < range.location }.count
                 return "\(position):\(Data(literal.utf8).base64EncodedString())"
             }.sorted()
@@ -296,7 +342,20 @@ struct TranscriptPolisher: Sendable {
         }
         guard lineBoundaries(baseline) == lineBoundaries(candidate) else { return false }
         func symbols(_ text: String) -> [String] {
-            text.unicodeScalars.filter { CharacterSet.symbols.contains($0) }.map(String.init)
+            let source = text as NSString
+            let wordRanges = matches(wordPattern, in: text)
+            return matches(#"[\p{S}*/%]"#, in: text).map { range in
+                let position = wordRanges.filter { $0.location < range.location }.count
+                // Operator spacing can carry meaning. Literal contents are already exact;
+                // punctuation added beside a closing code delimiter remains permissible.
+                let isOperator = source.substring(with: range).range(of: #"[\p{Sm}*/]"#, options: .regularExpression) != nil
+                func neighbor(_ location: Int) -> String {
+                    guard isOperator, location >= 0, location < source.length else { return "" }
+                    let character = source.substring(with: source.rangeOfComposedCharacterSequence(at: location))
+                    return character.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                }
+                return "\(position):\(source.substring(with: range)):\(neighbor(range.location - 1)):\(neighbor(NSMaxRange(range)))"
+            }
         }
         return symbols(baseline) == symbols(candidate)
     }

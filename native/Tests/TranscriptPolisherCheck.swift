@@ -3,6 +3,21 @@ import Foundation
 @main enum TranscriptPolisherCheck {
     static func main() async throws {
         let cases = [
+            ("Visit https://example.com. Send red never mind send blue.", "Visit https://example.com. Send blue."),
+            ("Use /tmp/config.json. Send red never mind send blue.", "Use /tmp/config.json. Send blue."),
+            ("Call U.S. Steel never mind call Acme.", "Call Acme."),
+            ("My colleagues never mind waiting.", "My colleagues never mind waiting."),
+            ("We really never mind waiting.", "We really never mind waiting."),
+            ("Colleagues never mind waiting.", "Colleagues never mind waiting."),
+            ("My colleagues never mind.", "My colleagues never mind."),
+            ("We never mind we can wait.", "We never mind we can wait."),
+            ("Book red never mind book blue.", "Book blue."),
+            ("Send red never mind send blue.", "Send blue."),
+            ("Ask Alice never mind ask Bob.", "Ask Bob."),
+            ("Red never mind blue never mind green.", "Green."),
+            ("Run git commit -m um today.", "Run git commit -m um today."),
+            ("Use .5 um and -.5 um and ,5 um filters.", "Use .5 um and -.5 um and ,5 um filters."),
+            ("Run git commit --message uh today.", "Run git commit --message uh today."),
             ("Um, Alice has 12 tickets, uh, not 13.", "Alice has 12 tickets, not 13."),
             ("Keep this sentence. Book red never mind, book blue.", "Keep this sentence. Book blue."),
             ("Keep this. Wrong sentence. Nevermind. Next sentence.", "Keep this. Wrong sentence. Next sentence."),
@@ -53,6 +68,17 @@ import Foundation
             precondition(TranscriptPolisher.clean(result) == result, "Cleanup must be idempotent")
         }
         let attacks = [
+            ("Pay .5 dollars", "Pay 5 dollars"),
+            ("Pay -.5 dollars", "Pay -5 dollars"),
+            ("Pay ,5 dollars", "Pay 5 dollars"),
+            ("Pay -,5 dollars", "Pay -5 dollars"),
+            ("Pay $12 to Alice and 20 to Bob", "Pay 12 to Alice and $20 to Bob"),
+            ("Use x < y and z", "Use x y and < z"),
+            ("Use x<y", "Use x <y"),
+            ("Use x<y", "Use x,<y"),
+            ("Use x * y and z", "Use x y and * z"),
+            ("Use x < y", "Use x <y"),
+            ("Run git commit -m um today.", "Run git commit -m Um today."),
             ("Run --force now.", "Run force now."),
             ("Run --force now.", "Run -force now."),
             ("Email um@example.com today.", "Email um example com today."),
@@ -74,6 +100,11 @@ import Foundation
         for (baseline, candidate) in attacks {
             precondition(!TranscriptPolisher.accepts(candidate, original: baseline), "Accepted unsafe edit: \(candidate.debugDescription)")
         }
+        precondition(TranscriptPolisher.accepts("Pay .5 dollars.", original: "Pay .5 dollars"))
+        precondition(TranscriptPolisher.accepts("Pay -.5 dollars.", original: "Pay -.5 dollars"))
+        precondition(TranscriptPolisher.accepts("Pay ,5 dollars.", original: "Pay ,5 dollars"))
+        precondition(TranscriptPolisher.accepts("Pay -,5 dollars.", original: "Pay -,5 dollars"))
+        precondition(TranscriptPolisher.accepts("Pay $12 to Alice.", original: "Pay $12 to Alice"))
         precondition(TranscriptPolisher.accepts("Hello Alice, can you send it today?", original: "hello Alice can you send it today"))
         precondition(TranscriptPolisher.accepts("Run `echo um`, then wait.", original: "Run `echo um` then wait"))
         precondition(!TranscriptPolisher.accepts("Pay 12 dollars", original: "Pay -12 dollars"))
