@@ -22,6 +22,7 @@
     "verify:compact-ui": "env -u ELECTRON_RUN_AS_NODE electron scripts/verify-compact-ui.cjs",
     "verify:menu-bar": "node scripts/verify-menu-bar.mjs",
     "verify:insertion": "bash scripts/verify-buffered-insertion.sh",
+    "verify:dictation": "bash scripts/verify-dictation.sh",
     "verify:motion": "env -u ELECTRON_RUN_AS_NODE electron scripts/verify-motion.cjs"
   },
   "dependencies": {

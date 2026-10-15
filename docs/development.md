@@ -80,9 +80,12 @@ After installing, verify the current bundle and physical microphone:
 node scripts/verify-installed-version.cjs
 ./scripts/verify-microphone.sh
 npm run verify:insertion
+npm run verify:dictation
 ```
 
 `verify:insertion` drives disposable AppKit and Electron editors through the installed desktop and its bundled helper. It checks complete insertion, selection replacement, Unicode, rich-text placeholders, application input events, clipboard restoration, and refusal to report a truncated paste as successful.
+
+`verify:dictation` checks the normal installed app with posted Fn hold/release and Fn + Space events. It plays a generated speech fixture through your speakers into the selected microphone and checks the complete inserted words in a disposable native editor. Open Voco with a ready model first. Keep speaker output audible and the disposable editor focused. The launching terminal needs Accessibility access to post events. Run this check alone because other UI automation can change focus. This verifies posted shortcut events, not physical Fn or Globe hardware delivery.
 
 To include local recognition in those editor checks:
 
