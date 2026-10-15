@@ -26,6 +26,7 @@ import {
   type AppState,
   type Command,
   type Preferences,
+  type OutputMode,
   navigationPageSchema,
   type NavigationPage,
 } from '../../shared/protocol';
@@ -36,7 +37,7 @@ import { sampleUsage } from '../../shared/usage';
 import { retainTranscripts, type RecentTranscript } from './recent-transcripts';
 import './styles.css';
 
-type PreviewScenario = 'setup' | 'ready' | 'downloading' | 'recovery' | 'listening' | 'finishing' | 'silent';
+type PreviewScenario = 'setup' | 'ready' | 'downloading' | 'recovery' | 'listening' | 'finishing' | 'polishing' | 'silent';
 type AppPage = 'auto' | NavigationPage;
 
 const query = new URLSearchParams(window.location.search);
@@ -60,6 +61,7 @@ function parsePreviewScenario(value: string | null): PreviewScenario {
     case 'recovery':
     case 'listening':
     case 'finishing':
+    case 'polishing':
     case 'silent':
       return value;
     default:
@@ -102,6 +104,8 @@ function createPreviewState(scenario: PreviewScenario): AppState {
       };
     case 'finishing':
       return { ...ready, session: { kind: 'finishing' } };
+    case 'polishing':
+      return { ...ready, session: { kind: 'polishing' } };
     case 'silent':
       return { ...ready, session: { kind: 'listening' } };
     case 'listening':
@@ -256,6 +260,12 @@ function ActionError({ message }: { message: string }): React.JSX.Element | null
   return <p className="action-error" role="alert">{message}</p>;
 }
 
+const OUTPUT_MODES = [
+  { id: 'fast', name: 'Fast', description: 'Paste the speech model’s words without a cleanup pass.' },
+  { id: 'balanced', name: 'Balanced', description: 'Fast + clean. Remove fillers and spoken restarts with local rules.' },
+  { id: 'accurate', name: 'Accurate', description: 'Add an on-device AI pass for punctuation and conservative cleanup. Takes longer.' },
+] satisfies { id: OutputMode; name: string; description: string }[];
+
 function SettingsView({ state, loadError }: { state: AppState; loadError: string }): React.JSX.Element {
   const { run, pending, error } = useCommands();
   const ready = isReady(state);
@@ -266,6 +276,22 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
       <header className="settings-header">
         <div><h1>Settings</h1><p className="intro-copy">Make Voco work for you. Changes apply immediately.</p></div>
       </header>
+
+      <section className="settings-section output-section" aria-labelledby="output-heading">
+        <h2 className="section-heading" id="output-heading">Output quality</h2>
+        <p className="row-description model-section-note">Speech recognition and cleanup run on your Mac. Choose how much Voco edits before pasting.</p>
+        <div className="output-options" role="radiogroup" aria-labelledby="output-heading">
+          {OUTPUT_MODES.map(mode => <label className="output-option" key={mode.id} data-selected={state.preferences.outputMode === mode.id}>
+            <input type="radio" name="output-mode" value={mode.id} checked={state.preferences.outputMode === mode.id}
+              disabled={preview || pending !== null || state.session.kind !== 'idle'}
+              onChange={() => void updatePreferences(run, state.preferences, { outputMode: mode.id })} />
+            <span><strong>{mode.name}</strong><span>{mode.description}</span></span>
+          </label>)}
+        </div>
+        <p className="output-help">Balanced and Accurate remove “um” and “uh”. Say “never mind” to discard the current sentence and start again. Earlier completed sentences stay. Use Fast to dictate these words literally.</p>
+        <p className="output-availability" role="status">{state.polishing.message} {state.polishing.kind === 'unavailable' && 'Accurate keeps the original transcript when AI cleanup is unavailable.'}</p>
+        <p className="output-help">Cleanup can make mistakes. Review important text. Your selected speech model is used in every mode.</p>
+      </section>
 
       <section className="settings-section" aria-labelledby="model-heading">
         <h2 className="section-heading" id="model-heading">Speech model</h2>
@@ -418,7 +444,7 @@ function ModelChoices({
 }): React.JSX.Element {
   const downloading = state.model.kind === 'downloading' || state.models.some((entry) => entry.state.kind === 'downloading');
   const loading = state.model.kind === 'loading' || state.models.some((entry) => entry.state.kind === 'loading');
-  const captureActive = state.session.kind === 'starting' || state.session.kind === 'listening' || state.session.kind === 'finishing';
+  const captureActive = state.session.kind === 'starting' || state.session.kind === 'listening' || state.session.kind === 'finishing' || state.session.kind === 'polishing';
   const canSelect = !preview && pending === null && !loading && !captureActive;
   const canDownload = !preview && pending === null && !downloading && !loading;
 
@@ -639,9 +665,10 @@ function PillStatus({ state }: { state: AppState }): React.JSX.Element {
     case 'starting': title = 'Starting…'; break;
     case 'listening': title = 'Listening…'; break;
     case 'finishing': title = 'Transcribing…'; break;
+    case 'polishing': title = 'Polishing…'; break;
     case 'recovery': title = 'Words saved'; break;
   }
-  const processing = session.kind === 'starting' || session.kind === 'finishing';
+  const processing = session.kind === 'starting' || session.kind === 'finishing' || session.kind === 'polishing';
   return <div className="pill-status" role="status" aria-live="polite">
     {processing ? <LoaderCircle className="spin pill-loader" size={18} aria-hidden="true" /> : <Waveform size="pill" state={state} level={session.kind === 'listening' ? state.audioLevel : 0} active={session.kind === 'listening'} />}
     <p className="pill-title">{title}</p>
@@ -657,6 +684,7 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
     case 'listening': status = 'Listening'; break;
     case 'starting': status = 'Starting'; break;
     case 'finishing': status = 'Transcribing'; break;
+    case 'polishing': status = 'Polishing locally'; break;
     case 'recovery': status = 'Transcript needs attention'; break;
     case 'idle': status = ready ? 'Ready to dictate' : setupComplete ? 'Loading speech model' : 'Setup needed'; break;
   }
@@ -665,7 +693,7 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
     <section className="home-hero" aria-labelledby="home-heading">
       <h1 id="home-heading">{state.userName ? <>Hello, <span className="user-name">{state.userName}</span></> : 'Welcome to Voco'}</h1>
       <span className="dashboard-ready dictation-status" data-ready={ready && state.session.kind === 'idle'} role="status" aria-live="polite">
-        {state.session.kind === 'starting' || state.session.kind === 'finishing' || (setupComplete && !ready)
+        {state.session.kind === 'starting' || state.session.kind === 'finishing' || state.session.kind === 'polishing' || (setupComplete && !ready)
           ? <LoaderCircle className="spin" size={14} aria-hidden="true" />
           : state.session.kind === 'recovery' || !ready ? <Info size={14} aria-hidden="true" /> : <Mic size={14} aria-hidden="true" />}
         {status}
@@ -679,7 +707,13 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
       <button type="button" className="text-link activity-link" onClick={onStats}>All stats <ArrowRight size={14} aria-hidden="true" /></button>
     </div>
     </div>
+    {state.polishNotice && <p className="output-notice" role="status">{state.polishNotice}</p>}
     <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} onShowMore={onTranscripts} />
+    {state.preferences.keepLastTranscript && state.lastRawTranscript && state.lastRawTranscript !== state.lastTranscript && <details className="original-transcript">
+      <summary>Original speech transcript</summary>
+      <p>{state.lastRawTranscript}</p>
+      <CopyTranscriptButton text={state.lastRawTranscript} disabled={preview} latest={false} />
+    </details>}
     {state.session.kind !== 'recovery' && <ActionError message={error || loadError} />}
   </main>;
 }

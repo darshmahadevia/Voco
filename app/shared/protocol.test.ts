@@ -14,8 +14,16 @@ describe('desktop protocol boundary', () => {
   it('rejects malformed download progress and unsafe preference inputs', () => {
     expect(nativeMessageSchema.safeParse({ type: 'state', state: { ...initialState, model: { kind: 'downloading', progress: 2, file: 'encoder' } } }).success).toBe(false);
     expect(commandSchema.safeParse({ kind: 'setPreferences', preferences: { keepLastTranscript: 'yes' } }).success).toBe(false);
-    expect(commandSchema.parse({ kind: 'setPreferences', preferences: { keepLastTranscript: false } })).toEqual({ kind: 'setPreferences', preferences: { keepLastTranscript: false } });
+    expect(commandSchema.parse({ kind: 'setPreferences', preferences: { keepLastTranscript: false } })).toEqual({ kind: 'setPreferences', preferences: { keepLastTranscript: false, outputMode: 'fast' } });
     expect(appStateSchema.safeParse({ ...initialState, session: { kind: 'listening', mode: 'continuous', buffered: false, text: '' } }).success).toBe(false);
+  });
+
+  it('validates output choices and the separate polishing phase', () => {
+    for (const outputMode of ['fast', 'balanced', 'accurate']) {
+      expect(commandSchema.parse({ kind: 'setPreferences', preferences: { keepLastTranscript: true, outputMode } })).toEqual({ kind: 'setPreferences', preferences: { keepLastTranscript: true, outputMode } });
+    }
+    expect(commandSchema.safeParse({ kind: 'setPreferences', preferences: { keepLastTranscript: true, outputMode: 'cloud' } }).success).toBe(false);
+    expect(appStateSchema.parse({ ...initialState, session: { kind: 'polishing' } }).session).toEqual({ kind: 'polishing' });
   });
 
   it('validates microphone levels before they reach the waveform', () => {

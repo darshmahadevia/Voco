@@ -26,7 +26,7 @@ describe('session transcript retention', () => {
   });
 
   it('clears all words when retention is turned off', () => {
-    expect(retainTranscripts({ entries, previous: first, next: { ...first, preferences: { keepLastTranscript: false } }, now: 200 })).toEqual([]);
+    expect(retainTranscripts({ entries, previous: first, next: { ...first, preferences: { ...first.preferences, keepLastTranscript: false } }, now: 200 })).toEqual([]);
   });
 
   it('captures the initial transcript without saving an empty entry', () => {

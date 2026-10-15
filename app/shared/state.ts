@@ -15,8 +15,11 @@ export const initialState: AppState = {
   ],
   permissions: { microphone: 'required', accessibility: false, shortcut: false },
   session: { kind: 'idle' },
-  preferences: { keepLastTranscript: true },
+  preferences: { keepLastTranscript: true, outputMode: 'fast' },
   lastTranscript: '',
+  lastRawTranscript: '',
+  polishNotice: '',
+  polishing: { kind: 'unavailable', message: 'Local AI cleanup availability is not known yet.' },
   usage: emptyUsage,
 };
 

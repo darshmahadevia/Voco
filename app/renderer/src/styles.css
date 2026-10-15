@@ -2473,3 +2473,19 @@ html:not([data-view="pill"]) #root { height: 100%; overflow: hidden; }
   .progress-expanded .progress-totals > div { border-left: 0; padding: 0; }
   .stats-page .progress-dashboard { padding: 0; border-radius: 0; }
 }
+
+.output-options { display: grid; gap: 0; margin-top: 14px; }
+.output-option { display: flex; align-items: flex-start; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line, #292929); cursor: pointer; }
+.output-option:last-child { border-bottom: 0; }
+.output-option input { margin: 3px 0 0; width: 16px; height: 16px; accent-color: var(--accent, #ff742f); flex-shrink: 0; }
+.output-option > span { display: grid; gap: 5px; }
+.output-option strong { font-size: 13px; font-weight: 600; }
+.output-option > span > span, .output-help, .output-availability { font-size: 12px; line-height: 1.6; color: var(--text-secondary, #a5a5a5); }
+.output-option:has(input:disabled) { cursor: default; }
+.output-option input:focus-visible { outline: 2px solid var(--accent, #ff742f); outline-offset: 4px; }
+.output-help, .output-availability { margin-top: 12px; }
+.output-availability { color: var(--text-primary, #f1f1ef); }
+.output-notice { font-size: 12px; line-height: 1.6; color: var(--text-secondary, #a5a5a5); margin: 12px 0; }
+.original-transcript { margin: 18px 0; font-size: 12px; color: var(--text-secondary, #a5a5a5); }
+.original-transcript summary { cursor: pointer; }
+.original-transcript p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; max-height: 180px; overflow-y: auto; margin: 12px 0; user-select: text; }

@@ -69,6 +69,9 @@ app.whenReady().then(async () => {
       }
       if (page === 'stats') assert.ok(await evaluate("Boolean(document.querySelector('.activity-calendar'))"));
       if (page === 'settings') {
+        assert.deepEqual(await evaluate("[...document.querySelectorAll('input[name=output-mode]')].map(input => input.value)"), ['fast', 'balanced', 'accurate']);
+        assert.equal(await evaluate("document.querySelector('input[name=output-mode]:checked').value"), 'fast');
+        assert.ok(await evaluate("[...document.querySelectorAll('input[name=output-mode]')].every(input => input.disabled)"));
         assert.ok(await evaluate("![...document.querySelectorAll('button')].some(button => button.textContent.trim() === 'Done')"));
         await evaluate("document.querySelector('.workspace-main').scrollTo({ top: 10000 })");
         await capture(`${prefix}-settings-footer`);
@@ -140,6 +143,10 @@ app.whenReady().then(async () => {
   await evaluate("(() => { const select = document.querySelector('.progress-preferences select'); select.value = '1000'; select.dispatchEvent(new Event('change', { bubbles: true })); })()");
   await settle();
   assert.match(await evaluate("document.querySelector('.goal-count').textContent"), /1,000/);
+  await window.loadFile(renderer, { query: { preview: 'polishing', view: 'pill' } });
+  await settle();
+  assert.equal(await evaluate("document.querySelector('.pill-title').textContent"), 'Polishing…');
+  assert.ok(await evaluate("Boolean(document.querySelector('.pill-loader'))"));
   assert.deepEqual(errors, [], 'Renderer console errors');
   await writeFile(join(output, 'report.json'), JSON.stringify({ screenshots: report, errors, interactions: 'Onboarding, blocked continuation, transcript search, empty results, copy feedback, calendar keyboard navigation, and goal adjustment passed.' }, null, 2));
   process.stdout.write(`Verified ${report.length} layouts and onboarding/search interactions. Screenshots: ${output}\n`);

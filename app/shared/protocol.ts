@@ -1,8 +1,12 @@
 import { z } from 'zod';
 import { emptyUsage, usageSchema } from './usage';
 
+export const outputModeSchema = z.enum(['fast', 'balanced', 'accurate']);
+export type OutputMode = z.infer<typeof outputModeSchema>;
+
 export const preferencesSchema = z.object({
   keepLastTranscript: z.boolean(),
+  outputMode: outputModeSchema.default('fast'),
 });
 export type Preferences = z.infer<typeof preferencesSchema>;
 
@@ -22,6 +26,7 @@ export const sessionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('starting') }),
   z.object({ kind: z.literal('listening') }).strict(),
   z.object({ kind: z.literal('finishing') }),
+  z.object({ kind: z.literal('polishing') }),
   z.object({ kind: z.literal('recovery'), message: z.string(), text: z.string() }),
 ]);
 export const appStateSchema = z.object({
@@ -41,6 +46,12 @@ export const appStateSchema = z.object({
   session: sessionSchema,
   preferences: preferencesSchema,
   lastTranscript: z.string(),
+  lastRawTranscript: z.string().default(''),
+  polishNotice: z.string().default(''),
+  polishing: z.object({
+    kind: z.enum(['available', 'unavailable']),
+    message: z.string(),
+  }).default({ kind: 'unavailable', message: 'Local AI cleanup availability is not known yet.' }),
   usage: usageSchema.default(() => ({ ...emptyUsage, days: {} })),
 }).refine(state => state.model.kind !== 'ready'
   || state.models.find(entry => entry.id === state.selectedModel)?.state.kind === 'ready',
