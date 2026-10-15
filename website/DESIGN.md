@@ -1,15 +1,16 @@
 ---
 name: Voco marketing website
-description: A warm, tactile introduction to local voice dictation for Mac.
+description: A dark, tactile introduction to local voice dictation for Mac.
 colors:
-  ivory: "#f6f4ee"
-  ink: "#262720"
-  sage: "#777e63"
-  graphite: "#20231e"
-  muted: "#65665d"
-  orange: "#c74c16"
-  line: "#dbdad1"
-  demo-surface: "#2c3028"
+  surface: "#171819"
+  ivory: "#f2f0ec"
+  ink: "#f2f0ec"
+  accent: "#ff742f"
+  graphite: "#111213"
+  muted: "#b9b8b5"
+  orange: "#ff742f"
+  line: "#303234"
+  demo-surface: "#202123"
 typography:
   display:
     fontFamily: "Manrope, -apple-system, sans-serif"
@@ -43,7 +44,7 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.ink}"
-    textColor: "{colors.ivory}"
+    textColor: "{colors.surface}"
     rounded: "{rounded.pill}"
     padding: "0 25px"
     height: "54px"
@@ -58,13 +59,13 @@ components:
 
 ## Overview
 
-The direction is a little breathing room. A spacious, persuasive landing page makes dictation feel approachable through a tactile Fn key, plain language, and inspectable product evidence. Warm ivory and sage open the story; a graphite demonstration chapter gives the interaction its own stage.
+The direction is a little breathing room. A spacious, persuasive landing page makes dictation feel approachable through a tactile Fn key, plain language, and inspectable product evidence. Graphite surfaces, soft-white text and controls, and restrained orange accents match the desktop app. A deeper graphite demonstration chapter gives the interaction its own stage.
 
 This system applies only to `website/`. The root design documents describe the desktop app. Inspiration: [Beside’s hero](https://vibrant.design/website/pcyiyzl-beside-s-hero-section) for spaciousness and a tactile instrument; [Griffin](https://vibrant.design/website/yovgmpb-griffin-the-bank-you-can-build-on) for dark editorial sections and exploration. Preserve Voco’s own mark, Manrope, product behavior, and real captures.
 
 ## Colors
 
-Ivory is the page canvas; ink carries reading and primary actions. Sage softens the hero’s second line. Graphite defines the demo chapter, where muted text, borders, and orange adapt for contrast. Orange marks small voice details and focus rather than filling large surfaces. CSS is the implementation source of truth.
+The page canvas is #171819. Soft white carries reading and primary actions. Orange emphasizes the hero’s second line. Graphite defines the demo chapter, where muted text, borders, and orange adapt for contrast. Orange marks small voice details and focus rather than filling large surfaces. CSS is the implementation source of truth.
 
 ## Typography
 

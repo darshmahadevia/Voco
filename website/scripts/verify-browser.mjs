@@ -30,6 +30,16 @@ try {
       () => document.querySelector("#release-version").textContent === "v0.2.1",
     );
     assert.equal(await page.locator("h1").count(), 1);
+    const theme = await page.evaluate(() => ({
+      scheme: getComputedStyle(document.documentElement).colorScheme,
+      canvas: getComputedStyle(document.documentElement).backgroundColor,
+      action: getComputedStyle(document.querySelector(".hero .button")).color,
+    }));
+    assert.deepEqual(
+      theme,
+      { scheme: "dark", canvas: "rgb(23, 24, 25)", action: "rgb(23, 24, 25)" },
+      "Voco must retain its dark canvas and readable soft-white actions",
+    );
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

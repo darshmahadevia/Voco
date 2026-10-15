@@ -28,7 +28,7 @@ This writes optimized WebP screenshots to `public/images/` and requires `cwebp`.
 
 Run `env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron website/scripts/capture-social.cjs` from the repository root to regenerate the social preview image.
 
-The marketing page uses ivory and sage around a dark demonstration section. Its tactile Fn key draws on [Beside's spacious hero](https://vibrant.design/website/pcyiyzl-beside-s-hero-section). The dark editorial pacing draws on [Griffin](https://vibrant.design/website/yovgmpb-griffin-the-bank-you-can-build-on). Reference artwork is not redistributed. Site-specific tokens and behavior are documented in [DESIGN.md](DESIGN.md), independently of the desktop app's design system.
+The marketing page matches Voco’s dark graphite, soft-white, and orange theme, with a deeper graphite demonstration section. Its tactile Fn key draws on [Beside's spacious hero](https://vibrant.design/website/pcyiyzl-beside-s-hero-section). The dark editorial pacing draws on [Griffin](https://vibrant.design/website/yovgmpb-griffin-the-bank-you-can-build-on). Reference artwork is not redistributed. Site-specific tokens and behavior are documented in [DESIGN.md](DESIGN.md), independently of the desktop app's design system.
 
 The simulated demo has three sample records and one explicit phase: idle, listening, transcribing, or complete. The hero key and play control use the same state machine. Switching examples, pressing Cancel or Escape, or hiding the page cancels outstanding timers. Full text appears only when transcription completes. No audio plays and no browser microphone permission is requested. Reduced motion completes the demonstration immediately.
 

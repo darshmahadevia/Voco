@@ -6,7 +6,7 @@
     "colorMeta": {
       "ivory": {
         "role": "neutral",
-        "displayName": "Warm ivory"
+        "displayName": "Soft white"
       },
       "ink": {
         "role": "neutral",
@@ -14,22 +14,22 @@
       },
       "sage": {
         "role": "primary",
-        "displayName": "Muted sage"
+        "displayName": "Voice orange"
       },
       "graphite": {
         "role": "neutral",
-        "displayName": "Demo graphite"
+        "displayName": "Deep graphite"
       }
     },
     "shadows": [
       {
         "name": "key-stack",
-        "value": "4px 12px 0 #c8c9ba, 6px 15px 0 #b8baab, 13px 30px 30px #454b3426, inset 0 2px 2px #fff",
+        "value": "4px 12px 0 #1c1d1f, 6px 15px 0 #111213, 13px 30px 30px #00000066, inset 0 2px 2px #fff",
         "purpose": "Physical depth on the Fn instrument."
       },
       {
         "name": "screenshot",
-        "value": "0 24px 40px #323c3026",
+        "value": "0 24px 40px #00000066",
         "purpose": "Lift real app captures from their stage."
       },
       {
@@ -79,30 +79,30 @@
       "name": "Primary action",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Download action on the ivory canvas.",
+      "description": "Download action on the graphite canvas.",
       "html": "<button class=\"ds-primary\">Download for Mac \u2192</button>",
-      "css": ".ds-primary{font-family:Manrope,-apple-system,sans-serif;border:0;border-radius:100px;min-height:54px;padding:0 25px;background:var(--ink,#262720);color:var(--paper,#f6f4ee);font-size:12px;font-weight:600;cursor:pointer;transition:transform 180ms,background-color 180ms}.ds-primary:hover{background:#44473b;transform:translateY(-2px)}.ds-primary:active{transform:scale(.97)}.ds-primary:focus-visible{outline:2px solid var(--orange,#c74c16);outline-offset:5px}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}.ds-primary:hover,.ds-primary:active{transform:none}}"
+      "css": ".ds-primary{font-family:Manrope,-apple-system,sans-serif;border:0;border-radius:100px;min-height:54px;padding:0 25px;background:var(--ink,#f2f0ec);color:var(--canvas,#171819);font-size:12px;font-weight:600;cursor:pointer;transition:transform 180ms,background-color 180ms}.ds-primary:hover{background:#ffffff;transform:translateY(-2px)}.ds-primary:active{transform:scale(.97)}.ds-primary:focus-visible{outline:2px solid var(--orange,#ff742f);outline-offset:5px}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}.ds-primary:hover,.ds-primary:active{transform:none}}"
     },
     {
       "name": "Text action",
       "kind": "button",
       "description": "Quiet secondary action beside a primary button.",
       "html": "<a class=\"ds-text\" href=\"#demo\">See it in action \u2192</a>",
-      "css": ".ds-text{font-family:Manrope,-apple-system,sans-serif;display:inline-flex;align-items:center;min-height:40px;color:var(--ink,#262720);font-size:12px;font-weight:550;text-decoration:none}.ds-text:hover{color:var(--orange,#c74c16)}.ds-text:focus-visible{outline:2px solid var(--orange,#c74c16);outline-offset:5px}"
+      "css": ".ds-text{font-family:Manrope,-apple-system,sans-serif;display:inline-flex;align-items:center;min-height:40px;color:var(--ink,#f2f0ec);font-size:12px;font-weight:550;text-decoration:none}.ds-text:hover{color:var(--orange,#ff742f)}.ds-text:focus-visible{outline:2px solid var(--orange,#ff742f);outline-offset:5px}"
     },
     {
       "name": "Section navigation",
       "kind": "nav",
       "description": "Quiet anchors for exploring the page.",
       "html": "<nav class=\"ds-nav\" aria-label=\"Sections\"><a href=\"#how-it-works\">How it works</a><a href=\"#the-app\">The app</a><a href=\"#privacy\">Privacy</a></nav>",
-      "css": ".ds-nav{font-family:Manrope,-apple-system,sans-serif;display:flex;flex-wrap:wrap;gap:34px;font-size:12px;color:#5a5c51}.ds-nav a{color:inherit;text-decoration:none}.ds-nav a:hover{color:var(--orange,#c74c16)}.ds-nav a:focus-visible{outline:2px solid var(--orange,#c74c16);outline-offset:5px}"
+      "css": ".ds-nav{font-family:Manrope,-apple-system,sans-serif;display:flex;flex-wrap:wrap;gap:34px;font-size:12px;color:#b9b8b5}.ds-nav a{color:inherit;text-decoration:none}.ds-nav a:hover{color:var(--orange,#ff742f)}.ds-nav a:focus-visible{outline:2px solid var(--orange,#ff742f);outline-offset:5px}"
     },
     {
       "name": "Demo sample choice",
       "kind": "chip",
       "description": "Selected and unselected sample states inside the dark demonstration.",
       "html": "<div class=\"ds-samples\"><button aria-pressed=\"true\">Email</button><button aria-pressed=\"false\">Note</button><button aria-pressed=\"false\">Message</button></div>",
-      "css": ".ds-samples{display:flex;gap:6px;background:#2c3028;padding:16px}.ds-samples button{font-family:Manrope,-apple-system,sans-serif;border:0;border-radius:24px;padding:10px 14px;min-height:40px;background:transparent;color:#c5cbbd;font-size:11px;cursor:pointer}.ds-samples button:hover{background:#3a4231;color:#fff}.ds-samples button[aria-pressed=true]{background:#dce2d0;color:#303b27}.ds-samples button:focus-visible{outline:2px solid #ff9c64;outline-offset:3px}"
+      "css": ".ds-samples{display:flex;gap:6px;background:#202123;padding:16px}.ds-samples button{font-family:Manrope,-apple-system,sans-serif;border:0;border-radius:24px;padding:10px 14px;min-height:40px;background:transparent;color:#b9b8b5;font-size:11px;cursor:pointer}.ds-samples button:hover{background:#303234;color:#fff}.ds-samples button[aria-pressed=true]{background:#f2f0ec;color:#171819}.ds-samples button:focus-visible{outline:2px solid #ffb58f;outline-offset:3px}"
     },
     {
       "name": "Demonstration surface",
@@ -110,21 +110,21 @@
       "refersTo": "demo",
       "description": "Tonal workspace for a clearly labeled simulation.",
       "html": "<section class=\"ds-demo\"><span>ILLUSTRATIVE DEMO</span><h3>Ready when you are</h3><p>A simulated example. Your microphone stays off.</p></section>",
-      "css": ".ds-demo{font-family:Manrope,-apple-system,sans-serif;border-radius:16px;padding:27px;background:#2c3028;color:#f6f4ee}.ds-demo span{font-size:10px;color:#bcc1b1}.ds-demo h3{font-size:25px;font-weight:500;letter-spacing:-.02em}.ds-demo p{font-size:11px;line-height:1.75;color:#b3b7aa}"
+      "css": ".ds-demo{font-family:Manrope,-apple-system,sans-serif;border-radius:16px;padding:27px;background:#202123;color:#f2f0ec}.ds-demo span{font-size:10px;color:#b9b8b5}.ds-demo h3{font-size:25px;font-weight:500;letter-spacing:-.02em}.ds-demo p{font-size:11px;line-height:1.75;color:#b9b8b5}"
     },
     {
       "name": "Tactile Fn key",
       "kind": "custom",
       "description": "The hero instrument; activation starts the illustrative demo.",
       "html": "<button class=\"ds-key\" aria-label=\"Play the dictation demo\">fn</button>",
-      "css": ".ds-key{font-family:Manrope,-apple-system,sans-serif;position:relative;width:216px;height:218px;border:0;border-radius:39px;background:linear-gradient(145deg,#fcfbf5,#e1e1d6);color:#4c5142;font-size:48px;cursor:pointer;transform:rotate(-13deg) rotateX(20deg) rotateY(-14deg);box-shadow:4px 12px 0 #c8c9ba,6px 15px 0 #b8baab,13px 30px 30px #454b3426,inset 0 2px 2px #fff;transition:transform 500ms cubic-bezier(.16,1,.3,1)}.ds-key:before{content:\"\";position:absolute;inset:12px;border:1px solid #d4d6c8;border-radius:29px}.ds-key:hover,.ds-key:focus-visible{transform:translateY(5px) rotate(-9deg) rotateX(12deg) rotateY(-9deg)}.ds-key:focus-visible{outline:2px solid #c74c16;outline-offset:5px}@media(prefers-reduced-motion:reduce){.ds-key{transition:none;transform:none}.ds-key:hover,.ds-key:focus-visible{transform:none}}"
+      "css": ".ds-key{font-family:Manrope,-apple-system,sans-serif;position:relative;width:216px;height:218px;border:0;border-radius:39px;background:linear-gradient(145deg,#353739,#242628);color:#f2f0ec;font-size:48px;cursor:pointer;transform:rotate(-13deg) rotateX(20deg) rotateY(-14deg);box-shadow:4px 12px 0 #1c1d1f,6px 15px 0 #111213,13px 30px 30px #00000066,inset 0 2px 2px #ffffff14;transition:transform 500ms cubic-bezier(.16,1,.3,1)}.ds-key:before{content:\"\";position:absolute;inset:12px;border:1px solid #484b4d;border-radius:29px}.ds-key:hover,.ds-key:focus-visible{transform:translateY(5px) rotate(-9deg) rotateX(12deg) rotateY(-9deg)}.ds-key:focus-visible{outline:2px solid #ff742f;outline-offset:5px}@media(prefers-reduced-motion:reduce){.ds-key{transition:none;transform:none}.ds-key:hover,.ds-key:focus-visible{transform:none}}"
     }
   ],
   "narrative": {
     "northStar": "A little breathing room.",
-    "overview": "A spacious, persuasive landing page introduces local dictation with a tactile Fn instrument, a graphite demonstration chapter, and real app captures. Scoped to website/; desktop design documents remain separate.",
+    "overview": "A spacious, persuasive landing page introduces local dictation with a tactile Fn instrument, a deeper graphite demonstration chapter, and real app captures. Scoped to website/; desktop design documents remain separate.",
     "keyCharacteristics": [
-      "Warm ivory and muted sage",
+      "Graphite surfaces, soft-white controls, and orange voice accents",
       "Tactile instrument, flat supporting surfaces",
       "Authentic screenshots and truthful early access requirements",
       "Keyboard access and reduced motion"
