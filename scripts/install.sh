@@ -24,6 +24,14 @@ if test -e "$app_dir"; then
         running_binary="$(ps -p "$voco_pid" -o comm= || true)"
         if test "$running_binary" = "$app_dir/Contents/MacOS/Voco"; then
             kill -TERM "$voco_pid"
+            for ((attempt = 0; attempt < 100; attempt++)); do
+                if ! kill -0 "$voco_pid" 2>/dev/null; then break; fi
+                sleep 0.1
+            done
+            if kill -0 "$voco_pid" 2>/dev/null; then
+                printf 'Voco did not quit. Quit the app and retry installation.\n' >&2
+                exit 1
+            fi
         fi
     done < <(pgrep -x Voco || true)
     "$launch_services" -u "$app_dir" || true
