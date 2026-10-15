@@ -34,7 +34,17 @@ GPT-6-Astra inspected the source and local browser captures. It found no blockin
 
 The reviewer accepted the EARLY ACCESS badge and the concise brand copy. The original ribbon, responsive typography, demo labeling, download fallback, keyboard behavior, reduced-motion behavior, and verbatim upstream transition snippets and comments were preserved.
 
-The review did not cover live production or independently execute the installer. There was no approved comp or QUALITY BAR card for this code-led build. The user explicitly delegated direction selection; no concept seed was used. Production verification is recorded separately below after deployment.
+The review did not cover live production or independently execute the installer. There was no approved comp or QUALITY BAR card for this code-led build. The user explicitly delegated direction selection; no concept seed was used.
+
+## Production verification
+
+Commit `5fd2764` was pushed to `main` without force. The connected GitHub integration automatically deployed it as `dpl_DV8stN6fSv7ddJph7ivZoSSDKhpc`, with Vercel reporting Ready and GitHub reporting a successful deployment. No duplicate CLI deployment was needed.
+
+Before and after deployment, the CLI identified user `mahadeviadarsh-9908` and project `prj_hBlibLftP2NlCHgNJhPaLP1T4tIL` in `mahadeviadarsh-gmailcoms-projects`, with root directory `website`. The production alias is https://voco-mac.vercel.app.
+
+The same Chrome verification script passed against that public production alias at 1440, 390, and 320px. All interaction, reduced-motion, offscreen-pause, JavaScript-disabled, and manifest-failure checks passed, with no JavaScript errors, horizontal overflow, or automated WCAG violations. Anonymous HTTP requests returned 200 for all 14 deployment files, with each response matching the local production build byte for byte. The public installer link followed redirects to HTTP 200 and reported the expected 147,079,383-byte size. Its full anonymous-download checksum was verified earlier in this task.
+
+GitHub reports `darshmahadevia/Voco` as private and `darshmahadevia/voco-releases` as public. The early-access signing and clean-second-Mac limitations above still apply.
 
 ## Mechanical detector
 

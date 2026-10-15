@@ -40,6 +40,6 @@ Public binaries and release notes live in [voco-releases](https://github.com/dar
 
 The Vercel project is `voco`. Its root directory is `website`, framework is Vite, and production URL is https://voco-mac.vercel.app. The shorter `voco.vercel.app` was already assigned to another project.
 
-Run `vercel --prod` from the repository root after linking it to the `voco` project. The root `.vercelignore` uploads only the website and excludes local credentials and build artifacts. Keep `.vercel/` and `.env*` out of Git.
+Run `vercel --prod --scope mahadeviadarsh-gmailcoms-projects` from the repository root after linking it to the `voco` project. Confirm the current CLI user is `mahadeviadarsh-9908` and project ID is `prj_hBlibLftP2NlCHgNJhPaLP1T4tIL` before deploying. The root `.vercelignore` uploads only the website and excludes local credentials and build artifacts. Keep `.vercel/` and `.env*` out of Git.
 
 The project is linked to the private GitHub repository in the personal workspace `mahadeviadarsh-gmailcoms-projects`. Pushes to `main` trigger production deployment from `website/`. Standard Vercel protection keeps preview and unique deployment URLs protected while the production alias is public.
