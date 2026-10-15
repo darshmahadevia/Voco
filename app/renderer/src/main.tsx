@@ -37,6 +37,7 @@ import { ProgressDashboard, UsageTotals } from './ProgressDashboard';
 import { sampleUsage } from '../../shared/usage';
 import { retainTranscripts, type RecentTranscript } from './recent-transcripts';
 import { VoiceRibbon } from './VoiceRibbon';
+import { Disclosure } from './Disclosure';
 import './styles.css';
 
 type PreviewScenario = 'setup' | 'ready' | 'downloading' | 'recovery' | 'listening' | 'finishing' | 'polishing' | 'silent';
@@ -334,12 +335,12 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
               <span className="output-label"><strong>{mode.name}</strong></span>
             </label>)}
         </div>
-        <p className="output-mode-description">{OUTPUT_MODES.find(mode => mode.id === state.preferences.outputMode)?.description}</p>
-        <details className="output-details"><summary>About cleanup &amp; AI formatting</summary>
+        <motion.p key={state.preferences.outputMode} className="output-mode-description" initial={reducedMotion ? false : { opacity: 0.5, y: 3 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.16 }}>{OUTPUT_MODES.find(mode => mode.id === state.preferences.outputMode)?.description}</motion.p>
+        <Disclosure className="output-details" title={<>About cleanup &amp; AI formatting</>}>
           {OUTPUT_MODES.map(mode => <p className="output-help" key={mode.id}><strong>{mode.name}.</strong> {mode.description}</p>)}
         <p className="output-help">Balanced and Accurate remove spoken “um” and “uh” while preserving quotes, code, links, and units. Say “never mind” to restart the current sentence. Earlier completed sentences stay. Use Fast for literal dictation.</p>
         <p className="output-help">{state.polishing.message}</p>
-        <p className="output-help">Cleanup can make mistakes. Review important text. Your selected speech model is used in every mode.</p></details>
+        <p className="output-help">Cleanup can make mistakes. Review important text. Your selected speech model is used in every mode.</p></Disclosure>
         {state.preferences.outputMode === 'accurate' && state.polishing.kind === 'unavailable' && <p className="output-availability" role="status">{state.polishing.message} Accurate still applies Balanced cleanup.</p>}
         </div>
       </section>
@@ -395,8 +396,7 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
           </PermissionRow>
 
           {!state.permissions.accessibility && (
-            <details className="manual-access-help">
-              <summary>Keyboard access still says off?</summary>
+            <Disclosure className="manual-access-help" title={<>Keyboard access still says off?</>}>
               <p>macOS may keep approval for an earlier Voco build. Remove the old Voco entry in Privacy &amp; Security, then add this copy from Finder and enable it.</p>
               <div className="manual-access-actions">
                 <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'openPrivacy', pane: 'accessibility' })}>
@@ -406,7 +406,7 @@ function SettingsView({ state, loadError }: { state: AppState; loadError: string
                   <FolderOpen size={14} aria-hidden="true" /> Show app in Finder
                 </Button>
               </div>
-            </details>
+            </Disclosure>
           )}
         </div>
       </section>
@@ -772,11 +772,10 @@ function HomeView({ state, transcripts, loadError, onSetup, onTranscripts, onSta
     </div>
     {state.polishNotice && <p className="output-notice" role="status">{state.polishNotice}</p>}
     <TranscriptPanel entries={state.preferences.keepLastTranscript ? transcripts : []} latestText={state.lastTranscript} enabled={state.preferences.keepLastTranscript} onShowMore={onTranscripts} />
-    {state.preferences.keepLastTranscript && state.lastRawTranscript && state.lastRawTranscript !== state.lastTranscript && <details className="original-transcript">
-      <summary>Original speech transcript</summary>
+    {state.preferences.keepLastTranscript && state.lastRawTranscript && state.lastRawTranscript !== state.lastTranscript && <Disclosure className="original-transcript" title={<>Original speech transcript</>}>
       <p>{state.lastRawTranscript}</p>
       <CopyTranscriptButton text={state.lastRawTranscript} disabled={preview} latest={false} />
-    </details>}
+    </Disclosure>}
     <ActionError message={loadError} />
   </main>;
 }
@@ -1048,12 +1047,11 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
               {!state.permissions.accessibility ? <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'requestAccessibility' })}>Allow</Button> : !state.permissions.shortcut ? <Button disabled={preview || pending !== null} onClick={() => void run({ kind: 'restart' })}>Restart Voco</Button> : null}
             </PermissionRow>
             {!state.permissions.accessibility && <p className="setup-note">Turn on Voco in macOS Accessibility settings, then return here.</p>}
-            {!state.permissions.accessibility && <details className="access-help">
-              <summary>Can’t find Voco in System Settings?</summary>
+            {!state.permissions.accessibility && <Disclosure className="access-help" title={<>Can’t find Voco in System Settings?</>}>
               <p>Enable Voco in System Settings → Privacy &amp; Security → Accessibility. If it is missing, add the app shown in Finder.</p>
               <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'showApp' })}><FolderOpen size={14} /> Show app in Finder</Button>
               <Button kind="quiet" disabled={preview || pending !== null} onClick={() => void run({ kind: 'refresh' })}><RotateCw size={14} /> Check again</Button>
-            </details>}
+            </Disclosure>}
           </>}
           {step === 'practice' && <>
             {practiceBlocker && <div className="practice-blocker" role="status">
@@ -1064,10 +1062,9 @@ function OnboardingView({ state, loadError, onDone }: { state: AppState; loadErr
             <label className="visually-hidden" htmlFor="practice-text">Try your first dictation</label>
             <textarea ref={practiceFieldRef} id="practice-text" defaultValue={practiceText.current} placeholder="Click here and say something…" disabled={!ready} />
             {preview && <p className="setup-note">Dictation is available in the desktop app.</p>}
-            <details className="practice-help">
-              <summary>Set up your Fn / Globe key</summary>
+            <Disclosure className="practice-help" title={<>Set up your Fn / Globe key</>}>
               <p>In macOS System Settings → Keyboard, set “Press Globe key to” to “Do Nothing”. Turn off any Apple Dictation shortcut that uses the same key.</p>
-            </details>
+            </Disclosure>
           </>}
           <ActionError message={error || loadError} />
         </section>

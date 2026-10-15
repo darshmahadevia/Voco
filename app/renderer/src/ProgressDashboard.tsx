@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Award, Check, ChevronLeft, ChevronRight, Flame, Settings2, Target, Trophy } from 'lucide-react';
 import { dateKey, emptyUsage, savedTimeLabel, shiftDay, usageSummary, type Usage } from '../../shared/usage';
 import type { Command } from '../../shared/protocol';
+import { Disclosure } from './Disclosure';
 
 const number = new Intl.NumberFormat();
 
@@ -119,17 +120,17 @@ export function ProgressDashboard({ usage: providedUsage, preview, run, pending 
         <div className="goal-count"><strong>{number.format(todayWords)}</strong><span>/ {number.format(usage.dailyGoal)} words</span></div>
         <progress aria-label="Today's word goal" max={usage.dailyGoal} value={Math.min(todayWords, usage.dailyGoal)} />
         <p className="goal-message" role="status">{goalComplete ? <><Check size={16} aria-hidden="true" /> Daily goal reached.</> : todayWords > 0 ? `${number.format(usage.dailyGoal - todayWords)} more words to your daily goal.` : 'Your first dictation starts today\'s streak.'}</p>
-        <details className="progress-preferences"><summary><Settings2 size={14} aria-hidden="true" /> Adjust your goal</summary>
+        <Disclosure className="progress-preferences" title={<><Settings2 size={14} aria-hidden="true" /> Adjust your goal</>}>
           <p className="streak-note">Any completed dictation counts toward your streak.</p>
-          <label>Daily word goal<select value={usage.dailyGoal} disabled={pending} onChange={event => setPreferences(Number(event.target.value), usage.typingWpm)}>
+          <label>Daily word goal<select className="preference-select" value={usage.dailyGoal} disabled={pending} onChange={event => setPreferences(Number(event.target.value), usage.typingWpm)}>
             {[100, 250, 500, 1000, 2000, 5000, 10000].map(goal => <option key={goal} value={goal}>{number.format(goal)} words</option>)}
           </select></label>
-          <label>Estimated typing speed<select value={usage.typingWpm} disabled={pending} onChange={event => setPreferences(usage.dailyGoal, Number(event.target.value))}>
+          <label>Estimated typing speed<select className="preference-select" value={usage.typingWpm} disabled={pending} onChange={event => setPreferences(usage.dailyGoal, Number(event.target.value))}>
             {[10, 20, 30, 40, 50, 60, 80, 100, 150, 200].map(wpm => <option key={wpm} value={wpm}>{wpm} words / min</option>)}
           </select></label>
           <p>Time saved compares typing at this speed with your dictation and processing time. It is an estimate.</p>
           {preview && <p>Changes here affect this preview only.</p>}
-        </details>
+        </Disclosure>
       </section>
     <section className="milestones" aria-labelledby="milestones-heading">
       <div className="milestones-heading"><h3 id="milestones-heading">Milestones</h3><span>{badges.filter(badge => badge.unlocked).length} / {badges.length} earned</span></div>
