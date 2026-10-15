@@ -1,11 +1,29 @@
 import Foundation
 import Whisper
 
+private final class WhisperCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+
+    var isCancelled: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return cancelled
+    }
+
+    func cancel() {
+        lock.lock()
+        cancelled = true
+        lock.unlock()
+    }
+}
+
 private struct WhisperStream {
     var samples: [Float] = []
     var latestText = ""
     var lastDecodedSampleCount = 0
-    var generation = UUID()
+    let cancellation = WhisperCancellation()
+    var isFinishing = false
 
     func lines(complete: Bool = false) -> [SpeechLine] {
         guard !latestText.isEmpty else { return [] }
@@ -43,6 +61,9 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
     }
 
     func unload() {
+        audioLock.lock()
+        for state in streams.values { state.cancellation.cancel() }
+        audioLock.unlock()
         queue.sync {
             audioLock.lock()
             streams.removeAll()
@@ -84,7 +105,7 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
         guard !samples.isEmpty else { return }
         audioLock.lock()
         defer { audioLock.unlock() }
-        guard var state = streams[stream] else { throw NativeError.unavailable("The Whisper session has already ended.") }
+        guard var state = streams[stream], !state.isFinishing else { throw NativeError.unavailable("The Whisper session has already ended.") }
         state.samples.append(contentsOf: samples)
         streams[stream] = state
     }
@@ -97,7 +118,7 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
         guard !samples.isEmpty else { return }
         let copy = Array(samples)
         audioLock.lock()
-        guard var state = streams[stream] else {
+        guard var state = streams[stream], !state.isFinishing else {
             audioLock.unlock()
             onFailure("The Whisper session has already ended.")
             return
@@ -117,7 +138,7 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
                 return
             }
             self.audioLock.lock()
-            guard var state = self.streams[stream] else {
+            guard var state = self.streams[stream], !state.isFinishing else {
                 self.audioLock.unlock()
                 DispatchQueue.main.async { completion(.failure(NativeError.unavailable("The Whisper session has already ended."))) }
                 return
@@ -125,28 +146,29 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
             let changedEnough = state.samples.count - state.lastDecodedSampleCount >= self.updateStrideSamples
             guard changedEnough else {
                 let lines = state.lines()
+                let cancellation = state.cancellation
                 self.audioLock.unlock()
-                DispatchQueue.main.async { completion(.success(lines)) }
+                DispatchQueue.main.async { completion(.success(cancellation.isCancelled ? [] : lines)) }
                 return
             }
             state.lastDecodedSampleCount = state.samples.count
             let samples = state.samples
-            let generation = state.generation
+            let cancellation = state.cancellation
             self.streams[stream] = state
             self.audioLock.unlock()
 
-            let result = Result { try self.transcribeLocked(context: context, samples: samples) }
+            let result = Result { try self.transcribeLocked(context: context, samples: samples, cancellation: cancellation) }
             self.audioLock.lock()
-            guard var current = self.streams[stream], current.generation == generation else {
+            guard var current = self.streams[stream], current.cancellation === cancellation else {
                 self.audioLock.unlock()
-                DispatchQueue.main.async { completion(result.map { _ in [] }) }
+                DispatchQueue.main.async { completion(.success([])) }
                 return
             }
             if case let .success(text) = result { current.latestText = text }
             let lines = current.lines()
             self.streams[stream] = current
             self.audioLock.unlock()
-            DispatchQueue.main.async { completion(result.map { _ in lines }) }
+            DispatchQueue.main.async { completion(cancellation.isCancelled ? .success([]) : result.map { _ in lines }) }
         }
     }
 
@@ -160,18 +182,27 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
                 return
             }
             self.audioLock.lock()
-            guard let state = self.streams.removeValue(forKey: stream) else {
+            guard var state = self.streams[stream], !state.isFinishing else {
                 self.audioLock.unlock()
                 DispatchQueue.main.async { completion(.failure(NativeError.unavailable("The Whisper session has already ended."))) }
                 return
             }
+            // Keep cancellation reachable until the main queue delivers the final result.
+            state.isFinishing = true
+            self.streams[stream] = state
             self.audioLock.unlock()
-            let result = Result { try self.transcribeLocked(context: context, samples: state.samples) }
-            DispatchQueue.main.async { completion(result.map { text in
-                text.isEmpty ? [] : [SpeechLine(
-                    text: text, complete: true
-                )]
-            }) }
+            let cancellation = state.cancellation
+            let result = Result {
+                try self.transcribeLocked(context: context, samples: state.samples, cancellation: cancellation)
+            }
+            DispatchQueue.main.async {
+                self.audioLock.lock()
+                self.streams.removeValue(forKey: stream)
+                self.audioLock.unlock()
+                completion(cancellation.isCancelled ? .success([]) : result.map { text in
+                    text.isEmpty ? [] : [SpeechLine(text: text, complete: true)]
+                })
+            }
         }
     }
 
@@ -179,13 +210,20 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
         try queue.sync {
             guard let context else { throw NativeError.unavailable("The Whisper model is not ready.") }
             audioLock.lock()
-            guard let state = streams.removeValue(forKey: stream) else {
+            guard var state = streams[stream], !state.isFinishing else {
                 audioLock.unlock()
                 throw NativeError.unavailable("The Whisper session has already ended.")
             }
+            state.isFinishing = true
+            streams[stream] = state
             audioLock.unlock()
-            let text = try transcribeLocked(context: context, samples: state.samples)
-            guard !text.isEmpty else { return [] }
+            defer {
+                audioLock.lock()
+                streams.removeValue(forKey: stream)
+                audioLock.unlock()
+            }
+            let text = try transcribeLocked(context: context, samples: state.samples, cancellation: state.cancellation)
+            guard !state.cancellation.isCancelled, !text.isEmpty else { return [] }
             return [SpeechLine(
                 text: text, complete: true
             )]
@@ -194,11 +232,16 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
 
     func cancel(stream: SpeechStreamID) {
         audioLock.lock()
-        streams.removeValue(forKey: stream)
+        streams.removeValue(forKey: stream)?.cancellation.cancel()
         audioLock.unlock()
     }
 
-    private func transcribeLocked(context: OpaquePointer, samples: [Float]) throws -> String {
+    private func transcribeLocked(
+        context: OpaquePointer,
+        samples: [Float],
+        cancellation: WhisperCancellation
+    ) throws -> String {
+        guard !cancellation.isCancelled else { return "" }
         guard samples.contains(where: { $0 != 0 }) else { return "" }
         var parameters = whisper_full_default_params(WHISPER_SAMPLING_GREEDY)
         parameters.n_threads = Int32(max(1, min(8, ProcessInfo.processInfo.activeProcessorCount)))
@@ -209,6 +252,14 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
         parameters.suppress_nst = true
         parameters.no_speech_thold = 0.6
         parameters.temperature = 0
+        // whisper_full borrows this pointer until it returns, including backend worker callbacks.
+        let retainedCancellation = Unmanaged.passRetained(cancellation)
+        defer { retainedCancellation.release() }
+        parameters.abort_callback_user_data = retainedCancellation.toOpaque()
+        parameters.abort_callback = { userData in
+            guard let userData else { return false }
+            return Unmanaged<WhisperCancellation>.fromOpaque(userData).takeUnretainedValue().isCancelled
+        }
         let status = "en".withCString { language in
             parameters.language = language
             return samples.withUnsafeBufferPointer { audio in
@@ -216,6 +267,7 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
                 return whisper_full(context, parameters, baseAddress, Int32(audio.count))
             }
         }
+        guard !cancellation.isCancelled else { return "" }
         guard status == 0 else { throw NativeError.unavailable("Whisper could not transcribe the current phrase.") }
         let count = Int(whisper_full_n_segments(context))
         let segments = (0..<count).compactMap { index -> String? in
