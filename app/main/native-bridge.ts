@@ -16,6 +16,7 @@ export class NativeBridge {
     onState: (state: AppState) => void;
     onShowSettings: () => void;
     onFailure: (message: string) => void;
+    commandTimeoutMs?: number;
   }) {}
 
   start(): void {
@@ -65,9 +66,8 @@ export class NativeBridge {
     const id = randomUUID();
     return new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error('The native service did not respond. Restart Voco.'));
-      }, 15_000);
+        this.fail('The native service did not respond. Restart Voco.');
+      }, this.options.commandTimeoutMs ?? 15_000);
       this.pending.set(id, { resolve, reject, timer });
       child.stdin.write(`${JSON.stringify({ id, command })}\n`, (error) => {
         if (!error) return;

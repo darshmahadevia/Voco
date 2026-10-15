@@ -70,3 +70,18 @@ require('node:readline').createInterface({input:process.stdin}).on('line', () =>
   expect(states).toEqual([]);
   expect(failures).toEqual(['The native service sent an invalid response. Restart Voco.']);
 });
+
+
+it('fails an unresponsive helper once and rejects every pending command', async () => {
+  const executable = await fixture("process.stdin.resume();");
+  const failures: string[] = [];
+  const bridge = new NativeBridge({ executable, modelDirectory: '/tmp/models', commandTimeoutMs: 100,
+    onState: () => {}, onShowSettings: () => {}, onFailure: message => failures.push(message) });
+  cleanups.push(async () => bridge.stop());
+  bridge.start();
+  const replies = await Promise.allSettled([bridge.command({ kind: 'refresh' }), bridge.command({ kind: 'copyLast' })]);
+  expect(replies.map(reply => reply.status)).toEqual(['rejected', 'rejected']);
+  expect(failures).toEqual(['The native service did not respond. Restart Voco.']);
+  expect(bridge.isRunning).toBe(false);
+  await expect(bridge.command({ kind: 'refresh' })).rejects.toThrow('unavailable');
+});
