@@ -28,11 +28,13 @@ This writes optimized WebP screenshots to `public/images/` and requires `cwebp`.
 
 Run `env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron website/scripts/capture-social.cjs` from the repository root to regenerate the social preview image.
 
-The marketing page matches Voco’s dark graphite, soft-white, and orange theme, with a deeper graphite demonstration section. Its tactile Fn key draws on [Beside's spacious hero](https://vibrant.design/website/pcyiyzl-beside-s-hero-section). The dark editorial pacing draws on [Griffin](https://vibrant.design/website/yovgmpb-griffin-the-bank-you-can-build-on). Reference artwork is not redistributed. Site-specific tokens and behavior are documented in [DESIGN.md](DESIGN.md), independently of the desktop app's design system.
+The rebuilt page uses a near-black canvas, soft-white text, orange voice traces, and an editorial opening. [REBUILD.md](REBUILD.md) records the reference observations and section sequence. [DESIGN.md](DESIGN.md) records the website system independently of the desktop app.
 
-The simulated demo has three sample records and one explicit phase: idle, listening, transcribing, or complete. The hero key and play control use the same state machine. Switching examples, pressing Cancel or Escape, or hiding the page cancels outstanding timers. Full text appears only when transcription completes. No audio plays and no browser microphone permission is requested. Reduced motion completes the demonstration immediately.
+The illustrative demo has three samples and one explicit phase. It moves through idle, listening, transcribing, and complete. Switching samples, Cancel, Escape, and hiding the page clear pending timers. The transcript arrives together after processing. No browser microphone is used. Reduced-motion playback resolves immediately. The canvas voice traces stop while offscreen or hidden and become static under reduced motion.
 
-The screenshot gallery supports arrow keys, Home, and End. View full size opens the selected screenshot in a native modal dialog with horizontal scrolling on small screens. Escape and Close restore focus to the opener. Keep sample-data notices in the source captures. Captures use an 1100 × 880 CSS-pixel viewport at the display's native scale. PNG metadata and WebP JSON sidecars record asset origins.
+The real interface recording shows Home, Settings, Models, Stats, and Home again. It uses the renderer's ready-state preview with sample data. Native dictation is inactive. To reproduce it, run `npm run dev:ui` from the repository root, then run `node website/scripts/capture-walkthrough.cjs`. Capture uses installed Google Chrome and requires `ffmpeg` and `ffprobe`. The script trims browser startup from the clip and verifies its dimensions and duration. Captions describe the silent interface sequence.
+
+The screenshot gallery supports arrow keys, Home, and End. View full size opens the selected screenshot in a native dialog. Escape and Close restore focus to the opener. Preserve sample-data notices in all captures.
 
 ## Downloads
 
