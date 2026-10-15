@@ -102,7 +102,9 @@ struct TranscriptPolisher: Sendable {
         return matches.map { match in
             let word = source.substring(with: match.range)
             let wasQuoted = quote != nil
-            if ["\"", "'", "“", "‘"].contains(word), quote == nil { quote = word }
+            let apostrophe = word == "'" && match.range.location > 0
+                && source.substring(with: NSRange(location: match.range.location - 1, length: 1)).unicodeScalars.contains { CharacterSet.alphanumerics.contains($0) }
+            if ["\"", "'", "“", "‘"].contains(word), quote == nil, !apostrophe { quote = word }
             else if let opening = quote,
                     word == opening || (opening == "“" && word == "”") || (opening == "‘" && word == "’") { quote = nil }
             return Token(range: match.range, text: word, quoted: wasQuoted || quote != nil)
@@ -135,7 +137,7 @@ struct TranscriptPolisher: Sendable {
                         removed.insert(index)
                     }
                     sentenceStart = index + 1
-                } else if ["um", "umm", "uh"].contains(lower) {
+                } else if lower.range(of: #"^u(?:m+|h+)$"#, options: .regularExpression) != nil {
                     removed.insert(index)
                     if index + 1 < parts.count {
                         let punctuation = parts[index + 1].text
@@ -147,7 +149,10 @@ struct TranscriptPolisher: Sendable {
                 } else if [".", "!", "?"].contains(token.text) {
                     let nextHasSpace = index + 1 == parts.count || parts[index + 1].range.location > NSMaxRange(token.range)
                     let previous = index > 0 ? parts[index - 1].text.lowercased() : ""
-                    let abbreviation = token.text == "." && (["dr", "mr", "mrs", "ms", "prof", "sr", "jr"].contains(previous))
+                    let dottedAbbreviation = index >= 3 && previous.count == 1
+                        && parts[index - 2].text == "." && parts[index - 3].text.count == 1
+                        && previous.unicodeScalars.allSatisfy { CharacterSet.letters.contains($0) }
+                    let abbreviation = token.text == "." && (dottedAbbreviation || ["dr", "mr", "mrs", "ms", "prof", "sr", "jr"].contains(previous))
                     if nextHasSpace && !abbreviation { sentenceStart = index + 1 }
                 }
             }
@@ -174,7 +179,7 @@ struct TranscriptPolisher: Sendable {
             tokens(text).map(\.text).filter { $0.unicodeScalars.contains { CharacterSet.alphanumerics.contains($0) } }.map { $0.lowercased() }
         }
         func numbers(_ text: String) -> [String] {
-            let regex = try! NSRegularExpression(pattern: #"[+\-−]?[ \t]*\p{N}+(?:[.,:/\-]\p{N}+)*%?"#)
+            let regex = try! NSRegularExpression(pattern: #"[+\-−]?[ \t]*\p{N}+(?:[.,:/\-]\p{N}+)*(?:[ \t]*%)?"#)
             let source = text as NSString
             return regex.matches(in: text, range: NSRange(location: 0, length: source.length)).map { source.substring(with: $0.range).replacingOccurrences(of: #"[ \t]"#, with: "", options: .regularExpression) }
         }

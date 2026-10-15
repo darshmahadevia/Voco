@@ -17,6 +17,9 @@ import Foundation
             ("Keep this. Ask Dr. Alice never mind ask Bob.", "Keep this. ask Bob."),
             ("I owe Alice 2. Send Tuesday never mind send Friday.", "I owe Alice 2. send Friday."),
             ("Say \"Hello.\" Send Tuesday never mind send Friday.", "Say \"Hello.\" send Friday."),
+            ("Keep this. Ask the U.S. team never mind ask Canada.", "Keep this. ask Canada."),
+            ("Keep this. Send to James' team never mind send to Alice.", "Keep this. send to Alice."),
+            ("Ummm, uhhh, send it.", "send it."),
             ("I don't owe Alice 20 dollars.", "I don't owe Alice 20 dollars."),
         ]
         for (raw, expected) in cases {
@@ -27,6 +30,8 @@ import Foundation
         precondition(!TranscriptPolisher.accepts("Pay 1,5 dollars", original: "Pay 1.5 dollars"))
         precondition(!TranscriptPolisher.accepts("Pay 12 dollars", original: "Pay - 12 dollars"))
         precondition(!TranscriptPolisher.accepts("Pay 12 dollars", original: "Pay −12 dollars"))
+        precondition(!TranscriptPolisher.accepts("Set the rate to 12", original: "Set the rate to 12 %"))
+        precondition(TranscriptPolisher.accepts("Set the rate to 12%", original: "Set the rate to 12 %"))
         let available = PolishingAvailability(available: true, message: "fixture")
         let raw = "um Alice does not owe 12 dollars"
         for unsafe in ["", "Alice does owe 12 dollars", "Bob does not owe 12 dollars", "Alice does not owe 13 dollars", "Alice owes nothing", "Alice does not owe 12 dollars. Thank you."] {
