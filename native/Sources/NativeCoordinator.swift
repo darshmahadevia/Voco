@@ -262,7 +262,7 @@ final class NativeCoordinator {
             state.usage.dailyGoal = goal
             state.usage.typingWpm = wpm
         case "cancel": cancelDictation(message: "Dictation canceled.", clearRecovery: true)
-        case "copyRecovery": copyRecovery()
+        case "copyRecovery": try copyRecovery()
         case "copyLast": copyLastTranscript()
         case "refresh": refreshPermissions(publish: false)
         default: throw NativeError.invalidCommand("Voco received an unknown command.")
@@ -704,10 +704,12 @@ final class NativeCoordinator {
         publishState()
     }
 
-    private func copyRecovery() {
+    private func copyRecovery() throws {
         guard case let .recovery(_, text) = state.session, !text.isEmpty else { return }
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        guard NSPasteboard.general.setString(text, forType: .string) else {
+            throw NativeError.unavailable("Voco could not copy the transcript. Try copying it again.")
+        }
         state.session = .idle
     }
 
