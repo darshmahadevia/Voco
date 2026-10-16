@@ -1,0 +1,15 @@
+{
+  "accessibility": true,
+  "closeHidesDashboard": true,
+  "microphone": false,
+  "pagesRendered": 4,
+  "practiceInsertion": true,
+  "runtime": "rust",
+  "screenshots": 4,
+  "secondInstanceShow": true,
+  "shortcut": true,
+  "status": "Choose a speech model to finish setup",
+  "transcriptPersistence": false,
+  "trayCreated": true,
+  "ui": "egui"
+}

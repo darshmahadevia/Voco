@@ -31,3 +31,33 @@ The Rust dashboard uses egui and the recording indicator uses an AppKit panel cr
 Accurate cleanup uses Balanced cleanup and displays a notice. The Swift-only FoundationModels formatting pass is unavailable.
 
 The Parakeet runtime uses a separately downloaded int8 ONNX export of TDT 0.6B v2. Existing Moonshine and Whisper caches are reused. The old CoreML Parakeet cache remains on disk and is not modified.
+
+## Final native and build checks
+
+The integrated verification command passed formatting, Clippy with warnings denied, 34 tests, and the executable build. The seven original Swift shortcut tests are now Rust tests.
+
+`voco --verify-insertion` passed against disposable native text fields. It inserted 2,200 UTF-16 units containing emoji, accented text, Japanese text, and line breaks. Selection replacement, changed-selection refusal, changed-field refusal, and password-field refusal all passed. Clipboard unit tests preserved every representation and preserved a new user copy made during insertion.
+
+The native adapter's isolated checks exercised synthetic Fn, Fn+Space, Escape, and event-tap retry. Physical keyboard presses across Spaces and fullscreen apps remain unverified. Browser-editor paste compatibility is implemented but has not been checked live.
+
+The optimized app bundle passed code-signature verification and a contents/dependency audit. It has one Rust executable, static inference dependencies, system dynamic dependencies, and no Electron, JavaScript, HTML, or Swift application files.
+
+The final four-page screenshot run is under `/tmp/voco-rust-packaged-ui`. The regular-weight font corrected the overly light first rendering. `docs/rust/ui.md` records the UI choices. The existing `.impeccable/design.json` sidecar predates DESIGN.md; it was not refreshed during the port.
+
+The requested Claude and Grok review providers were disabled. Independent design and code reviews used separate Codex tasks. A review from another model family was unavailable.
+
+## Durable evidence and review corrections
+
+The baseline source is available at commit `0d264a6`, including `app/shared/protocol.test.ts`. That source was removed from the current tree after the Rust replacement passed its checks.
+
+The committed result artifacts are [inference.txt](evidence/inference.txt), [insertion.json](evidence/insertion.json), and [ui.json](evidence/ui.json). The insertion report includes live assertions that the recording panel cannot become key or main, ignores mouse input, and preserves the editor's keyboard focus.
+
+The real UI check initially failed because the egui practice field's Accessibility tree was unavailable. The fix captures the field's value and Unicode character selection directly from egui, checks that both remain unchanged, and applies the replacement through egui text state. The revised four-page executable check replaced a selected emoji with `Rust` and exited successfully. This verifies the shared field helpers and actual UI state; it does not exercise microphone capture or the complete dictation controller.
+
+Practice insertion rejects pending text, key, clipboard, IME, and pointer-selection input before committing a result. Active IME composition and selection drags also block insertion. The final focused review found this additional input race, which the final guard addresses.
+
+Both debug and release Whisper native objects were checked with `otool` and target macOS 26.0. Existing cached objects had targeted the host's macOS 27 until the native build cache was rebuilt with the pinned deployment target.
+
+The final UI check also closes the dashboard through a real window-close event, verifies the native window is hidden, launches a second executable with `--show`, and verifies the native window becomes visible again. The final release app was checked separately from the debug executable.
+
+The source and bundle audits found no remaining Swift, TypeScript, JavaScript, HTML, Electron, or helper application files in the tracked application or packaged runtime. Shell scripts handle development, verification, packaging, and installation.

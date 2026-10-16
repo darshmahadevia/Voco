@@ -1,0 +1,6 @@
+PASS moonshine: The quick brown fox jumps over the lazy dog, this is a local speech recognition test.
+PASS parakeet: The quick brown fox jumps over the lazy dog. This is a local speech recognition test.
+PASS whisper: the quick brown fox jumps over the lazy dog. This is a local speech recognition test.
+moonshine: active cancellation and subsequent reuse passed.
+parakeet: active cancellation and subsequent reuse passed.
+whisper: active cancellation and subsequent reuse passed.

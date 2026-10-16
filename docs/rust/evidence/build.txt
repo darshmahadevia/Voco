@@ -1,0 +1,3 @@
+Formatting, Clippy with warnings denied, 34 Rust tests, and the executable build passed.
+Voco 0.3.0
+Verified Rust-only app bundle: /Users/darshm/Documents/Projects/Voco/release/Voco.app
