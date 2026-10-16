@@ -1,0 +1,33 @@
+[package]
+name = "voco"
+version = "0.3.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Private, local dictation for macOS"
+license = "MIT"
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1"
+eframe = { version = "0.33.3", default-features = false, features = ["default_fonts", "glow", "accesskit"] }
+tray-icon = "0.21"
+image = { version = "0.25", default-features = false, features = ["png"] }
+cpal = "0.16"
+crossbeam-channel = "0.5"
+fs2 = "0.4"
+hound = "3.5"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSString", "NSURL", "NSDictionary", "NSUserDefaults"] }
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSWorkspace", "NSPasteboard", "NSRunningApplication"] }
+block2 = "0.6"
+core-foundation = "0.10"
+core-graphics = "0.25"
+
+[profile.release]
+lto = "thin"
+strip = "debuginfo"

@@ -10,3 +10,5 @@ native/build
 native/.cache/
 .audit/
 .env*
+
+/target/

@@ -1,0 +1,4 @@
+ts	phase	decision	why	evidence	result
+2026-10-16T18:25:00Z	frame	Port the entire UI and native helper to Rust	The user explicitly requested all application code in Rust	docs/rust/migration.md	open
+2026-10-16T18:25:00Z	baseline	Capture the original test baseline	Preserve existing shortcut and dictation behavior	app/shared/protocol.test.ts	28 TypeScript tests and type checking passed
+2026-10-16T18:25:00Z	design	Use available Codex design reviewers	Claude and Grok providers rejected delegation because they are disabled	docs/rust/migration.md	cross-family review unavailable
