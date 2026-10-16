@@ -4,25 +4,31 @@ Speak into the app you're using. Voco turns your voice into text on your Mac.
 
 Hold **Fn** or **Globe**, speak, and release. Voco transcribes locally and inserts your words at the cursor. **Fn + Space** starts and stops continuous dictation. **Escape** cancels recording or pending transcription.
 
-Voco is a Rust application. GPUI renders its dashboard and floating recording pill with Metal. Rust bindings call macOS frameworks for the menu bar, permissions, shortcuts, nonactivating windows, and text insertion. The app has no Electron, browser UI, Node.js, or Swift helper.
+Voco is a Rust application. GPUI renders its dashboard and floating recording pill with Metal. Rust bindings call macOS frameworks for the menu bar, permissions, shortcuts, nonactivating windows, and text insertion. The app runs as one executable, with no browser renderer or separate helper.
+
+![Voco GPUI dashboard](docs/images/voco-dashboard.png)
 
 ## Build and run
 
 Voco requires an Apple Silicon Mac with macOS 26 or newer, Rust 1.92 or newer, Apple's Command Line Tools, and CMake. Speech inference dependencies include native C and C++ libraries compiled or fetched by Cargo. A first build needs internet access.
 
 ```sh
+git clone https://github.com/darshmahadevia/Voco.git
+cd Voco
 cargo run -- --show
 ```
 
-Build a signed local application bundle and install it.
+To install or update the macOS app from this checkout:
 
 ```sh
-./scripts/package.sh
-./scripts/install.sh --built
-open ~/Applications/Voco.app
+git pull --ff-only
+./scripts/install.sh
+open ~/Applications/Voco.app --args --show
 ```
 
-Without `--built`, the installer builds first. Local builds use your configured signing identity, or ad hoc signing. They are not notarized. See [development](docs/development.md).
+The installer builds the current source, verifies the bundle, and replaces `~/Applications/Voco.app`. It quits a running copy and preserves settings and downloaded models. Pulling source alone does not update the installed app.
+
+Local builds use your configured signing identity, or ad hoc signing. They are not notarized. See [development](docs/development.md) for packaging and signing.
 
 Normal launch starts in the menu bar with the dashboard hidden. Choose **Open Dashboard** to open it. Closing the dashboard keeps Voco running. Choose **Quit Voco** from the menu bar to exit.
 
@@ -55,7 +61,16 @@ VOCO_VERIFY_UI=1 ./scripts/verify.sh
 cargo run -- --diagnostics
 ```
 
-The [verification record](docs/rust/verification.md) distinguishes tested behavior from hardware checks. See [architecture](docs/architecture.md) for module ownership and cancellation.
+The [GPUI verification record](docs/gpui/verification.md) distinguishes tested behavior from hardware checks. See [architecture](docs/architecture.md) for module ownership and cancellation.
+
+## Documentation
+
+- [Development and installation](docs/development.md)
+- [Architecture](docs/architecture.md)
+- [Output modes](docs/local-dictation.md)
+- [Verification commands](docs/verification.md)
+
+Documents under `docs/migration`, the dated project audits, and the Rust migration records describe earlier builds. Use the guides above for the current app.
 
 ## License
 

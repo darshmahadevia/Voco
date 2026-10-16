@@ -37,6 +37,18 @@ Insertion verification creates disposable native fields and requires Accessibili
 
 Set `VOCO_VERIFY_AUDIO` to a WAV path when running `scripts/verify.sh` to transcribe through all three engines. Use `scripts/verify-inference.sh` with both `VOCO_VERIFY_AUDIO` and `VOCO_VERIFY_EXPECTED_TRANSCRIPT` to compare the recognized words against an expected sentence across all three engines. This does not test physical Fn key presses or acoustic microphone capture.
 
+## Update the installed app
+
+Pulling source does not replace the installed app. To rebuild and install the current checkout:
+
+```sh
+git pull --ff-only
+./scripts/install.sh
+open ~/Applications/Voco.app --args --show
+```
+
+The installer preserves settings and models. It replaces the application at `~/Applications/Voco.app` and moves the previous bundle to the Trash.
+
 ## Package and install
 
 ```sh

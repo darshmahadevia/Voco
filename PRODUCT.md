@@ -18,8 +18,8 @@ Dictate English directly into the text field you are using. Hold Fn or Globe to 
 
 ## Capabilities and constraints
 
-- Free to build and use, with MIT-licensed application code in a private repository. Speech models run locally. Preserve the license notices for each engine and model.
-- Install the app first, then explicitly download and load a speech model in setup. Switch models while dictation is idle.
+- Free to build and use, with MIT-licensed application code in a public repository. Speech models run locally. Preserve the license notices for each engine and model.
+- Install the app first, then download a speech model in Settings. Switch models while dictation is idle.
 - Show download progress, cancellation, retry, loading, and readiness. Keep the model outside the app bundle so updates preserve it.
 - Run speech recognition offline after setup, without an account, cloud service, API key, or subscription.
 - Keep microphone capture and safe system text insertion in Rust. Reveal the Voco app when manual keyboard permission is needed.
@@ -27,12 +27,21 @@ Dictate English directly into the text field you are using. Hold Fn or Globe to 
 - Use the current caret or selection in the original field. Refuse insertion if the app or field changes. Verify complete writes where the field exposes text and selection; retain the full transcript if insertion fails, without retrying a partial write.
 - Show the microphone waveform during capture and Transcribing while recognition finishes. Keep the pill from taking typing focus.
 - Retain recovery words for manual copying. Keep optional recent transcripts in memory until quit. Do not persist audio or transcript history.
-- Start in the menu bar with the dashboard hidden. Closing the dashboard keeps dictation running. Provide a compact dashboard with readiness, Fn / Globe guidance, and recent transcripts held in memory. Use #0A0A0A for main backgrounds, graphite only on small controls and fields, fully rounded soft-white primary controls, restrained #FF742F orange voice accents, and bundled Manrope throughout. Home pairs a personal greeting with compact shortcut guidance and decorative ASCII voice artwork, followed by flat statistics and complete transcript rows. A persistent live footer keeps status and recovery available across pages. Settings shows one of four tab panels at a time, with segmented output choices and detailed guidance behind disclosures. Provide purposeful motion and reduced-motion support. First-run onboarding guides welcome, model download, microphone and keyboard access, and practice dictation with Fn / Globe troubleshooting. Keep model, access, shortcut, and transcript controls in Settings.
+- Start in the menu bar with the dashboard hidden. Closing the dashboard keeps dictation running.
+- Provide Home, Transcripts, Statistics, and Settings pages. Home has shortcut guidance, setup actions, usage totals, a practice field, and recent transcripts. Transcripts supports search and copying.
+- Keep status and recovery visible below page scrolling. Settings has Output, Models, Access, and Dictation tabs.
+- Use a black canvas, graphite controls, soft-white primary buttons, orange voice details, and bundled Manrope. Follow [DESIGN.md](DESIGN.md) for colors, typography, spacing, and reduced-motion behavior.
 - Do not submit forms, press Return, or write to password fields.
 
 ## Output quality
 
-Settings exposes Fast for the original speech-model transcript, Balanced for local filler and restart rules with punctuation repair, and Accurate for Balanced cleanup with a notice that FoundationModels formatting is unavailable in the Rust build. Speech-model choice stays independent. Accurate currently keeps Balanced cleanup because FoundationModels is a Swift-only API. Protect quotes, code, links, quantities, and line boundaries. Retain the latest original in memory only while transcript retention is enabled. Show Polishing during cleanup. The product prioritizes local processing and recoverable text, without a guarantee of accuracy or speed.
+The speech model and output mode are separate choices.
+
+- Fast returns the speech model's original transcript.
+- Balanced removes fillers and spoken restarts with local rules and repairs punctuation. The rules protect quotes, code, links, quantities, and line boundaries.
+- Accurate currently returns Balanced output with a notice that FoundationModels formatting is unavailable in the Rust build.
+
+The app keeps the latest original transcript in memory only while transcript retention is enabled. Recognition and cleanup can make mistakes. Review the result before sending it.
 
 ## Deferred work
 

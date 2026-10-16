@@ -6,4 +6,4 @@ Use `cargo run -- --verify-insertion` for disposable native text insertion check
 
 For recognition, prepare a mono 16 kHz WAV recording and run `VOCO_VERIFY_AUDIO=/path/to/audio.wav ./scripts/verify.sh`. All three models must already be installed.
 
-The [Rust migration verification record](rust/verification.md) records completed checks and limitations. Physical Fn/Globe behavior, permission revocation, fullscreen apps, and acoustic capture require live hardware checks. A screenshot or successful compile does not prove those behaviors.
+The [GPUI verification record](gpui/verification.md) covers the current interface and installed bundle. The [Rust migration record](rust/verification.md) preserves earlier engine and insertion checks. Physical Fn/Globe behavior, permission revocation, fullscreen apps, and acoustic capture require live hardware checks. A screenshot or successful compile does not prove those behaviors.

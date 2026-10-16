@@ -32,4 +32,10 @@ The [dashboard capture](../images/voco-dashboard.png), [compact capture](evidenc
 
 Microphone permission was absent for the tested executable. Accessibility permission and the shortcut monitor were available. This redesign run did not exercise live microphone dictation, physical Fn presses across applications, or model downloads and inference. Earlier engine checks are historical evidence in the [Rust migration record](../rust/verification.md).
 
-The overlay focus check uses the dashboard as the focused editor. It does not prove behavior with every external application or fullscreen Space. The release app bundle was not rebuilt during this design task.
+The overlay focus check uses the dashboard as the focused editor. It does not prove behavior with every external application or fullscreen Space. The design task did not rebuild the release bundle. A later installed-bundle check is recorded below.
+
+## Installed release bundle, October 16, 2026
+
+`./scripts/install.sh` rebuilt the optimized executable from the GPUI source and installed it at `~/Applications/Voco.app`. Bundle checks passed the strict code-signature check, system-only dynamic dependencies, and executable UUID comparison against `target/release/voco`.
+
+The installed executable then completed `--verify-ui` with a temporary profile. The [installed UI report](evidence/installed-ui.json) identified `"ui": "gpui"` and passed the page, settings, practice input, search, overlay focus, and close/reopen checks described above. The app opened from its installed path with `--show`. This check did not exercise microphone capture or speech inference.
