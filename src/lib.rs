@@ -1,8 +1,10 @@
 pub mod audio;
 pub mod cleanup;
+pub mod controller;
 pub mod domain;
 pub mod gesture;
 pub mod models;
 pub mod platform;
 pub mod speech;
 pub mod storage;
+pub mod ui;
