@@ -17,76 +17,24 @@
         "displayName": "Deep graphite"
       }
     },
-    "shadows": [
-      {
-        "name": "floating-capsule",
-        "value": "0 8px 24px #0005, inset 0 1px 0 #ffffff12",
-        "purpose": "Give the floating status pill presence over other apps."
-      }
-    ],
+    "shadows": [],
     "motion": [
       {
-        "name": "ease-out",
-        "value": "cubic-bezier(.16, 1, .3, 1)",
-        "purpose": "Control movement and page arrival."
-      },
-      {
-        "name": "control",
-        "value": "160ms",
-        "purpose": "Control color and press feedback."
-      },
-      {
-        "name": "standard",
-        "value": "180ms",
-        "purpose": "General state changes."
-      },
-      {
         "name": "page-arrival",
-        "value": "160ms",
-        "purpose": "Resolve opacity from 0.7 to 1 and 4px vertical travel without blur; immediate under reduced motion."
+        "value": "160ms ease-out-quint",
+        "purpose": "Native GPUI page and Settings-tab arrival from 0.75 opacity and 4px top offset; immediate under macOS reduced motion."
       },
       {
-        "name": "status-swap",
-        "value": "120ms",
-        "purpose": "Resolve status text through opacity and 3px travel without blur; immediate under reduced motion."
-      },
-      {
-        "name": "navigation-selection",
-        "value": "spring(stiffness: 420, damping: 36)",
-        "purpose": "Move the shared sidebar selection; immediate under reduced motion."
-      },
-      {
-        "name": "switch",
-        "value": "180ms cubic-bezier(.16, 1, .3, 1)",
-        "purpose": "Switch thumb feedback without overshoot; immediate under reduced motion."
-      },
-      {
-        "name": "pill-recovery",
-        "value": "spring(stiffness: 380, damping: 32, mass: 0.8)",
-        "purpose": "Floating pill arrival and recovery shape changes; immediate under reduced motion."
+        "name": "processing",
+        "value": "5 radians per second",
+        "purpose": "Rotate the native pill arc during Starting and Transcribing; keep the arc still under macOS reduced motion."
       }
     ],
     "breakpoints": [
       {
-        "name": "wide",
-        "value": "1200px"
-      },
-      {
-        "name": "compact",
-        "value": "800px"
-      },
-      {
-        "name": "narrow",
-        "value": "600px"
-      },
-      {
-        "name": "short-height",
-        "value": "580px"
-      },
-      {
-        "name": "short-window",
-        "value": "max-height: 580px",
-        "purpose": "Omit decorative Home introductions, compact the guidance strip, and keep the latest transcript copy action visible."
+        "name": "artwork",
+        "value": "960px",
+        "purpose": "Hide decorative Home artwork below this window width; retain the 174px labeled sidebar and 36px page gutters."
       }
     ]
   },
