@@ -2,70 +2,61 @@
 
 Speak into the app you're using. Voco turns your voice into text on your Mac.
 
-Hold **Fn** or **Globe**, say what you want to write, and release. Voco transcribes your speech and inserts the text at your cursor. It lives in the menu bar, so you can close the dashboard and keep dictating.
+Hold **Fn** or **Globe**, speak, and release. Voco transcribes locally and inserts your words at the cursor. **Fn + Space** starts and stops continuous dictation. **Escape** cancels recording or pending transcription.
 
-Speech recognition runs locally. You don't need an account, an API key, or a subscription. After you download a speech model, you can dictate offline.
+Voco is a Rust application. Its dashboard uses egui. Rust bindings call macOS frameworks for the menu bar, permissions, shortcuts, the recording panel, and text insertion. The app has no Electron, browser UI, Node.js, or Swift helper.
 
-![Voco dashboard with shortcut guidance and recent transcripts](docs/images/voco-dashboard.png)
+## Build and run
 
-*Dashboard preview with sample transcripts and usage data.*
-
-## What you can do
-
-- Dictate into text fields in other apps.
-- Hold a key to talk, or use **Fn + Space** to start and stop a longer dictation.
-- Choose Moonshine, Parakeet, or Whisper for speech recognition.
-- Keep your words as spoken, or clean up fillers and punctuation before insertion.
-- Copy recent transcripts while Voco is open, including text it couldn't insert.
-
-Voco inserts the finished transcript after you stop speaking. Review the text before you send it.
-
-## Try Voco
-
-Voco currently supports **Apple Silicon Macs running macOS 26 or newer** and **English dictation**. It's an early project, and compatibility with text fields varies between apps.
-
-For now, build Voco from source. There is no published installer. You'll need Node.js 22 or newer, Swift 6.2 or newer, Apple's Command Line Tools, and CMake.
+Voco requires an Apple Silicon Mac with macOS 26 or newer, Rust 1.92 or newer, Apple's Command Line Tools, and CMake. Speech inference dependencies include native C and C++ libraries compiled or fetched by Cargo. A first build needs internet access.
 
 ```sh
-git clone https://github.com/darshmahadevia/Voco.git
-cd Voco
-npm ci
-./scripts/install.sh
+cargo run -- --show
+```
+
+Build a signed local application bundle and install it.
+
+```sh
+./scripts/package.sh
+./scripts/install.sh --built
 open ~/Applications/Voco.app
 ```
 
-The installer puts Voco in `~/Applications`. Local builds are not notarized by Apple. See the [development guide](docs/development.md) for build options and signing details.
+Without `--built`, the installer builds first. Local builds use your configured signing identity, or ad hoc signing. They are not notarized. See [development](docs/development.md).
 
-## First setup
+Normal launch starts in the menu bar with the dashboard hidden. Choose **Open Dashboard** to open it. Closing the dashboard keeps Voco running. Choose **Quit Voco** from the menu bar to exit.
 
-1. Open Voco from the menu bar and choose **Open Dashboard**.
-2. Follow setup to download and load a speech model. The download needs an internet connection and stays on your Mac across app updates.
-3. Allow microphone and keyboard access when prompted. Voco uses macOS Accessibility access to detect shortcuts and insert text. Follow the setup instructions to approve the helper app.
-4. In macOS Keyboard settings, set **Press Globe key to** to **Do Nothing**. Use a different shortcut for Apple Dictation.
-5. Try the practice field, then place your cursor in another app and dictate.
+## Set up dictation
 
-Hold **Fn** or **Globe** to speak and release to finish. Press **Fn + Space** to start continuous dictation, then press it again to finish. **Escape** cancels recording or pending transcription.
+1. Download a speech model in the dashboard.
+2. Allow Microphone and Accessibility access for **Voco**. There is no separate helper to approve.
+3. Set **Press Globe key to** to **Do Nothing** in macOS Keyboard settings. Use a different shortcut for Apple Dictation.
+4. Click the practice field and try holding Fn. Then dictate into a text field in another app.
 
-If you switch apps or text fields before insertion, Voco keeps the transcript available to copy. Selected text is replaced when Voco inserts a transcript. Voco doesn't press Return or send messages for you.
+Voco supports Moonshine Medium Streaming, Parakeet TDT 0.6B v2, and Whisper Large v3 Turbo in English. Model downloads use the internet. Recognition works offline after installation.
 
-## Choose how your words are cleaned up
+Existing Moonshine and Whisper downloads are reused. The Rust Parakeet runtime needs a separate ONNX download. Existing CoreML Parakeet files stay untouched.
 
-**Fast** keeps the speech model's transcript. **Balanced** removes fillers and spoken restarts and tidies punctuation. **Accurate** adds formatting with Apple's on-device model when Apple Intelligence is available. If that step is unavailable, Voco uses Balanced cleanup.
+Voco inserts the final transcript once. It refuses insertion if the destination app, text field, selection, or readable text changes. It does not write into password fields, press Return, or send messages. If insertion fails, copy the complete transcript from recovery. Review your words before sending them.
 
-You choose the speech model separately. These settings describe the cleanup Voco applies, and recognition can still make mistakes. See [output modes and examples](docs/local-dictation.md) for details.
+## Output and privacy
 
-## Your audio and text
+**Fast** keeps the speech model's transcript. **Balanced** removes fillers and spoken restarts with local rules while protecting literal text. **Accurate** currently uses Balanced cleanup and displays a notice. Apple's Swift-only FoundationModels formatting is unavailable in the Rust build.
 
-Audio is processed on your Mac. Voco doesn't save recordings or transcript history to disk. Recent transcripts stay in memory until you quit. Turning off **Keep recent transcripts** clears retained text. If insertion fails, Voco keeps the completed text available for copying.
+Audio and transcript history stay in memory. Voco never saves recordings or transcripts to disk. Turning off **Keep recent transcripts** clears retained history immediately. Failed insertion text remains available for recovery. Continuous recording stops at ten minutes and transcribes the captured audio.
 
-Preferences and usage totals are saved locally. Speech models are stored in `~/Library/Application Support/Voco/models`. Model downloads use the internet. Dictation works offline once a model is installed.
+Settings and usage totals live in `~/Library/Application Support/Voco/settings.json`. Model files live in the adjacent `models` directory. The app migrates previous local preferences and usage totals on its first run.
 
-## Report a problem
+## Verify
 
-[Open an issue](https://github.com/darshmahadevia/Voco/issues) with your macOS version, Mac chip, selected model, and steps to reproduce the problem. For insertion problems, include the destination app. Use sample text instead of private recordings or transcripts.
+```sh
+./scripts/verify.sh
+VOCO_VERIFY_UI=1 ./scripts/verify.sh
+cargo run -- --diagnostics
+```
 
-For code changes, start with the [development guide](docs/development.md) and [architecture](docs/architecture.md).
+The [verification record](docs/rust/verification.md) distinguishes tested behavior from hardware checks. See [architecture](docs/architecture.md) for module ownership and cancellation.
 
-## License and credits
+## License
 
-Voco is licensed under the [MIT License](LICENSE). Speech engines, model weights, and fonts have their own licenses. The app includes [third-party notices](Resources/licenses), including attribution for Moonshine, NVIDIA Parakeet, FluidAudio, OpenAI Whisper, and whisper.cpp.
+Voco application code uses the [MIT License](LICENSE). Speech engines, model weights, and Manrope have their own licenses. The app bundles [third-party notices](Resources/licenses).

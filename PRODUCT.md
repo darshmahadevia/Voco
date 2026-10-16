@@ -4,13 +4,13 @@
 
 ## Platform
 
-web
+macOS
 
-Electron desktop application for Apple Silicon Macs running macOS 26 or newer.
+Rust desktop application for Apple Silicon Macs running macOS 26 or newer.
 
 ## Stack
 
-Electron, React, TypeScript, and Motion provide the interface. A bundled Swift/AppKit/AVFoundation helper owns system integration and local recognition. Users choose Moonshine Medium Streaming, Parakeet TDT 0.6B v2, or Whisper Large v3 Turbo. All run in English mode.
+Rust and egui/eframe provide the dashboard. Rust bindings to AppKit and Accessibility own system integration. CPAL captures audio. Statically linked inference libraries run Moonshine Medium Streaming, Parakeet TDT 0.6B v2 ONNX, and Whisper Large v3 Turbo in English.
 
 ## Product purpose
 
@@ -22,7 +22,7 @@ Dictate English directly into the text field you are using. Hold Fn or Globe to 
 - Install the app first, then explicitly download and load a speech model in setup. Switch models while dictation is idle.
 - Show download progress, cancellation, retry, loading, and readiness. Keep the model outside the app bundle so updates preserve it.
 - Run speech recognition offline after setup, without an account, cloud service, API key, or subscription.
-- Keep microphone capture and safe system text insertion in the native helper. Reveal the exact helper app when manual keyboard permission is needed.
+- Keep microphone capture and safe system text insertion in Rust. Reveal the Voco app when manual keyboard permission is needed.
 - Record while listening, then insert the completed transcript once after hold release or continuous stop. Do not insert provisional words or revise earlier output.
 - Use the current caret or selection in the original field. Refuse insertion if the app or field changes. Verify complete writes where the field exposes text and selection; retain the full transcript if insertion fails, without retrying a partial write.
 - Show the microphone waveform during capture and Transcribing while recognition finishes. Keep the pill from taking typing focus.
@@ -32,7 +32,7 @@ Dictate English directly into the text field you are using. Hold Fn or Globe to 
 
 ## Output quality
 
-Settings exposes Fast for the original speech-model transcript, Balanced for local filler and restart rules with punctuation repair, and Accurate for an optional on-device FoundationModels cleanup pass. Speech-model choice stays independent. Accurate starts with Balanced cleanup and keeps that cleanup if AI formatting is unavailable or fails validation. Protect quotes, code, links, quantities, and line boundaries. Retain the latest original in memory only while transcript retention is enabled. Show Polishing during cleanup. The product prioritizes local processing and recoverable text, without a guarantee of accuracy or speed.
+Settings exposes Fast for the original speech-model transcript, Balanced for local filler and restart rules with punctuation repair, and Accurate for Balanced cleanup with a notice that FoundationModels formatting is unavailable in the Rust build. Speech-model choice stays independent. Accurate currently keeps Balanced cleanup because FoundationModels is a Swift-only API. Protect quotes, code, links, quantities, and line boundaries. Retain the latest original in memory only while transcript retention is enabled. Show Polishing during cleanup. The product prioritizes local processing and recoverable text, without a guarantee of accuracy or speed.
 
 ## Deferred work
 

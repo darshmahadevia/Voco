@@ -28,5 +28,5 @@ fi
 
 printf 'Voco: building and installing the current commit before pushing…\n'
 ./scripts/install.sh </dev/null
-env -u ELECTRON_RUN_AS_NODE open -g "$HOME/Applications/Voco.app"
+open -g "$HOME/Applications/Voco.app"
 printf 'Voco: local app updated. Continuing push.\n'

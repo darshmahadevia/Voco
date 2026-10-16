@@ -2,13 +2,13 @@
 set -euo pipefail
 project_dir="$(cd "$(dirname "$0")/.." && pwd)"
 app_dir="$HOME/Applications/Voco.app"
-bundle_dir="$project_dir/release/mac-arm64/Voco.app"
+bundle_dir="$project_dir/release/Voco.app"
 launch_services="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 cd "$project_dir"
 if test "${1:-}" != --built; then
-    npm run pack
+    ./scripts/package.sh
 fi
-node scripts/verify-installed-version.cjs "$bundle_dir"
+./scripts/verify-bundle.sh "$bundle_dir"
 codesign --verify --deep --strict "$bundle_dir"
 if test "$bundle_dir" -ef "$app_dir"; then
     printf 'Already installed %s\n' "$app_dir"
@@ -44,6 +44,6 @@ mkdir -p "$HOME/Applications"
 mv "$bundle_dir" "$app_dir"
 ln -s "$app_dir" "$bundle_dir"
 "$launch_services" -f "$app_dir"
-node scripts/verify-installed-version.cjs
+./scripts/verify-bundle.sh "$app_dir"
 codesign --verify --deep --strict "$app_dir"
 printf 'Installed %s\n' "$app_dir"

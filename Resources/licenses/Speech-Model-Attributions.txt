@@ -1,7 +1,8 @@
 Speech model attributions
 
-Parakeet TDT 0.6B v2 CoreML
-The model is based on NVIDIA's Parakeet TDT 0.6B v2. CoreML conversion and Swift integration are by the FluidInference team. The model is distributed under the Creative Commons Attribution 4.0 International license. Model card: https://huggingface.co/FluidInference/parakeet-tdt-0.6b-v2-coreml
+Parakeet TDT 0.6B v2 ONNX
+The model is based on NVIDIA's Parakeet TDT 0.6B v2. ONNX export is by istupakov. The Rust runtime is parakeet-rs. Model card: https://huggingface.co/istupakov/parakeet-tdt-0.6b-v2-onnx
+The model is distributed under the Creative Commons Attribution 4.0 International license.
 
 Whisper Large v3 Turbo and Large v3
 Whisper was developed by OpenAI. The GGML model files are converted and distributed by the whisper.cpp project. Whisper model weights are MIT licensed. Original model project: https://github.com/openai/whisper

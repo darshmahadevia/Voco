@@ -1,5 +1,0 @@
-module Moonshine [system] {
-  header "shim.h"
-  link "moonshine"
-  export *
-}

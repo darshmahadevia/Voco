@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleName</key><string>Voco</string>
+<key>CFBundleDisplayName</key><string>Voco</string>
+<key>CFBundleIdentifier</key><string>org.vocoapp.Voco</string>
+<key>CFBundleExecutable</key><string>Voco</string>
+<key>CFBundleIconFile</key><string>Voco.icns</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleShortVersionString</key><string>0.3.0</string>
+<key>CFBundleVersion</key><string>0.3.0</string>
+<key>LSMinimumSystemVersion</key><string>26.0</string>
+<key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
+<key>LSUIElement</key><true/>
+<key>NSHighResolutionCapable</key><true/>
+<key>NSMicrophoneUsageDescription</key><string>Voco records your voice while you dictate and transcribes it on your Mac.</string>
+</dict></plist>
