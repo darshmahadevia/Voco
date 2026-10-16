@@ -137,4 +137,284 @@ mod tests {
         );
         assert_eq!(gesture.update(KeyEvent::default()), None);
     }
+    #[test]
+    fn space_chord_promotes_hold_and_ignores_repeats_and_fn_release() {
+        let mut gesture = HoldGesture::default();
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                ..Default::default()
+            }),
+            Some(Action::Pressed)
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                key_pressed: true,
+                space_pressed: true,
+                ..Default::default()
+            }),
+            Some(Action::ToggleContinuous)
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                key_pressed: true,
+                space_pressed: true,
+                repeat: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: false,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                key_pressed: true,
+                space_pressed: true,
+                repeat: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                space_released: true,
+                ..Default::default()
+            }),
+            Some(Action::Pressed)
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                key_pressed: true,
+                space_pressed: true,
+                ..Default::default()
+            }),
+            Some(Action::ToggleContinuous)
+        );
+    }
+    #[test]
+    fn blocked_combination_requires_fn_release_before_space_chord() {
+        let mut gesture = HoldGesture::default();
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                other_modifier: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                key_pressed: true,
+                space_pressed: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: false,
+                space_released: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                key_pressed: true,
+                space_pressed: true,
+                ..Default::default()
+            }),
+            Some(Action::ToggleContinuous)
+        );
+    }
+    #[test]
+    fn unrelated_key_cancels_hold_and_space_does_not_restart_it() {
+        let mut gesture = HoldGesture::default();
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                ..Default::default()
+            }),
+            Some(Action::Pressed)
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                key_pressed: true,
+                ..Default::default()
+            }),
+            Some(Action::Cancelled)
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                key_pressed: true,
+                space_pressed: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: false,
+                space_released: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                ..Default::default()
+            }),
+            Some(Action::Pressed)
+        );
+    }
+    #[test]
+    fn space_held_before_fn_cannot_suppress_hold_release() {
+        let mut gesture = HoldGesture::default();
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: false,
+                key_pressed: true,
+                space_pressed: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                ..Default::default()
+            }),
+            Some(Action::Pressed)
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                key_pressed: true,
+                space_pressed: true,
+                repeat: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: false,
+                ..Default::default()
+            }),
+            Some(Action::Released)
+        );
+    }
+    #[test]
+    fn hold_emits_one_start_and_one_release() {
+        let mut gesture = HoldGesture::default();
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                ..Default::default()
+            }),
+            Some(Action::Pressed)
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: false,
+                ..Default::default()
+            }),
+            Some(Action::Released)
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: false,
+                ..Default::default()
+            }),
+            None
+        );
+    }
+    #[test]
+    fn keyboard_combination_cancels_until_the_trigger_is_released() {
+        let mut gesture = HoldGesture::default();
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                ..Default::default()
+            }),
+            Some(Action::Pressed)
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                key_pressed: true,
+                ..Default::default()
+            }),
+            Some(Action::Cancelled)
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: false,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                ..Default::default()
+            }),
+            Some(Action::Pressed)
+        );
+    }
+    #[test]
+    fn existing_modifier_combination_does_not_start_dictation() {
+        let mut gesture = HoldGesture::default();
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                other_modifier: true,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: false,
+                ..Default::default()
+            }),
+            None
+        );
+        assert_eq!(
+            gesture.update(KeyEvent {
+                trigger_down: true,
+                ..Default::default()
+            }),
+            Some(Action::Pressed)
+        );
+    }
 }

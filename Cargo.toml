@@ -43,4 +43,7 @@ core-graphics = "0.25"
 
 [profile.release]
 lto = "thin"
-strip = "debuginfo"
+
+[profile.release.build-override]
+debug = true
+strip = "none"

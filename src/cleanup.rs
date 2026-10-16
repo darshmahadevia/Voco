@@ -176,7 +176,6 @@ fn action_head(word: &str) -> bool {
     .contains(&word)
 }
 
-// Apple sentence and POS APIs are deliberately isolated behind these conservative rules.
 fn sentence_starts(raw: &str, parts: &[Token<'_>]) -> Vec<bool> {
     let abbreviations: Vec<_> = patterns()
         .abbreviation

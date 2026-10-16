@@ -56,7 +56,13 @@ impl Settings {
             Ok(data) => serde_json::from_slice(&data).context(
                 "Voco settings are unreadable. Restore settings.json or move it aside to reset.",
             )?,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Self::migrate(),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                if std::env::var_os("VOCO_DATA_DIR").is_some() {
+                    Self::default()
+                } else {
+                    Self::migrate()
+                }
+            }
             Err(error) => return Err(error).context("Could not read Voco settings"),
         };
         settings.validate()?;
@@ -73,45 +79,50 @@ impl Settings {
             let Ok(plist::Value::Dictionary(values)) = plist::Value::from_file(path) else {
                 continue;
             };
-            if let Some(value) = values
-                .get("keepLastTranscript")
-                .and_then(plist::Value::as_boolean)
-            {
-                settings.keep_last_transcript = value;
-            }
-            if let Some(value) = values.get("outputMode").and_then(plist::Value::as_string)
-                && let Ok(mode) =
-                    serde_json::from_value(serde_json::Value::String(value.to_owned()))
-            {
-                settings.output_mode = mode;
-            }
-            if let Some(value) = values
-                .get("selectedSpeechModel")
-                .and_then(plist::Value::as_string)
-                && let Ok(model) =
-                    serde_json::from_value(serde_json::Value::String(value.to_owned()))
-            {
-                settings.selected_model = model;
-            }
-            if let Some(bytes) = values.get("usageStats.v1").and_then(plist::Value::as_data) {
-                #[derive(Deserialize)]
-                #[serde(rename_all = "camelCase")]
-                struct LegacyUsage {
-                    days: BTreeMap<String, UsageDay>,
-                    daily_goal: u32,
-                    typing_wpm: u32,
-                }
-                if let Ok(usage) = serde_json::from_slice::<LegacyUsage>(bytes) {
-                    settings.days = usage.days;
-                    settings.daily_goal = usage.daily_goal;
-                    settings.typing_wpm = usage.typing_wpm;
-                }
-            }
-        }
-        if settings.validate().is_err() {
-            return Self::default();
+            settings.import_legacy(&values);
         }
         settings
+    }
+
+    fn import_legacy(&mut self, values: &plist::Dictionary) {
+        if let Some(value) = values
+            .get("keepLastTranscript")
+            .and_then(plist::Value::as_boolean)
+        {
+            self.keep_last_transcript = value;
+        }
+        if let Some(value) = values.get("outputMode").and_then(plist::Value::as_string)
+            && let Ok(mode) = serde_json::from_value(serde_json::Value::String(value.to_owned()))
+        {
+            self.output_mode = mode;
+        }
+        if let Some(value) = values
+            .get("selectedSpeechModel")
+            .and_then(plist::Value::as_string)
+            && let Ok(model) = serde_json::from_value(serde_json::Value::String(value.to_owned()))
+        {
+            self.selected_model = model;
+        }
+        if let Some(bytes) = values.get("usageStats.v1").and_then(plist::Value::as_data) {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct LegacyUsage {
+                days: BTreeMap<String, UsageDay>,
+                daily_goal: u32,
+                typing_wpm: u32,
+            }
+            if let Ok(usage) = serde_json::from_slice::<LegacyUsage>(bytes) {
+                let candidate = Settings {
+                    days: usage.days,
+                    daily_goal: usage.daily_goal,
+                    typing_wpm: usage.typing_wpm,
+                    ..self.clone()
+                };
+                if candidate.validate().is_ok() {
+                    *self = candidate;
+                }
+            }
+        }
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -255,5 +266,25 @@ mod tests {
         let mut invalid = settings;
         invalid.typing_wpm = 0;
         assert!(invalid.validate().is_err());
+    }
+    #[test]
+    fn invalid_legacy_usage_preserves_privacy_and_model_preferences() {
+        let mut settings = Settings::default();
+        let mut values = plist::Dictionary::new();
+        values.insert("keepLastTranscript".into(), plist::Value::Boolean(false));
+        values.insert(
+            "selectedSpeechModel".into(),
+            plist::Value::String("whisper".into()),
+        );
+        values.insert("outputMode".into(), plist::Value::String("balanced".into()));
+        values.insert(
+            "usageStats.v1".into(),
+            plist::Value::Data(br#"{"days":{},"dailyGoal":0,"typingWpm":0}"#.to_vec()),
+        );
+        settings.import_legacy(&values);
+        assert!(!settings.keep_last_transcript);
+        assert_eq!(settings.selected_model, ModelId::Whisper);
+        assert_eq!(settings.output_mode, OutputMode::Balanced);
+        assert_eq!((settings.daily_goal, settings.typing_wpm), (500, 40));
     }
 }
