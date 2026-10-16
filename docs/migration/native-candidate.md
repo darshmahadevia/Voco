@@ -1,5 +1,7 @@
 # Candidate A: Swift native runtime, Electron UI
 
+Historical document for an earlier Voco implementation. Commands and design details below may refer to removed code. See the [current README](../../README.md), [architecture](../architecture.md), and [development guide](../development.md).
+
 ## Recommendation
 
 Keep one signed Swift helper process as Voco's macOS system-integration and dictation runtime. Electron's main process owns the app lifecycle and windows. React owns the minimal setup/settings and microphone-pill views. The helper owns global shortcuts, microphone capture, Moonshine, focus tracking, live typing, and safe insertion. This keeps the existing trusted insertion boundary intact while replacing the Apple Speech framework with Moonshine.

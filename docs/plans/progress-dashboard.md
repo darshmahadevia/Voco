@@ -1,5 +1,7 @@
 # Voco progress dashboard
 
+Historical document for an earlier Voco implementation. Commands and design details below may refer to removed code. See the [current README](../../README.md), [architecture](../architecture.md), and [development guide](../development.md).
+
 Extend Home in the existing black, orange, Manrope and Pixelify Sans design. Keep readiness and Fn / Globe guidance visible above progress.
 
 - Show total words, estimated typing time saved, and current / best streak.

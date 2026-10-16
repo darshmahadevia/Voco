@@ -1,5 +1,7 @@
 # Verification record
 
+Historical document for an earlier Voco implementation. Commands and design details below may refer to removed code. See the [current README](../../README.md), [architecture](../architecture.md), and [development guide](../development.md).
+
 Verified on an Apple Silicon Mac running macOS 27.0.1, using the installed Swift 6.4 Command Line Tools and macOS 27 SDK. The app's deployment target is macOS 26.
 
 ## October 8 editor insertion compatibility

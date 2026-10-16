@@ -1,5 +1,7 @@
 # Native dictation design
 
+Historical document for an earlier Voco implementation. Commands and design details below may refer to removed code. See the [current README](../../README.md), [architecture](../architecture.md), and [development guide](../development.md).
+
 Voco uses a native menu-bar shell and Apple's on-device speech engine. The user chose this approach over a bundled open-source speech engine for the first version.
 
 ## User flow

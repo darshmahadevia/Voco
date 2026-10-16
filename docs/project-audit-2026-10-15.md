@@ -1,5 +1,7 @@
 # Project audit, October 15, 2026
 
+Historical audit of the retired Electron and Swift app. Paths, commands, and implementation decisions below describe that build. See the [current architecture](architecture.md) and [verification guide](verification.md).
+
 ## Intent
 
 Voco should provide reliable local dictation with little maintenance. Capture, recognition, safe insertion, recovery, and straightforward updates justify complexity. Retired recognition behavior and duplicate bookkeeping do not. Prefer deletion, then simplification, before optimization or automation.

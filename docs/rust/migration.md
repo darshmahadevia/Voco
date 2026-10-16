@@ -1,5 +1,7 @@
 # Rust migration
 
+Historical record of the initial Rust port, which used egui. GPUI has since replaced egui. See the [current architecture](../architecture.md) and [GPUI verification](../gpui/verification.md).
+
 The target is one Rust application executable. React, Electron, Node, and the Swift helper leave the runtime and build. Apple frameworks and native speech inference libraries remain dependencies.
 
 The original TypeScript baseline passed all 28 tests and type checking before migration.

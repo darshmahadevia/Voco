@@ -1,5 +1,7 @@
 # Electron migration architecture
 
+Historical document for an earlier Voco implementation. Commands and design details below may refer to removed code. See the [current README](../../README.md), [architecture](../architecture.md), and [development guide](../development.md).
+
 Voco's desktop interface moves to Electron, React, TypeScript, and Motion. A bundled macOS helper owns Moonshine Medium Streaming recognition, microphone capture, global shortcuts, and safe text insertion. Windows is deferred until the macOS app is stable.
 
 ## Caller experience

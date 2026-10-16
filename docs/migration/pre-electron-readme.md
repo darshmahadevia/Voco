@@ -1,5 +1,7 @@
 # Voco
 
+Historical document for an earlier Voco implementation. Commands and design details below may refer to removed code. See the [current README](../../README.md), [architecture](../architecture.md), and [development guide](../development.md).
+
 Hold Fn or Globe to dictate English directly into your text field. Release to stop. Press Fn or Globe + Space to toggle continuous listening, with phrases settled after a pause. The bottom-center pill shows only microphone status and a stop button in continuous mode.
 
 Voco is a native macOS app with MIT-licensed source code. Apple's proprietary SpeechAnalyzer model runs transcription on your Mac. There is no transcription subscription or API key. Setup may download English speech assets once.

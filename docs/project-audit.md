@@ -1,5 +1,7 @@
 # Project audit, October 10, 2026
 
+Historical audit of the retired Electron and Swift app. Paths, commands, and implementation decisions below describe that build. See the [current architecture](architecture.md) and [verification guide](verification.md).
+
 ## Intent
 
 Voco captures English speech locally and inserts one completed transcript into the original text field. Reliability, focus safety, recoverable failures, and offline recognition justify complexity. Code for abandoned insertion behavior does not.

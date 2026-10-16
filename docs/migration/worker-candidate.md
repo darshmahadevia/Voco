@@ -1,5 +1,7 @@
 # Voco migration candidate B: Electron session owner + Moonshine WASM worker
 
+Historical document for an earlier Voco implementation. Commands and design details below may refer to removed code. See the [current README](../../README.md), [architecture](../architecture.md), and [development guide](../development.md).
+
 ## Grounded behavior
 
 The current app is a native menu-bar dictation tool. `AppModel` owns setup and permissions, press/hold/release/cancel state, continuous mode, pause/commit behavior, prepared/active session identity, recovery text, and calls into the writer. `SpeechSession` owns AVFoundation audio capture, Apple SpeechAnalyzer/SpeechTranscriber, and finalization. `ShortcutMonitor` watches Fn/Globe, Fn+Space, Escape, and configured Option keys. `FocusTarget`, `LiveTextWriter`, and `VocoCore.LiveTextBuffer` protect the original document/caret and edit only the text range Voco inserted. The UI is the settings/setup window plus a non-activating microphone pill. See `docs/architecture.md` and `DESIGN.md`.

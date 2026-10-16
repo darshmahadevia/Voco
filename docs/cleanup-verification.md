@@ -1,35 +1,19 @@
-# Cleanup verification
+# Verify transcript cleanup
 
-The cleanup polish replaces filler deletion across the whole transcript with edits outside protected text. Accurate now formats the Balanced result and keeps that result when the model fails or its output is rejected.
-
-## Reproduce the checks
+Run the cleanup tests from the repository root:
 
 ```sh
-./scripts/evaluate-cleanup.sh
-./scripts/evaluate-cleanup.sh --model
-./scripts/check-transcript-polisher.sh
-./scripts/check-deferred-dictation.sh
-npm run typecheck
-npm test
-npm run verify:compact-ui
+cargo test --locked cleanup::tests
 ```
 
-The acceptance corpus has 49 fixed inputs and expected Balanced outputs. It checks Fast preservation, Accurate fallback when the model is unavailable or throws, and stable output when cleanup runs twice. Sixteen candidate edits must be rejected, including changed flags, paths, email addresses, quotations, numbers, negations, paragraph boundaries, leading decimals, and moved currency signs. The expected values live in `native/Tests/Fixtures` and the runner is `native/Tests/CleanupEvaluation.swift`.
+The tests exercise the Rust cleanup code in `src/cleanup.rs`. Fixtures in `Tests/fixtures` cover expected Balanced output, protected literals, rejected edits, and repeated cleanup. The same fixtures check that Fast preserves the original text and Accurate returns Balanced output with an unavailable-FoundationModels notice for nonempty results.
 
-## Observed local results
+To try a sentence through the executable:
 
-Before the change, executable probes produced `I, need this.` from `I, um, need this.`, `Send it,.` from `Send it, um.`, and a damaged URL from `https://example.com/um`. Updated fixture outputs preserve the URL and produce `I need this.` and `Send it.`.
+```sh
+cargo run -- --cleanup balanced 'Um, send it today.'
+```
 
-The original Accurate flow sometimes rejected a model result and restored fillers or a discarded phrase. The new flow keeps deterministic cleanup in that case, including on the coordinator's cleanup deadline. The original speech transcript remains separate for recovery.
+The result is `Send it today.`. See [output modes](local-dictation.md) for behavior and limitations.
 
-Actual FoundationModels generation on this Mac produced these accepted results:
-
-- `um hello Alice can you send it today` became `Hello Alice, can you send it today?`.
-- `um I have 12 tickets not 13 please keep them` became `I have 12 tickets, not 13. Please keep them.`.
-- `uh please bring apples oranges and pears` became `Please bring apples, oranges, and pears.`.
-
-Selected model cases also exercised protected quotes, URLs, command flags, negative quantities, paragraph breaks, and dictated instructions. Some results were rejected and fell back to Balanced cleanup. A fallback is a passing preservation check, not a successful AI formatting result. Generative output can vary with system model updates, so the `--model` check validates retained words and protected literals rather than promising identical punctuation on every run.
-
-These are synthetic text cases, not a speech-recognition accuracy evaluation. They do not establish word error rates, performance improvements, or a physical microphone-to-editor session.
-
-Sentence rollback uses the system NaturalLanguage sentence tokenizer instead of treating every period as a boundary. Regression cases cover URLs and paths at the end of a sentence, dotted abbreviations, and proper names after abbreviations. Ambiguous two-word `never mind` wording is preserved unless a restart cue is present.
+These checks use text fixtures. They do not measure speech recognition accuracy, live microphone capture, or dictation latency. The [earlier Swift cleanup record](migration/pre-rust-cleanup-verification.md) preserves the retired implementation's results.
