@@ -17,7 +17,7 @@ version="$(cargo metadata --no-deps --format-version 1 | /usr/bin/plutil -extrac
 /usr/bin/plutil -replace CFBundleVersion -string "$version" "$app/Contents/Info.plist"
 cp Resources/Voco.icns "$app/Contents/Resources/"
 mkdir -p "$app/Contents/Resources/Fonts"
-cp Resources/Fonts/Manrope-Regular.ttf "$app/Contents/Resources/Fonts/Manrope-Regular.ttf"
+cp Resources/Fonts/*.ttf "$app/Contents/Resources/Fonts/"
 cp -R Resources/licenses "$app/Contents/Resources/"
 cp Resources/Fonts/OFL.txt "$app/Contents/Resources/licenses/Manrope-OFL.txt"
 identity="${VOCO_CODESIGN_IDENTITY:-}"
