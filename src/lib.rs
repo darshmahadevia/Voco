@@ -5,6 +5,7 @@ pub mod domain;
 pub mod gesture;
 pub mod models;
 pub mod platform;
+pub mod practice;
 pub mod speech;
 pub mod storage;
 pub mod ui;

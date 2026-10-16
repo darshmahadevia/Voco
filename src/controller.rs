@@ -85,6 +85,11 @@ impl Generation {
     }
 }
 
+enum Target {
+    Native(FocusTarget),
+    Practice(crate::practice::PracticeTarget),
+}
+
 pub struct Controller {
     pub root: PathBuf,
     pub settings: Settings,
@@ -98,9 +103,9 @@ pub struct Controller {
     pub show_dashboard: bool,
     pub shortcut_running: bool,
     pub practice_update: Option<(String, usize)>,
-    pub practice_focused: bool,
+    pub practice_snapshot: Option<crate::practice::PracticeTarget>,
     recorder: Option<Recorder>,
-    target: Option<FocusTarget>,
+    target: Option<Target>,
     monitor: Option<ShortcutMonitor>,
     actions: Receiver<Action>,
     action_sender: Sender<Action>,
@@ -177,7 +182,7 @@ impl Controller {
             show_dashboard: false,
             shortcut_running: false,
             practice_update: None,
-            practice_focused: false,
+            practice_snapshot: None,
             recorder: None,
             target: None,
             monitor: None,
@@ -511,13 +516,16 @@ impl Controller {
             self.show_dashboard = true;
             return false;
         }
-        match FocusTarget::capture() {
+        let target = if platform::voco_is_focused() {
+            self.practice_snapshot
+                .clone()
+                .map(Target::Practice)
+                .context("Click inside the practice field before dictating into Voco.")
+        } else {
+            FocusTarget::capture().map(Target::Native)
+        };
+        match target {
             Ok(target) => {
-                if target.is_local() && !self.practice_focused {
-                    self.notice =
-                        "Click inside the practice field before dictating into Voco.".into();
-                    return false;
-                }
                 self.target = Some(target);
                 self.output_mode = self.settings.output_mode;
                 self.session_generation.next_id();
@@ -591,12 +599,18 @@ impl Controller {
             .target
             .take()
             .context("The original text field is unavailable.")
-            .and_then(|target| {
-                if target.is_local() {
-                    self.practice_update = Some(target.local_replacement(&text)?);
+            .and_then(|target| match target {
+                Target::Native(target) => target.insert(&text),
+                Target::Practice(target) => {
+                    anyhow::ensure!(
+                        platform::voco_is_focused(),
+                        "The focused application changed. Copy your transcript instead."
+                    );
+                    let current = self.practice_snapshot.as_ref().context(
+                        "The practice field lost keyboard focus. Copy your transcript instead.",
+                    )?;
+                    self.practice_update = Some(target.replace(current, &text)?);
                     Ok(())
-                } else {
-                    target.insert(&text)
                 }
             });
         match result {

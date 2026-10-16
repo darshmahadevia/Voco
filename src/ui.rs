@@ -48,6 +48,7 @@ pub struct VocoApp {
     visible: bool,
     quitting: bool,
     practice: String,
+    ime_composing: bool,
     search: String,
     copied_until: Option<Instant>,
     verification: Option<Verification>,
@@ -58,6 +59,8 @@ struct Verification {
     started: Instant,
     stage: usize,
     captures: usize,
+    practice_ready: Option<Instant>,
+    practice_verified: bool,
 }
 
 impl VocoApp {
@@ -182,6 +185,7 @@ impl VocoApp {
             visible: show,
             quitting: false,
             practice: String::new(),
+            ime_composing: false,
             search: String::new(),
             copied_until: None,
             verification: verification.map(|directory| Verification {
@@ -189,6 +193,8 @@ impl VocoApp {
                 started: Instant::now(),
                 stage: 0,
                 captures: 0,
+                practice_ready: None,
+                practice_verified: false,
             }),
         })
     }
@@ -430,6 +436,19 @@ impl VocoApp {
             ui.label(RichText::new("Recent transcripts").size(18.0));
             self.transcript_rows(ui, 3);
         }
+        if self
+            .verification
+            .as_ref()
+            .is_some_and(|verification| verification.stage >= 5)
+            && !self.controller.ready()
+        {
+            ui.add(
+                egui::TextEdit::multiline(&mut self.practice)
+                    .id(egui::Id::new("practice"))
+                    .desired_rows(3)
+                    .desired_width(f32::INFINITY),
+            );
+        }
     }
     fn transcript_rows(&mut self, ui: &mut egui::Ui, limit: usize) {
         if self.controller.history.is_empty() {
@@ -649,9 +668,54 @@ impl VocoApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(Default::default()));
             verification.stage += 1;
         }
-        if verification.captures == 4 {
+        if verification.captures == 4 && verification.stage == 4 {
+            self.page = Page::Home;
+            self.practice = "Before 😀 after".into();
+            ctx.memory_mut(|memory| memory.request_focus(egui::Id::new("practice")));
+            platform::activate_dashboard();
+            ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+            verification.stage = 5;
+        } else if verification.stage == 5 {
+            if let Some(mut state) =
+                egui::text_edit::TextEditState::load(ctx, egui::Id::new("practice"))
+            {
+                state
+                    .cursor
+                    .set_char_range(Some(egui::text::CCursorRange::two(
+                        egui::text::CCursor::new(7),
+                        egui::text::CCursor::new(8),
+                    )));
+                state.store(ctx, egui::Id::new("practice"));
+                verification.practice_ready = Some(Instant::now());
+                verification.stage = 6;
+            }
+        } else if verification.stage == 6
+            && verification
+                .practice_ready
+                .is_some_and(|at| at.elapsed() >= Duration::from_millis(500))
+        {
+            let result = practice_snapshot(ctx, &self.practice, self.ime_composing)
+                .ok_or_else(|| anyhow::anyhow!("The practice field is not focused"))
+                .and_then(|target| target.replace(&target, "Rust"));
+            match result {
+                Ok((replacement, caret)) => {
+                    apply_practice_update(ctx, &mut self.practice, replacement, caret);
+                    if self.practice != "Before Rust after" {
+                        eprintln!("Practice insertion produced an incorrect value");
+                        std::process::exit(1);
+                    }
+                    verification.practice_verified = true;
+                    verification.stage = 7;
+                }
+                Err(error) => {
+                    eprintln!("Practice insertion failed: {error:#}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        if verification.practice_verified {
             let report = serde_json::json!({ "runtime": "rust", "ui": "egui", "pagesRendered": 4, "screenshots": 4,
-                "trayCreated": true, "microphone": self.controller.permissions.microphone, "accessibility": self.controller.permissions.accessibility,
+                "trayCreated": true, "practiceInsertion": verification.practice_verified, "microphone": self.controller.permissions.microphone, "accessibility": self.controller.permissions.accessibility,
                 "shortcut": self.controller.shortcut_running, "status": self.controller.status(), "transcriptPersistence": false });
             if let Err(error) = std::fs::write(
                 verification.directory.join("report.json"),
@@ -668,21 +732,27 @@ impl VocoApp {
 
 impl eframe::App for VocoApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.controller.practice_focused =
-            ctx.memory(|memory| memory.focused()) == Some(egui::Id::new("practice"));
+        ctx.input(|input| {
+            for event in &input.events {
+                match event {
+                    egui::Event::Ime(egui::ImeEvent::Preedit(text)) => {
+                        self.ime_composing = !text.is_empty()
+                    }
+                    egui::Event::Ime(egui::ImeEvent::Commit(_) | egui::ImeEvent::Disabled) => {
+                        self.ime_composing = false
+                    }
+                    _ => {}
+                }
+            }
+        });
+        self.controller.practice_snapshot = if self.visible && self.page == Page::Home {
+            practice_snapshot(ctx, &self.practice, self.ime_composing)
+        } else {
+            None
+        };
         self.controller.tick();
         if let Some((replacement, caret)) = self.controller.practice_update.take() {
-            self.practice = replacement;
-            if let Some(mut state) =
-                egui::text_edit::TextEditState::load(ctx, egui::Id::new("practice"))
-            {
-                state
-                    .cursor
-                    .set_char_range(Some(egui::text::CCursorRange::one(
-                        egui::text::CCursor::new(caret),
-                    )));
-                state.store(ctx, egui::Id::new("practice"));
-            }
+            apply_practice_update(ctx, &mut self.practice, replacement, caret);
         }
         if std::fs::remove_file(self.controller.root.join("show-dashboard")).is_ok() {
             self.show(ctx, Page::Home);
@@ -823,4 +893,53 @@ impl eframe::App for VocoApp {
             },
         ));
     }
+}
+
+fn apply_practice_update(
+    ctx: &egui::Context,
+    practice: &mut String,
+    replacement: String,
+    caret: usize,
+) {
+    *practice = replacement;
+    if let Some(mut state) = egui::text_edit::TextEditState::load(ctx, egui::Id::new("practice")) {
+        state
+            .cursor
+            .set_char_range(Some(egui::text::CCursorRange::one(
+                egui::text::CCursor::new(caret),
+            )));
+        state.store(ctx, egui::Id::new("practice"));
+    }
+}
+
+fn practice_snapshot(
+    ctx: &egui::Context,
+    value: &str,
+    composing: bool,
+) -> Option<crate::practice::PracticeTarget> {
+    let id = egui::Id::new("practice");
+    if composing
+        || ctx.input(|input| {
+            input.pointer.any_down()
+                || input.events.iter().any(|event| {
+                    matches!(
+                        event,
+                        egui::Event::Text(_)
+                            | egui::Event::Paste(_)
+                            | egui::Event::Cut
+                            | egui::Event::Key { pressed: true, .. }
+                            | egui::Event::PointerButton { .. }
+                            | egui::Event::Ime(_)
+                    )
+                })
+        })
+    {
+        return None;
+    }
+    if ctx.memory(|memory| memory.focused()) != Some(id) {
+        return None;
+    }
+    let state = egui::text_edit::TextEditState::load(ctx, id)?;
+    let selection = state.cursor.char_range()?.as_sorted_char_range();
+    crate::practice::PracticeTarget::capture(value, selection).ok()
 }

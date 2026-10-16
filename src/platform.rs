@@ -378,6 +378,10 @@ pub struct FocusTarget {
     value: Option<String>,
 }
 
+pub fn voco_is_focused() -> bool {
+    frontmost_pid().is_ok_and(|pid| pid == std::process::id() as i32)
+}
+
 fn frontmost_pid() -> Result<i32> {
     NSWorkspace::sharedWorkspace()
         .frontmostApplication()
@@ -430,33 +434,6 @@ fn focused_element(pid: i32) -> Result<Element> {
 }
 
 impl FocusTarget {
-    pub fn is_local(&self) -> bool {
-        matches!(self.element, Element::Local(_))
-    }
-
-    pub fn local_replacement(&self, text: &str) -> Result<(String, usize)> {
-        ensure!(
-            self.is_local(),
-            "The captured target belongs to another application."
-        );
-        self.validate()?;
-        let before = self
-            .value
-            .as_deref()
-            .context("The practice field has no readable text.")?;
-        let replaced = replace_selection(before, self.selection, text)?;
-        let prefix: Vec<u16> = before
-            .encode_utf16()
-            .take(self.selection.location)
-            .collect();
-        let caret = String::from_utf16(&prefix)
-            .context("The selection splits a Unicode character.")?
-            .chars()
-            .count()
-            + text.chars().count();
-        Ok((replaced, caret))
-    }
-
     pub fn capture() -> Result<Self> {
         ensure!(
             permissions().accessibility,
@@ -522,7 +499,7 @@ impl FocusTarget {
         if let Element::Local(element) = &self.element {
             ensure!(
                 element.downcast_ref::<NSTextView>().is_some(),
-                "Use local_replacement for dashboard practice dictation."
+                "This local field does not support native text insertion."
             );
             let allowed: Bool = unsafe {
                 msg_send![&**element, isAccessibilitySelectorAllowed: sel!(setAccessibilitySelectedText:)]
@@ -906,8 +883,7 @@ pub fn start_shortcuts(sender: Sender<Action>) -> Result<ShortcutMonitor> {
                 return;
             };
             let runloop = CFRunLoop::get_current();
-            // The source and tap stay owned by this thread until removed below.
-            let mode = unsafe { kCFRunLoopDefaultMode };
+                let mode = unsafe { kCFRunLoopDefaultMode };
             runloop.add_source(&source, mode);
             tap.enable();
             worker_status.store(0, Ordering::Release);
@@ -1191,8 +1167,23 @@ pub fn verify_insertion() -> Result<serde_json::Value> {
         FocusTarget::capture().is_err(),
         "The password-field guard allowed capture."
     );
+    let mut overlay = Overlay::new()?;
+    overlay.update("Listening", 0.5, true);
+    ensure!(
+        !overlay.panel.canBecomeKeyWindow() && !overlay.panel.canBecomeMainWindow(),
+        "The recording panel can take keyboard focus."
+    );
+    ensure!(
+        overlay.panel.ignoresMouseEvents(),
+        "The recording panel intercepts mouse input."
+    );
+    ensure!(
+        window.0.isKeyWindow(),
+        "The recording panel stole keyboard focus."
+    );
+    overlay.update("Idle", 0.0, false);
     Ok(
-        serde_json::json!({"status":"pass", "unicodeUtf16Units":text.encode_utf16().count(), "selectionReplacement":true, "changedSelectionRefused":true, "changedFieldRefused":true, "secureFieldRefused":true}),
+        serde_json::json!({"status":"pass", "unicodeUtf16Units":text.encode_utf16().count(), "selectionReplacement":true, "changedSelectionRefused":true, "changedFieldRefused":true, "secureFieldRefused":true, "panelNonactivating":true, "panelIgnoresMouse":true, "panelPreservesFocus":true}),
     )
 }
 
