@@ -2,7 +2,7 @@
 name = "voco"
 version = "0.3.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.92"
 description = "Private, local dictation for macOS"
 license = "MIT"
 
@@ -19,6 +19,19 @@ cpal = "0.16"
 crossbeam-channel = "0.5"
 fs2 = "0.4"
 hound = "3.5"
+moonshine-rs = { version = "=0.2.6", default-features = false }
+parakeet-rs = { version = "=0.4.1", default-features = false, features = ["cpu"] }
+# Use the ONNX Runtime bundled by moonshine-sys instead of linking a second copy.
+ort-sys = { version = "=2.0.0-rc.14", default-features = false, features = ["disable-linking"] }
+whisper-rs = { version = "0.16", features = ["metal"] }
+ureq = "2.12"
+url = "2"
+sha2 = { version = "0.10", features = ["asm"] }
+crc32c = "0.6"
+base64 = "0.22"
+tempfile = "3"
+libc = "0.2"
+plist = "1"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"

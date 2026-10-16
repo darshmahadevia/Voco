@@ -2,3 +2,7 @@ ts	phase	decision	why	evidence	result
 2026-10-16T18:25:00Z	frame	Port the entire UI and native helper to Rust	The user explicitly requested all application code in Rust	docs/rust/migration.md	open
 2026-10-16T18:25:00Z	baseline	Capture the original test baseline	Preserve existing shortcut and dictation behavior	app/shared/protocol.test.ts	28 TypeScript tests and type checking passed
 2026-10-16T18:25:00Z	design	Use available Codex design reviewers	Claude and Grok providers rejected delegation because they are disabled	docs/rust/migration.md	cross-family review unavailable
+2026-10-16T18:36:00Z	engines	Use Rust adapters with statically linked inference libraries	Remove the Swift helper while retaining local recognition	src/speech.rs	Moonshine Whisper and Parakeet transcribed the recorded fixture
+2026-10-16T18:36:00Z	models	Store Parakeet ONNX separately from CoreML	The Rust Parakeet runtime needs ONNX weights and must not mistake old files for a valid install	src/models.rs	verified checksums and successful real inference
+2026-10-16T18:36:00Z	cleanup	Port deterministic cleanup and disclose Accurate fallback	FoundationModels has no supported Rust binding in this implementation	src/cleanup.rs	all 49 fixtures and 52 Swift cleanup examples passed
+2026-10-16T18:36:00Z	core	Verify core independently before UI integration	Keep the migration units runnable and reviewable	src/storage.rs	15 core tests passed

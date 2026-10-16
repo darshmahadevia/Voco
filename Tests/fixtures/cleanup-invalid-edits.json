@@ -1,0 +1,174 @@
+[
+  {
+    "original": "Run --force",
+    "candidate": "Run force"
+  },
+  {
+    "original": "Email a.b@example.com",
+    "candidate": "Email a b@example com"
+  },
+  {
+    "original": "Use /tmp/Config.json",
+    "candidate": "Use /tmp/config.json"
+  },
+  {
+    "original": "Use /tmp/config.json",
+    "candidate": "Use tmp config json"
+  },
+  {
+    "original": "Say \"No, don't.\"",
+    "candidate": "Say No don't"
+  },
+  {
+    "original": "Use `x != y`",
+    "candidate": "Use `x! = y`"
+  },
+  {
+    "original": "First paragraph.\n\nSecond paragraph.",
+    "candidate": "First paragraph. Second paragraph."
+  },
+  {
+    "original": "Pay - 12 dollars",
+    "candidate": "Pay 12 dollars"
+  },
+  {
+    "original": "Set the rate to 12 %",
+    "candidate": "Set the rate to 12"
+  },
+  {
+    "original": "Alice does not owe 12 dollars",
+    "candidate": "Alice does owe 12 dollars"
+  },
+  {
+    "original": "Say \"hello\" then say hello",
+    "candidate": "Say hello then say \"hello\""
+  },
+  {
+    "original": "Pay .5 dollars",
+    "candidate": "Pay 5 dollars"
+  },
+  {
+    "original": "Pay -.5 dollars",
+    "candidate": "Pay -5 dollars"
+  },
+  {
+    "original": "Pay $12 to Alice and 20 to Bob",
+    "candidate": "Pay 12 to Alice and $20 to Bob"
+  },
+  {
+    "original": "Use x < y and z",
+    "candidate": "Use x y and < z"
+  },
+  {
+    "original": "Say \"12 %\" exactly",
+    "candidate": "Say \"12%\" exactly"
+  },
+  {
+    "original": "Pay ,5 dollars",
+    "candidate": "Pay 5 dollars"
+  },
+  {
+    "original": "Pay -,5 dollars",
+    "candidate": "Pay -5 dollars"
+  },
+  {
+    "original": "Use x<y",
+    "candidate": "Use x <y"
+  },
+  {
+    "original": "Use x<y",
+    "candidate": "Use x,<y"
+  },
+  {
+    "original": "Use x * y and z",
+    "candidate": "Use x y and * z"
+  },
+  {
+    "original": "Use x < y",
+    "candidate": "Use x <y"
+  },
+  {
+    "original": "Run git commit -m um today.",
+    "candidate": "Run git commit -m Um today."
+  },
+  {
+    "original": "Run --force now.",
+    "candidate": "Run force now."
+  },
+  {
+    "original": "Run --force now.",
+    "candidate": "Run -force now."
+  },
+  {
+    "original": "Email um@example.com today.",
+    "candidate": "Email um example com today."
+  },
+  {
+    "original": "Use /tmp/um/config.json today.",
+    "candidate": "Use tmp um config json today."
+  },
+  {
+    "original": "Visit https://example.com/um today.",
+    "candidate": "Visit https example com um today."
+  },
+  {
+    "original": "Run `echo um` today.",
+    "candidate": "Run echo um today."
+  },
+  {
+    "original": "Say \"a  b\" exactly.",
+    "candidate": "Say \"a b\" exactly."
+  },
+  {
+    "original": "Say \"12 %\" exactly.",
+    "candidate": "Say \"12%\" exactly."
+  },
+  {
+    "original": "Say \"hello\" then hello.",
+    "candidate": "Say hello then \"hello\"."
+  },
+  {
+    "original": "Run `echo x` then echo x.",
+    "candidate": "Run echo x then `echo x`."
+  },
+  {
+    "original": "First line.\nSecond line.",
+    "candidate": "First line. Second line."
+  },
+  {
+    "original": "First\r\nsecond.",
+    "candidate": "First\nsecond."
+  },
+  {
+    "original": "First\nsecond third.",
+    "candidate": "First second\nthird."
+  },
+  {
+    "original": "Alice uses iPhone and eBay.",
+    "candidate": "alice uses Iphone and Ebay."
+  },
+  {
+    "original": "Keep not now.",
+    "candidate": "Keep now not."
+  },
+  {
+    "original": "Keep -12 % today.",
+    "candidate": "Keep 12 % today."
+  },
+  {
+    "original": "Say \"é\" exactly.",
+    "candidate": "Say \"é\" exactly."
+  },
+  {
+    "original": "Pay -12 dollars",
+    "candidate": "Pay 12 dollars"
+  },
+  {
+    "original": "Pay 1.5 dollars",
+    "candidate": "Pay 1,5 dollars"
+  },
+  {
+    "original": "Pay −12 dollars",
+    "candidate": "Pay 12 dollars"
+  }
+]

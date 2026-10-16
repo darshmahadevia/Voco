@@ -1,0 +1,287 @@
+[
+  {
+    "id": "swift-check-1",
+    "input": "Visit https://example.com. Send red never mind send blue.",
+    "balanced": "Visit https://example.com. Send blue."
+  },
+  {
+    "id": "swift-check-2",
+    "input": "Use /tmp/config.json. Send red never mind send blue.",
+    "balanced": "Use /tmp/config.json. Send blue."
+  },
+  {
+    "id": "swift-check-3",
+    "input": "Call U.S. Steel never mind call Acme.",
+    "balanced": "Call Acme."
+  },
+  {
+    "id": "swift-check-4",
+    "input": "My colleagues never mind waiting.",
+    "balanced": "My colleagues never mind waiting."
+  },
+  {
+    "id": "swift-check-5",
+    "input": "We really never mind waiting.",
+    "balanced": "We really never mind waiting."
+  },
+  {
+    "id": "swift-check-6",
+    "input": "Colleagues never mind waiting.",
+    "balanced": "Colleagues never mind waiting."
+  },
+  {
+    "id": "swift-check-7",
+    "input": "My colleagues never mind.",
+    "balanced": "My colleagues never mind."
+  },
+  {
+    "id": "swift-check-8",
+    "input": "We never mind we can wait.",
+    "balanced": "We never mind we can wait."
+  },
+  {
+    "id": "swift-check-9",
+    "input": "Book red never mind book blue.",
+    "balanced": "Book blue."
+  },
+  {
+    "id": "swift-check-10",
+    "input": "Send red never mind send blue.",
+    "balanced": "Send blue."
+  },
+  {
+    "id": "swift-check-11",
+    "input": "Ask Alice never mind ask Bob.",
+    "balanced": "Ask Bob."
+  },
+  {
+    "id": "swift-check-12",
+    "input": "Red never mind blue never mind green.",
+    "balanced": "Green."
+  },
+  {
+    "id": "swift-check-13",
+    "input": "Run git commit -m um today.",
+    "balanced": "Run git commit -m um today."
+  },
+  {
+    "id": "swift-check-14",
+    "input": "Use .5 um and -.5 um and ,5 um filters.",
+    "balanced": "Use .5 um and -.5 um and ,5 um filters."
+  },
+  {
+    "id": "swift-check-15",
+    "input": "Run git commit --message uh today.",
+    "balanced": "Run git commit --message uh today."
+  },
+  {
+    "id": "swift-check-16",
+    "input": "Um, Alice has 12 tickets, uh, not 13.",
+    "balanced": "Alice has 12 tickets, not 13."
+  },
+  {
+    "id": "swift-check-17",
+    "input": "Keep this sentence. Book red never mind, book blue.",
+    "balanced": "Keep this sentence. Book blue."
+  },
+  {
+    "id": "swift-check-18",
+    "input": "Keep this. Wrong sentence. Nevermind. Next sentence.",
+    "balanced": "Keep this. Wrong sentence. Next sentence."
+  },
+  {
+    "id": "swift-check-19",
+    "input": "Say \"um never mind\" literally.",
+    "balanced": "Say \"um never mind\" literally."
+  },
+  {
+    "id": "swift-check-20",
+    "input": "The album is ‘Nevermind’ and the word is 'uh'.",
+    "balanced": "The album is ‘Nevermind’ and the word is 'uh'."
+  },
+  {
+    "id": "swift-check-21",
+    "input": "Umbridge and humming are not fillers.",
+    "balanced": "Umbridge and humming are not fillers."
+  },
+  {
+    "id": "swift-check-22",
+    "input": "First line.\nwrong never mind right",
+    "balanced": "First line.\nRight"
+  },
+  {
+    "id": "swift-check-23",
+    "input": "um uh umm",
+    "balanced": ""
+  },
+  {
+    "id": "swift-check-24",
+    "input": "Um, uh, umm.",
+    "balanced": ""
+  },
+  {
+    "id": "swift-check-25",
+    "input": "Um. Hello Alice.",
+    "balanced": "Hello Alice."
+  },
+  {
+    "id": "swift-check-26",
+    "input": "Keep this. Charge 1.5 never mind charge 2.",
+    "balanced": "Keep this. Charge 2."
+  },
+  {
+    "id": "swift-check-27",
+    "input": "Keep this. Ask Dr. Alice never mind ask Bob.",
+    "balanced": "Keep this. Ask Bob."
+  },
+  {
+    "id": "swift-check-28",
+    "input": "I owe Alice 2. Send Tuesday never mind send Friday.",
+    "balanced": "I owe Alice 2. Send Friday."
+  },
+  {
+    "id": "swift-check-29",
+    "input": "Say \"Hello.\" Send Tuesday never mind send Friday.",
+    "balanced": "Say \"Hello.\" Send Friday."
+  },
+  {
+    "id": "swift-check-30",
+    "input": "Keep this. Ask the U.S. team never mind ask Canada.",
+    "balanced": "Keep this. Ask Canada."
+  },
+  {
+    "id": "swift-check-31",
+    "input": "Keep this. Send to James' team never mind send to Alice.",
+    "balanced": "Keep this. Send to Alice."
+  },
+  {
+    "id": "swift-check-32",
+    "input": "Ummm, uhhh, send it.",
+    "balanced": "Send it."
+  },
+  {
+    "id": "swift-check-33",
+    "input": "I don't owe Alice 20 dollars.",
+    "balanced": "I don't owe Alice 20 dollars."
+  },
+  {
+    "id": "swift-check-34",
+    "input": "Um, preserve \"a  b : c\"  exactly.",
+    "balanced": "Preserve \"a  b : c\"  exactly."
+  },
+  {
+    "id": "swift-check-35",
+    "input": "Uh, use foo_um and um.config and --um and /tmp/um.",
+    "balanced": "Use foo_um and um.config and --um and /tmp/um."
+  },
+  {
+    "id": "swift-check-36",
+    "input": "Use 5 um and UM and UH.",
+    "balanced": "Use 5 um and UM and UH."
+  },
+  {
+    "id": "swift-check-37",
+    "input": "Um, iPhone and eBay.",
+    "balanced": "iPhone and eBay."
+  },
+  {
+    "id": "swift-check-38",
+    "input": "I never mind waiting.",
+    "balanced": "I never mind waiting."
+  },
+  {
+    "id": "swift-check-39",
+    "input": "They never\nmind the noise.",
+    "balanced": "They never\nmind the noise."
+  },
+  {
+    "id": "swift-check-40",
+    "input": "Keep. Wrong never mind right.\r\nUh, next.",
+    "balanced": "Keep. Right.\r\nNext."
+  },
+  {
+    "id": "swift-check-41",
+    "input": "Keep\rWrong never mind right.",
+    "balanced": "Keep\rRight."
+  },
+  {
+    "id": "swift-check-42",
+    "input": "We live in the U.S. Wrong never mind right.",
+    "balanced": "We live in the U.S. Right."
+  },
+  {
+    "id": "swift-check-43",
+    "input": "Bring apples, um, oranges.",
+    "balanced": "Bring apples, oranges."
+  },
+  {
+    "id": "swift-check-44",
+    "input": "Yes, um, I can.",
+    "balanced": "Yes, I can."
+  },
+  {
+    "id": "swift-check-45",
+    "input": "I, um,, need this.",
+    "balanced": "I need this."
+  },
+  {
+    "id": "swift-check-46",
+    "input": "Keep [uh] this.",
+    "balanced": "Keep this."
+  },
+  {
+    "id": "swift-check-47",
+    "input": "I like this, you know.",
+    "balanced": "I like this, you know."
+  },
+  {
+    "id": "swift-check-48",
+    "input": "Um, straße.",
+    "balanced": "Straße."
+  },
+  {
+    "id": "swift-check-49",
+    "input": "(um)... hello.",
+    "balanced": "Hello."
+  },
+  {
+    "id": "swift-check-50",
+    "input": "Um, call um() and use $um.",
+    "balanced": "Call um() and use $um."
+  },
+  {
+    "id": "swift-check-51",
+    "input": "Say \"first\num second\". Uh, next.",
+    "balanced": "Say \"first\num second\". Next."
+  },
+  {
+    "id": "swift-escaped-quotation",
+    "input": "Say \"say \\\"um\\\"\". Uh, next.",
+    "balanced": "Say \"say \\\"um\\\"\". Next."
+  },
+  {
+    "id": "quoted-word-after-possessive",
+    "input": "Um, James' label is 'uh'.",
+    "balanced": "James' label is 'uh'."
+  },
+  {
+    "id": "overlapping-flag-boundary",
+    "input": "Um, keep a--um here.",
+    "balanced": "Keep a--um here."
+  },
+  {
+    "id": "unclosed-double-quote",
+    "input": "Um, say \"um never mind",
+    "balanced": "Say \"um never mind"
+  },
+  {
+    "id": "unclosed-fenced-code",
+    "input": "Um, use ```\num never mind",
+    "balanced": "Use ```\num never mind"
+  },
+  {
+    "id": "unclosed-inline-code",
+    "input": "Um, use `um never mind",
+    "balanced": "Use `um never mind"
+  }
+]
