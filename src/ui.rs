@@ -61,6 +61,8 @@ struct Verification {
     captures: usize,
     practice_ready: Option<Instant>,
     practice_verified: bool,
+    close_verified: bool,
+    show_verified: bool,
 }
 
 impl VocoApp {
@@ -195,6 +197,8 @@ impl VocoApp {
                 captures: 0,
                 practice_ready: None,
                 practice_verified: false,
+                close_verified: false,
+                show_verified: false,
             }),
         })
     }
@@ -712,10 +716,46 @@ impl VocoApp {
                     std::process::exit(1);
                 }
             }
+        } else if verification.stage == 7 {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            verification.practice_ready = Some(Instant::now());
+            verification.stage = 8;
+        } else if verification.stage == 8
+            && verification
+                .practice_ready
+                .is_some_and(|at| at.elapsed() >= Duration::from_millis(500))
+        {
+            if platform::dashboard_visible() {
+                eprintln!("Closing did not hide the dashboard");
+                std::process::exit(1);
+            }
+            verification.close_verified = true;
+            let status = std::env::current_exe().and_then(|executable| {
+                std::process::Command::new(executable)
+                    .arg("--show")
+                    .status()
+            });
+            if !status.is_ok_and(|status| status.success()) {
+                eprintln!("Second-instance show failed");
+                std::process::exit(1);
+            }
+            verification.practice_ready = Some(Instant::now());
+            verification.stage = 9;
+        } else if verification.stage == 9
+            && verification
+                .practice_ready
+                .is_some_and(|at| at.elapsed() >= Duration::from_millis(500))
+        {
+            if !platform::dashboard_visible() {
+                eprintln!("Second-instance show did not open the dashboard");
+                std::process::exit(1);
+            }
+            verification.show_verified = true;
+            verification.stage = 10;
         }
-        if verification.practice_verified {
+        if verification.show_verified {
             let report = serde_json::json!({ "runtime": "rust", "ui": "egui", "pagesRendered": 4, "screenshots": 4,
-                "trayCreated": true, "practiceInsertion": verification.practice_verified, "microphone": self.controller.permissions.microphone, "accessibility": self.controller.permissions.accessibility,
+                "trayCreated": true, "practiceInsertion": verification.practice_verified, "closeHidesDashboard": verification.close_verified, "secondInstanceShow": verification.show_verified, "microphone": self.controller.permissions.microphone, "accessibility": self.controller.permissions.accessibility,
                 "shortcut": self.controller.shortcut_running, "status": self.controller.status(), "transcriptPersistence": false });
             if let Err(error) = std::fs::write(
                 verification.directory.join("report.json"),

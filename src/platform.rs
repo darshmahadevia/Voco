@@ -378,6 +378,15 @@ pub struct FocusTarget {
     value: Option<String>,
 }
 
+pub fn dashboard_visible() -> bool {
+    MainThreadMarker::new().is_some_and(|main| {
+        NSApplication::sharedApplication(main)
+            .windows()
+            .iter()
+            .any(|window| window.title().to_string() == "Voco" && window.isVisible())
+    })
+}
+
 pub fn voco_is_focused() -> bool {
     frontmost_pid().is_ok_and(|pid| pid == std::process::id() as i32)
 }
