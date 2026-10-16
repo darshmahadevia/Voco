@@ -142,45 +142,7 @@ fn run() -> Result<()> {
         None
     };
     let show = args.first().is_some_and(|arg| arg == "--show") || verification.is_some();
-    let image = image::load_from_memory(include_bytes!("../Resources/Brand/voco-app.png"))
-        .ok()
-        .map(|image| {
-            let rgba = image.into_rgba8();
-            let (width, height) = rgba.dimensions();
-            eframe::egui::IconData {
-                rgba: rgba.into_raw(),
-                width,
-                height,
-            }
-        });
-    let mut viewport = eframe::egui::ViewportBuilder::default()
-        .with_title("Voco")
-        .with_inner_size([960.0, 720.0])
-        .with_min_inner_size([720.0, 520.0])
-        .with_max_inner_size([960.0, 720.0])
-        .with_maximize_button(false)
-        .with_visible(show)
-        .with_app_id("org.vocoapp.Voco");
-    if let Some(icon) = image {
-        viewport = viewport.with_icon(icon);
-    }
-    let options = eframe::NativeOptions {
-        viewport,
-        ..Default::default()
-    };
-    eframe::run_native(
-        "Voco",
-        options,
-        Box::new(move |cc| {
-            Ok(Box::new(voco::ui::VocoApp::new(
-                cc,
-                root,
-                show,
-                verification,
-            )?))
-        }),
-    )
-    .map_err(|error| anyhow::anyhow!("Could not open Voco. {error}"))?;
+    voco::ui::run(root, show, verification)?;
     Ok(())
 }
 

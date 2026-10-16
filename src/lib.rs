@@ -4,6 +4,7 @@ pub mod controller;
 pub mod domain;
 pub mod gesture;
 pub mod models;
+pub mod overlay;
 pub mod platform;
 pub mod practice;
 pub mod speech;

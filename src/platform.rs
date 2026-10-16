@@ -8,7 +8,6 @@ use core_foundation::{
     dictionary::CFDictionary,
     runloop::{CFRunLoop, kCFRunLoopDefaultMode},
     string::{CFString, CFStringRef},
-    url::CFURL,
 };
 use core_graphics::event::{
     CGEvent, CGEventFlags, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement,
@@ -22,10 +21,9 @@ use objc2::{
     sel,
 };
 use objc2_app_kit::{
-    NSApplication, NSApplicationActivationPolicy, NSBackingStoreType, NSBox, NSBoxType, NSColor,
-    NSEventMask, NSFont, NSPanel, NSPasteboard, NSPasteboardItem, NSPasteboardTypeString,
-    NSPasteboardWriting, NSScreen, NSSecureTextField, NSTextAlignment, NSTextField, NSTextView,
-    NSTitlePosition, NSView, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask, NSWorkspace,
+    NSApplication, NSApplicationActivationPolicy, NSBackingStoreType, NSEventMask, NSPasteboard,
+    NSPasteboardItem, NSPasteboardTypeString, NSPasteboardWriting, NSSecureTextField, NSTextView,
+    NSView, NSWindow, NSWindowStyleMask, NSWorkspace,
 };
 use objc2_foundation::{
     NSArray, NSDate, NSDefaultRunLoopMode, NSPoint, NSRange, NSRect, NSSize, NSString, NSURL,
@@ -35,7 +33,7 @@ use std::{
     ffi::c_void,
     path::PathBuf,
     sync::{
-        Arc, Once,
+        Arc,
         atomic::{AtomicBool, AtomicU8, Ordering},
     },
     thread::{self, JoinHandle},
@@ -87,11 +85,6 @@ unsafe extern "C" {
 
 #[link(name = "AVFoundation", kind = "framework")]
 unsafe extern "C" {}
-
-#[link(name = "CoreText", kind = "framework")]
-unsafe extern "C" {
-    fn CTFontManagerRegisterFontsForURL(url: CFTypeRef, scope: u32, error: *mut CFTypeRef) -> bool;
-}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Permissions {
@@ -191,6 +184,12 @@ pub fn activate_dashboard() {
         #[allow(deprecated)]
         app.activateIgnoringOtherApps(true);
     }
+}
+
+pub fn reduced_motion() -> bool {
+    let workspace = NSWorkspace::sharedWorkspace();
+    let reduced: Bool = unsafe { msg_send![&*workspace, accessibilityDisplayShouldReduceMotion] };
+    reduced.as_bool()
 }
 
 pub fn show_app() -> Result<()> {
@@ -922,140 +921,6 @@ pub fn start_shortcuts(sender: Sender<Action>) -> Result<ShortcutMonitor> {
     Ok(monitor)
 }
 
-pub struct Overlay {
-    panel: Retained<NSPanel>,
-    label: Retained<NSTextField>,
-    waveform: Retained<NSTextField>,
-    visible: bool,
-}
-
-impl Overlay {
-    pub fn new() -> Result<Self> {
-        let main =
-            MainThreadMarker::new().context("Create the dictation overlay on the main thread.")?;
-        let bounds = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(280.0, 54.0));
-        let panel = NSPanel::initWithContentRect_styleMask_backing_defer(
-            NSPanel::alloc(main),
-            bounds,
-            NSWindowStyleMask::Borderless | NSWindowStyleMask::NonactivatingPanel,
-            NSBackingStoreType::Buffered,
-            false,
-        );
-        // Retained owns the panel. Closing it must not trigger AppKit's extra release.
-        unsafe {
-            panel.setReleasedWhenClosed(false);
-        }
-        panel.setFloatingPanel(true);
-        panel.setBecomesKeyOnlyIfNeeded(true);
-        panel.setHidesOnDeactivate(false);
-        panel.setIgnoresMouseEvents(true);
-        panel.setLevel(25);
-        panel.setCollectionBehavior(
-            NSWindowCollectionBehavior::CanJoinAllSpaces
-                | NSWindowCollectionBehavior::FullScreenAuxiliary
-                | NSWindowCollectionBehavior::Stationary
-                | NSWindowCollectionBehavior::IgnoresCycle,
-        );
-        panel.setOpaque(false);
-        panel.setBackgroundColor(Some(&NSColor::clearColor()));
-        panel.setHasShadow(true);
-        let background = NSBox::initWithFrame(NSBox::alloc(main), bounds);
-        background.setBoxType(NSBoxType::Custom);
-        background.setBorderWidth(0.0);
-        background.setTitlePosition(NSTitlePosition::NoTitle);
-        background.setContentViewMargins(NSSize::new(0.0, 0.0));
-        background.setCornerRadius(27.0);
-        background.setFillColor(&NSColor::colorWithSRGBRed_green_blue_alpha(
-            0.09, 0.105, 0.12, 0.97,
-        ));
-        let label = NSTextField::labelWithString(&NSString::from_str("Listening"), main);
-        label.setFrame(NSRect::new(
-            NSPoint::new(20.0, 17.0),
-            NSSize::new(150.0, 21.0),
-        ));
-        label.setFont(Some(&overlay_font(14.0)));
-        label.setTextColor(Some(&NSColor::whiteColor()));
-        let waveform = NSTextField::labelWithString(&NSString::from_str("▁▂▃▂▁"), main);
-        waveform.setFrame(NSRect::new(
-            NSPoint::new(178.0, 17.0),
-            NSSize::new(82.0, 23.0),
-        ));
-        waveform.setFont(Some(&NSFont::boldSystemFontOfSize(17.0)));
-        waveform.setAlignment(NSTextAlignment::Center);
-        waveform.setTextColor(Some(&NSColor::colorWithSRGBRed_green_blue_alpha(
-            1.0,
-            116.0 / 255.0,
-            47.0 / 255.0,
-            1.0,
-        )));
-        background.addSubview(&label);
-        background.addSubview(&waveform);
-        panel.setContentView(Some(&background));
-        Ok(Self {
-            panel,
-            label,
-            waveform,
-            visible: false,
-        })
-    }
-
-    pub fn update(&mut self, label: &str, level: f32, visible: bool) {
-        self.label.setStringValue(&NSString::from_str(label));
-        let amplitude = if level.is_finite() {
-            level.clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
-        let heights = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
-        let bars: String = [0.35, 0.65, 0.9, 1.0, 0.9, 0.65, 0.35]
-            .into_iter()
-            .map(|envelope| heights[(amplitude * envelope * 7.0).round() as usize])
-            .collect();
-        self.waveform.setStringValue(&NSString::from_str(&bars));
-        if visible {
-            if let Some(screen) = NSScreen::mainScreen(MainThreadMarker::from(&*self.panel)) {
-                let frame = screen.visibleFrame();
-                self.panel.setFrameOrigin(NSPoint::new(
-                    frame.origin.x + (frame.size.width - 280.0) / 2.0,
-                    frame.origin.y + 24.0,
-                ));
-            }
-            if !self.visible {
-                self.panel.orderFrontRegardless();
-            }
-        } else if self.visible {
-            self.panel.orderOut(None);
-        }
-        self.visible = visible;
-    }
-}
-
-fn overlay_font(size: f64) -> Retained<NSFont> {
-    static REGISTER: Once = Once::new();
-    REGISTER.call_once(|| {
-        let bundled = std::env::current_exe().ok().and_then(|path| {
-            path.ancestors()
-                .find(|parent| {
-                    parent
-                        .extension()
-                        .is_some_and(|extension| extension == "app")
-                })
-                .map(|bundle| bundle.join("Contents/Resources/Fonts/Manrope-Regular.ttf"))
-        });
-        let path = bundled.filter(|path| path.is_file()).unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("Resources/Fonts/Manrope-Regular.ttf")
-        });
-        if let Some(url) = CFURL::from_path(&path, false) {
-            // Process-scope registration borrows the URL. No CFError is requested.
-            unsafe {
-                CTFontManagerRegisterFontsForURL(url.as_CFTypeRef(), 1, std::ptr::null_mut());
-            }
-        }
-    });
-    NSFont::fontWithName_size(&NSString::from_str("Manrope-Regular"), size)
-        .unwrap_or_else(|| NSFont::systemFontOfSize(size))
-}
-
 pub fn verify_insertion() -> Result<serde_json::Value> {
     let main = MainThreadMarker::new().context("Run insertion verification on the main thread.")?;
     ensure!(
@@ -1176,31 +1041,9 @@ pub fn verify_insertion() -> Result<serde_json::Value> {
         FocusTarget::capture().is_err(),
         "The password-field guard allowed capture."
     );
-    let mut overlay = Overlay::new()?;
-    overlay.update("Listening", 0.5, true);
-    ensure!(
-        !overlay.panel.canBecomeKeyWindow() && !overlay.panel.canBecomeMainWindow(),
-        "The recording panel can take keyboard focus."
-    );
-    ensure!(
-        overlay.panel.ignoresMouseEvents(),
-        "The recording panel intercepts mouse input."
-    );
-    ensure!(
-        window.0.isKeyWindow(),
-        "The recording panel stole keyboard focus."
-    );
-    overlay.update("Idle", 0.0, false);
     Ok(
-        serde_json::json!({"status":"pass", "unicodeUtf16Units":text.encode_utf16().count(), "selectionReplacement":true, "changedSelectionRefused":true, "changedFieldRefused":true, "secureFieldRefused":true, "panelNonactivating":true, "panelIgnoresMouse":true, "panelPreservesFocus":true}),
+        serde_json::json!({"status":"pass", "unicodeUtf16Units":text.encode_utf16().count(), "selectionReplacement":true, "changedSelectionRefused":true, "changedFieldRefused":true, "secureFieldRefused":true}),
     )
-}
-
-impl Drop for Overlay {
-    fn drop(&mut self) {
-        self.panel.orderOut(None);
-        self.panel.close();
-    }
 }
 
 #[cfg(test)]

@@ -12,7 +12,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = { version = "0.4", features = ["serde"] }
 regex = "1"
-eframe = { version = "0.33.3", default-features = false, features = ["default_fonts", "glow", "accesskit"] }
+gpui = { version = "=0.2.2", features = ["runtime_shaders"] }
+raw-window-handle = "0.6"
+gpui-component = { version = "=0.5.1", default-features = false }
 tray-icon = "0.21"
 image = { version = "0.25", default-features = false, features = ["png"] }
 cpal = "0.16"
