@@ -1,9 +1,11 @@
-# Rust dashboard
+# Native dashboard
 
-The Rust dashboard preserves Voco's existing dark palette, Manrope typography, orange voice accents, four navigation destinations, setup actions, and local transcript recovery. egui replaces the browser implementation. Native macOS menus provide navigation shortcuts.
+GPUI renders Voco's dashboard and floating voice pill. The interface uses Metal, the bundled Manrope font, a black canvas, graphite controls, soft-white primary buttons, and orange voice details. Native GPUI input components handle editing, selection, and composition.
 
-The first viewport has a narrow sidebar and a task area. Home leads with Fn/Globe guidance, then model and permission setup or a practice field and recent transcripts. Settings has Output, Models, Access, and Dictation tabs. A persistent footer reports session status and errors. The recording panel is an AppKit nonactivating panel controlled from Rust.
+A fixed sidebar gives Home, Transcripts, Statistics, and Settings stable locations. Home pairs shortcut guidance with an orange ASCII ribbon, followed by real usage totals, a practice field, and recent words. Missing setup has a direct action to the relevant settings panel. Settings retains Output, Models, Access, and Dictation tabs. Transcripts has search, complete text, and exact clipboard copying.
 
-The static `Resources/Fonts/Manrope-Regular.ttf` is a weight-400 instance of the previously bundled variable Manrope font, generated with FontTools. The variable font's default weight was 200, which egui rendered too lightly in the first screenshot. The original font license is retained.
+The live footer and recovery panel sit outside page scrolling. The floating voice pill uses measured audio levels during capture and a separate progress indicator during transcription. Its macOS panel cannot become key or main and ignores pointer input. Page arrivals and the progress indicator respect macOS Reduce Motion.
 
-Screenshots from the real executable are created by `voco --verify-ui DIRECTORY`. The native capture runs through egui's screenshot event. The verification record describes the tested pages and known limitations.
+`voco --verify-ui DIRECTORY` captures the real native windows and exercises practice selection replacement and dashboard lifecycle. The [GPUI verification record](../gpui/verification.md) records the current results and limits. Earlier egui results remain historical evidence in the [Rust migration record](verification.md).
+
+The [direction brief](../gpui/direction.md) explains the composition and alternatives. The [design system](../../DESIGN.md) owns shared colors, typography, and visual constraints.

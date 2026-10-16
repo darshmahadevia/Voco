@@ -1,5 +1,7 @@
 # Rust migration verification
 
+This record describes the earlier egui port. The [GPUI verification record](../gpui/verification.md) covers the current native interface.
+
 ## Core and recognition
 
 The original TypeScript application passed 28 tests and type checking before migration.

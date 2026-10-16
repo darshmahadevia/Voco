@@ -10,7 +10,7 @@ Rust desktop application for Apple Silicon Macs running macOS 26 or newer.
 
 ## Stack
 
-Rust and egui/eframe provide the dashboard. Rust bindings to AppKit and Accessibility own system integration. CPAL captures audio. Statically linked inference libraries run Moonshine Medium Streaming, Parakeet TDT 0.6B v2 ONNX, and Whisper Large v3 Turbo in English.
+Rust and GPUI provide the dashboard and floating recording pill. Native GPUI input components handle text editing and composition. Rust bindings to AppKit and Accessibility own system integration. CPAL captures audio. Statically linked inference libraries run Moonshine Medium Streaming, Parakeet TDT 0.6B v2 ONNX, and Whisper Large v3 Turbo in English.
 
 ## Product purpose
 

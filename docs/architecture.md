@@ -1,6 +1,6 @@
 # Architecture
 
-Voco is one Rust executable. egui/eframe renders the dashboard. AppKit and Accessibility bindings implement macOS behavior. CPAL captures microphone audio. Native inference dependencies provide Moonshine, ONNX Runtime, and whisper.cpp. There is no web renderer or helper process.
+Voco is one Rust executable. GPUI renders the dashboard and floating recording pill using Metal. AppKit and Accessibility bindings implement macOS behavior. CPAL captures microphone audio. Native inference dependencies provide Moonshine, ONNX Runtime, and whisper.cpp. There is no web renderer or helper process.
 
 ## Ownership
 
@@ -14,9 +14,11 @@ Voco is one Rust executable. egui/eframe renders the dashboard. AppKit and Acces
 
 `audio.rs` captures the default microphone, downmixes to mono, and resamples to 16 kHz with a low-pass filter. Its bounded memory buffer holds at most ten minutes. Capture errors stop the session. Reaching the limit finishes recognition of the captured prefix.
 
-`platform.rs` owns permissions, the global event tap, clipboard access, focus validation, insertion, and a nonactivating AppKit recording panel. The event tap runs on its own run loop and sends actions to the controller. It performs no Accessibility work in its callback.
+`platform.rs` owns permissions, the global event tap, clipboard access, focus validation, insertion, and macOS window integration. The event tap runs on its own run loop and sends actions to the controller. It performs no Accessibility work in its callback.
 
-`ui.rs` owns dashboard navigation, the practice field, settings controls, statistics, in-memory transcript views, tray menus, and screenshot verification. The practice field applies validated results directly to egui text state. Other apps receive a verified Accessibility write or clipboard-preserving paste.
+`ui.rs` owns dashboard navigation, the practice field, settings controls, statistics, in-memory transcript views, tray menus, and screenshot verification. The practice field applies validated results to its native GPUI input state, converting UTF-16 selections into character-based ranges and cursor positions. Other apps receive a verified Accessibility write or clipboard-preserving paste.
+
+`overlay.rs` draws the voice pill in GPUI. Its macOS panel cannot become key or main and ignores pointer input. It shows measured microphone energy during listening and a separate progress indicator during transcription.
 
 `storage.rs` owns preferences migration and atomic settings persistence. The serialized shape contains preferences and usage totals. It has no audio or transcript fields.
 

@@ -1,0 +1,52 @@
+   Compiling voco v0.3.0 (/Users/darshm/Documents/Projects/Voco)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.42s
+   Compiling voco v0.3.0 (/Users/darshm/Documents/Projects/Voco)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.29s
+     Running unittests src/lib.rs (target/debug/deps/voco-2a399ceab52ce402)
+
+running 34 tests
+test controller::tests::cancelled_generation_rejects_late_transcript ... ok
+test gesture::tests::blocked_combination_requires_fn_release_before_space_chord ... ok
+test gesture::tests::existing_modifier_combination_does_not_start_dictation ... ok
+test gesture::tests::hold_emits_one_start_and_one_release ... ok
+test gesture::tests::hold_releases_and_chord_does_not ... ok
+test gesture::tests::keyboard_combination_cancels_until_the_trigger_is_released ... ok
+test audio::tests::refuses_audio_beyond_the_buffer_limit ... ok
+test gesture::tests::modifier_chords_cancel_and_remain_blocked ... ok
+test gesture::tests::space_chord_promotes_hold_and_ignores_repeats_and_fn_release ... ok
+test gesture::tests::space_held_before_fn_cannot_suppress_hold_release ... ok
+test gesture::tests::unrelated_key_cancels_hold_and_space_does_not_restart_it ... ok
+test audio::tests::preserves_mono_16khz_exactly ... ok
+test models::tests::cancellation_does_not_create_an_installation ... ok
+test models::tests::cancellation_interrupts_integrity_verification ... ok
+test models::tests::parakeet_coreml_cache_is_a_separate_installation ... ok
+test models::tests::rejects_corruption_even_when_the_size_matches ... ok
+test models::tests::atomically_publishes_and_replaces_a_directory ... ok
+test models::tests::verifies_moonshine_crc32c_encoding ... ok
+test platform::tests::replacement_uses_utf16_selection_offsets ... ok
+test audio::tests::removes_frequencies_above_output_nyquist ... ok
+test practice::tests::refuses_changed_text_and_selection ... ok
+test practice::tests::replaces_unicode_selection_and_preserves_caret ... ok
+test storage::tests::invalid_legacy_usage_preserves_privacy_and_model_preferences ... ok
+test storage::tests::settings_store_no_transcripts_and_reject_invalid_usage ... ok
+test storage::tests::totals_and_streak_use_calendar_days ... ok
+test platform::tests::shortcut_callback_forwards_hold_chord_escape_and_ignores_our_events ... ok
+test platform::tests::clipboard_lease_preserves_a_new_copy ... ok
+test platform::tests::clipboard_lease_restores_every_representation ... ok
+test cleanup::tests::empty_and_long_transcripts_need_no_model ... ok
+test cleanup::tests::all_swift_balanced_fixtures ... ok
+test cleanup::tests::swift_literal_safety_and_idempotence ... ok
+test audio::tests::preserves_duration_and_speech_band_at_device_rates ... ok
+test cleanup::tests::safe_punctuation_preserves_literals_and_quantities ... ok
+test cleanup::tests::swift_invalid_model_edits ... ok
+
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s
+
+     Running unittests src/main.rs (target/debug/deps/voco-d58eb0ff9c0783f6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling voco v0.3.0 (/Users/darshm/Documents/Projects/Voco)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.98s

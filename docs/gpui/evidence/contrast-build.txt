@@ -1,0 +1,4 @@
+    Checking voco v0.3.0 (/Users/darshm/Documents/Projects/Voco)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.07s
+   Compiling voco v0.3.0 (/Users/darshm/Documents/Projects/Voco)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 22.82s

@@ -4,7 +4,7 @@ Speak into the app you're using. Voco turns your voice into text on your Mac.
 
 Hold **Fn** or **Globe**, speak, and release. Voco transcribes locally and inserts your words at the cursor. **Fn + Space** starts and stops continuous dictation. **Escape** cancels recording or pending transcription.
 
-Voco is a Rust application. Its dashboard uses egui. Rust bindings call macOS frameworks for the menu bar, permissions, shortcuts, the recording panel, and text insertion. The app has no Electron, browser UI, Node.js, or Swift helper.
+Voco is a Rust application. GPUI renders its dashboard and floating recording pill with Metal. Rust bindings call macOS frameworks for the menu bar, permissions, shortcuts, nonactivating windows, and text insertion. The app has no Electron, browser UI, Node.js, or Swift helper.
 
 ## Build and run
 
