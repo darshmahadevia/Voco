@@ -111,6 +111,7 @@ pub fn run(root: PathBuf, show: bool, verification: Option<PathBuf>) -> Result<(
         theme.font_size = px(13.);
         theme.colors.background = rgb(BG).into();
         theme.colors.foreground = rgb(TEXT).into();
+        theme.colors.muted_foreground = rgb(MUTED).into();
         theme.colors.input = rgb(0x141414).into();
         theme.colors.border = rgb(LINE).into();
         theme.colors.ring = rgb(ORANGE).into();
