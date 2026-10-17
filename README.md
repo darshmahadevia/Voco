@@ -8,6 +8,19 @@ Voco is a Rust application. GPUI renders its dashboard and floating recording pi
 
 ![Voco GPUI dashboard](docs/images/voco-dashboard.png)
 
+## Why I moved Voco to Rust
+
+I planned the Rust port to reduce the overhead and maintenance of a dictation app that stays running in the menu bar. The earlier version used TypeScript and Electron for the interface, plus a Swift helper for macOS integration.
+
+The goals were to:
+
+- Remove Chromium and Node.js from the app's runtime. Voco now renders its dashboard and recording pill through GPUI and Metal.
+- Keep recording, shortcuts, cancellation, and text insertion in one application. Fewer process boundaries make the dictation flow easier to follow and debug.
+- Use Rust's ownership and type checks to catch memory, concurrency, and state-handling mistakes before release. macOS integration and native dependencies still need runtime testing.
+- Simplify packaging and updates. The app has one executable with its resources, without a separate helper process to start and coordinate.
+
+Lower memory use and faster startup were goals of the port, but I have not measured those gains yet. The speech engines already ran native code, so the language change alone does not establish faster or more accurate transcription. The tradeoff is more platform-specific UI work if Voco expands beyond macOS.
+
 ## Build and run
 
 Voco requires an Apple Silicon Mac with macOS 26 or newer, Rust 1.92 or newer, Apple's Command Line Tools with Swift 6.2 and the macOS 26 SDK or newer, and CMake. Speech inference dependencies include native C and C++ libraries compiled or fetched by Cargo. A first build needs internet access.
