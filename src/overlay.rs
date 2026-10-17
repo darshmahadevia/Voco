@@ -9,7 +9,7 @@ use objc2::{
 use objc2_app_kit::{NSScreen, NSView, NSWindow, NSWindowCollectionBehavior};
 use objc2_foundation::{NSPoint, NSString};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 const VOICE_DIAMETER: f32 = 38.;
 const LABEL_WIDTH: f32 = 122.;
@@ -19,17 +19,81 @@ const WINDOW_MARGIN: f32 = 10.;
 const WINDOW_WIDTH: f32 = VOICE_DIAMETER + SURFACE_GAP + LABEL_WIDTH + WINDOW_MARGIN * 2.;
 const WINDOW_HEIGHT: f32 = 60.;
 const BAR_BASELINE: f32 = 3.;
+const IDLE_DIAMETER: f32 = 7.;
+const IDLE_WIDTH: f32 = 48.;
+const IDLE_HEIGHT: f32 = 3.;
+const MORPH_DURATION: Duration = Duration::from_millis(220);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Presentation {
+    Idle,
+    Active,
+}
+
+impl Presentation {
+    fn amount(self) -> f32 {
+        match self {
+            Self::Idle => 0.,
+            Self::Active => 1.,
+        }
+    }
+}
+
+struct Morph {
+    target: Presentation,
+    from: f32,
+    started: Instant,
+}
+
+impl Morph {
+    fn idle(now: Instant) -> Self {
+        Self {
+            target: Presentation::Idle,
+            from: 0.,
+            started: now,
+        }
+    }
+
+    fn retarget(&mut self, target: Presentation, now: Instant, reduced_motion: bool) -> bool {
+        if self.target == target {
+            return false;
+        }
+        self.from = self.sample(now, reduced_motion).0;
+        self.target = target;
+        self.started = now;
+        true
+    }
+
+    fn sample(&self, now: Instant, reduced_motion: bool) -> (f32, bool) {
+        let target = self.target.amount();
+        let distance = (target - self.from).abs();
+        if reduced_motion || distance == 0. {
+            return (target, false);
+        }
+        let progress = now.duration_since(self.started).as_secs_f32()
+            / (MORPH_DURATION.as_secs_f32() * distance);
+        if progress >= 1. {
+            return (target, false);
+        }
+        let eased = progress * progress * (3. - 2. * progress);
+        (self.from + (target - self.from) * eased, true)
+    }
+}
+
+fn interpolate(idle: f32, active: f32, amount: f32) -> f32 {
+    idle + (active - idle) * amount
+}
 
 pub struct Overlay {
     window: WindowHandle<VoicePill>,
     native: Retained<NSWindow>,
-    visible: bool,
 }
 
 struct VoicePill {
     label: SharedString,
     meter: VoiceMeter,
     started: Instant,
+    morph: Morph,
 }
 
 struct VoiceMeter {
@@ -104,6 +168,7 @@ impl Overlay {
                     label: "Listening".into(),
                     meter: VoiceMeter::new(Instant::now()),
                     started: Instant::now(),
+                    morph: Morph::idle(Instant::now()),
                 })
             },
         )?;
@@ -126,7 +191,6 @@ impl Overlay {
             } else {
                 let mut builder = ClassBuilder::new(c"VocoVoicePanel", native.class())
                     .context("Could not configure the voice pill.")?;
-                // Only this GPUI panel loses activation; dashboard behavior is unchanged.
                 unsafe {
                     builder.add_method(
                         sel!(canBecomeKeyWindow),
@@ -144,61 +208,67 @@ impl Overlay {
             native.setTitle(&NSString::from_str("Voco Voice"));
             native.setIgnoresMouseEvents(true);
             native.setHidesOnDeactivate(false);
-            native.setLevel(25);
+            native.setLevel(3);
             native.setHasShadow(false);
             native.setCollectionBehavior(
                 NSWindowCollectionBehavior::CanJoinAllSpaces
-                    | NSWindowCollectionBehavior::FullScreenAuxiliary
+                    | NSWindowCollectionBehavior::FullScreenNone
+                    | NSWindowCollectionBehavior::FullScreenDisallowsTiling
                     | NSWindowCollectionBehavior::Stationary
                     | NSWindowCollectionBehavior::IgnoresCycle,
             );
             Ok(native)
         })??;
-        let this = Self {
-            window,
-            native,
-            visible: false,
-        };
+        let mut this = Self { window, native };
+        this.update("Ready", 0., false, cx);
+        this.native.orderFront(None);
         this.verify()?;
         Ok(this)
     }
 
-    pub fn update(&mut self, label: &str, level: f32, visible: bool, cx: &mut App) {
+    pub fn update(&mut self, label: &str, level: f32, active: bool, cx: &mut App) {
         let label = match label {
             "Words saved for copying" => "Copy your words",
             label => label,
         };
-        let was_visible = self.visible;
+        let presentation = if active {
+            Presentation::Active
+        } else {
+            Presentation::Idle
+        };
         let _ = self.window.update(cx, |pill, _, cx| {
+            let now = Instant::now();
             let changed = pill.label.as_ref() != label;
-            if !visible || !was_visible || changed {
-                pill.meter = VoiceMeter::new(Instant::now());
+            let transitioned =
+                pill.morph
+                    .retarget(presentation, now, crate::platform::reduced_motion());
+            if transitioned || changed {
+                pill.meter = VoiceMeter::new(now);
+                pill.started = now;
             }
-            if visible && label == "Listening" {
+            if active && label == "Listening" {
                 pill.meter.push(level);
             }
             if changed {
                 pill.label = label.to_owned().into();
             }
-            if changed || visible {
+            if transitioned || active {
                 cx.notify();
             }
         });
-        if visible {
-            if let Some(screen) = MainThreadMarker::new().and_then(NSScreen::mainScreen) {
-                let frame = screen.visibleFrame();
-                self.native.setFrameOrigin(NSPoint::new(
-                    frame.origin.x + (frame.size.width - f64::from(WINDOW_WIDTH)) / 2.,
-                    frame.origin.y + 18.,
-                ));
-            }
-            if !self.visible {
-                self.native.orderFrontRegardless();
-            }
-        } else if self.visible {
-            self.native.orderOut(None);
+        if self.native.isVisible() && !self.native.isOnActiveSpace() {
+            return;
         }
-        self.visible = visible;
+        if let Some(screen) = MainThreadMarker::new().and_then(NSScreen::mainScreen) {
+            let frame = screen.visibleFrame();
+            let origin = NSPoint::new(
+                frame.origin.x + (frame.size.width - f64::from(WINDOW_WIDTH)) / 2.,
+                frame.origin.y + 18.,
+            );
+            if self.native.frame().origin != origin {
+                self.native.setFrameOrigin(origin);
+            }
+        }
     }
 
     pub fn verify(&self) -> Result<()> {
@@ -214,7 +284,45 @@ impl Overlay {
             self.native.ignoresMouseEvents(),
             "The GPUI voice pill intercepts mouse input."
         );
+        let behavior = self.native.collectionBehavior();
+        ensure!(
+            behavior.contains(NSWindowCollectionBehavior::FullScreenNone)
+                && !behavior.intersects(
+                    NSWindowCollectionBehavior::FullScreenAuxiliary
+                        | NSWindowCollectionBehavior::FullScreenPrimary
+                ),
+            "The GPUI voice pill can join native fullscreen windows."
+        );
+        ensure!(
+            self.native.level() > 0,
+            "The voice pill is below ordinary windows."
+        );
+        ensure!(
+            self.native.isVisible(),
+            "The persistent voice pill is hidden."
+        );
         Ok(())
+    }
+
+    pub fn verify_idle(&self, cx: &mut App) -> Result<()> {
+        self.verify()?;
+        self.window.update(cx, |pill, _, _| {
+            ensure!(
+                pill.morph.target == Presentation::Idle,
+                "The voice pill is active."
+            );
+            ensure!(
+                pill.morph
+                    .sample(Instant::now(), crate::platform::reduced_motion())
+                    == (0., false),
+                "The idle voice pill has not settled."
+            );
+            Ok(())
+        })?
+    }
+
+    pub fn on_active_space(&self) -> bool {
+        self.native.isOnActiveSpace()
     }
 
     pub fn window_number(&self) -> isize {
@@ -228,13 +336,32 @@ extern "C-unwind" fn cannot_activate(_: &AnyObject, _: Sel) -> Bool {
 
 impl Render for VoicePill {
     fn render(&mut self, window: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        let listening = self.label.as_ref() == "Listening";
-        let busy = matches!(self.label.as_ref(), "Starting" | "Transcribing");
         let reduced_motion = crate::platform::reduced_motion();
-        let (heights, settling) = self.meter.sample(Instant::now(), reduced_motion);
-        if listening && settling {
+        let now = Instant::now();
+        let (amount, morphing) = self.morph.sample(now, reduced_motion);
+        let listening = amount > 0. && self.label.as_ref() == "Listening";
+        let busy = amount > 0. && matches!(self.label.as_ref(), "Starting" | "Transcribing");
+        let (heights, settling) = if listening {
+            self.meter.sample(now, reduced_motion)
+        } else {
+            ([BAR_BASELINE; 5], false)
+        };
+        if morphing || (listening && settling) {
             window.request_animation_frame();
         }
+        let surface_color = Rgba {
+            r: 0.,
+            g: 0.,
+            b: 0.,
+            a: interpolate(0.13, 1., amount),
+        };
+        let border_channel = interpolate(1., 48. / 255., amount);
+        let border_color = Rgba {
+            r: border_channel,
+            g: border_channel,
+            b: border_channel,
+            a: interpolate(0.28, 1., amount),
+        };
         let waveform = div()
             .flex()
             .items_center()
@@ -300,26 +427,34 @@ impl Render for VoicePill {
                             .flex()
                             .items_center()
                             .justify_center()
-                            .size(px(VOICE_DIAMETER))
+                            .size(px(interpolate(IDLE_DIAMETER, VOICE_DIAMETER, amount)))
+                            .flex_shrink_0()
+                            .overflow_hidden()
                             .rounded_full()
-                            .bg(rgb(0x000000))
+                            .bg(surface_color)
                             .border_1()
-                            .border_color(rgb(0x303030))
-                            .child(feedback),
+                            .border_color(border_color)
+                            .child(div().opacity(amount).child(feedback)),
                     )
                     .child(
                         div()
                             .flex()
                             .items_center()
                             .justify_center()
-                            .w(px(LABEL_WIDTH))
-                            .h(px(LABEL_HEIGHT))
+                            .w(px(interpolate(IDLE_WIDTH, LABEL_WIDTH, amount)))
+                            .h(px(interpolate(IDLE_HEIGHT, LABEL_HEIGHT, amount)))
                             .rounded_full()
-                            .bg(rgb(0x000000))
+                            .bg(surface_color)
                             .border_1()
-                            .border_color(rgb(0x303030))
+                            .border_color(border_color)
+                            .overflow_hidden()
                             .text_center()
-                            .child(self.label.clone()),
+                            .child(
+                                div()
+                                    .flex_shrink_0()
+                                    .opacity(amount)
+                                    .child(self.label.clone()),
+                            ),
                     ),
             )
     }
@@ -333,13 +468,78 @@ impl Drop for Overlay {
 
 #[cfg(test)]
 mod tests {
-    use super::VoiceMeter;
+    use super::{Morph, Presentation, VoiceMeter, interpolate};
     use std::time::{Duration, Instant};
 
     fn assert_heights(actual: [f32; 5], expected: [f32; 5]) {
         for (actual, expected) in actual.into_iter().zip(expected) {
             assert!((actual - expected).abs() < 0.002, "{actual} != {expected}");
         }
+    }
+
+    #[test]
+    fn idle_geometry_stays_settled_until_activated() {
+        let now = Instant::now();
+        let mut morph = Morph::idle(now);
+        assert_eq!(
+            morph.sample(now + Duration::from_secs(60), false),
+            (0., false)
+        );
+        assert!(morph.retarget(Presentation::Active, now, false));
+        assert_eq!(
+            morph.sample(now + Duration::from_millis(110), false),
+            (0.5, true)
+        );
+        assert_eq!(interpolate(7., 38., 0.5), 22.5);
+        assert_eq!(interpolate(48., 122., 0.5), 85.);
+        assert_eq!(
+            morph.sample(now + Duration::from_millis(220), false),
+            (1., false)
+        );
+    }
+
+    #[test]
+    fn reversing_a_morph_keeps_its_current_geometry() {
+        let now = Instant::now();
+        let mut morph = Morph::idle(now);
+        morph.retarget(Presentation::Active, now, false);
+        let midway = now + Duration::from_millis(110);
+        assert_eq!(morph.sample(midway, false), (0.5, true));
+        morph.retarget(Presentation::Idle, midway, false);
+        assert_eq!(morph.sample(midway, false), (0.5, true));
+        assert_eq!(
+            morph.sample(midway + Duration::from_millis(55), false),
+            (0.25, true)
+        );
+        assert_eq!(
+            morph.sample(midway + Duration::from_millis(110), false),
+            (0., false)
+        );
+    }
+
+    #[test]
+    fn repeated_updates_do_not_restart_morph_and_reduced_motion_snaps() {
+        let now = Instant::now();
+        let mut morph = Morph::idle(now);
+        morph.retarget(Presentation::Active, now, false);
+        assert!(!morph.retarget(
+            Presentation::Active,
+            now + Duration::from_millis(100),
+            false
+        ));
+        assert_eq!(
+            morph.sample(now + Duration::from_millis(220), false),
+            (1., false)
+        );
+        morph.retarget(Presentation::Idle, now + Duration::from_millis(220), true);
+        assert_eq!(
+            morph.sample(now + Duration::from_millis(220), true),
+            (0., false)
+        );
+        assert_eq!(
+            morph.sample(now + Duration::from_secs(5), false),
+            (0., false)
+        );
     }
 
     #[test]

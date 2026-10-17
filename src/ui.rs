@@ -1425,7 +1425,12 @@ impl VocoApp {
             self.verification = Some(verification);
             return;
         }
-        if verification.stage_started.elapsed() < Duration::from_millis(400) {
+        let stage_delay = if matches!(verification.stage, 17 | 18) {
+            Duration::from_secs(2)
+        } else {
+            Duration::from_millis(400)
+        };
+        if verification.stage_started.elapsed() < stage_delay {
             self.verification = Some(verification);
             return;
         }
@@ -1434,7 +1439,7 @@ impl VocoApp {
             std::process::exit(1);
         };
         match verification.stage {
-            0..=10 => {
+            0..=10 | 15 => {
                 let stage = verification.stage;
                 match stage {
                     0 => self.page = Page::Home,
@@ -1460,6 +1465,10 @@ impl VocoApp {
                             message: "Verification scenario. Your words are safe to copy.".into(),
                         };
                     }
+                    15 => self
+                        .overlay
+                        .verify_idle(cx)
+                        .expect("persistent native idle overlay"),
                     9 | 10 => {
                         self.overlay.update(
                             if stage == 9 {
@@ -1493,7 +1502,8 @@ impl VocoApp {
                 verification.capture = Some(receiver);
                 std::thread::spawn(move || {
                     std::thread::sleep(Duration::from_millis(350));
-                    let output = directory.join(format!("{stage}.png"));
+                    let index = if stage == 15 { 11 } else { stage };
+                    let output = directory.join(format!("{index}.png"));
                     let result = std::process::Command::new("/usr/sbin/screencapture")
                         .args(["-x", "-o", "-l"])
                         .arg(number.to_string())
@@ -1608,11 +1618,56 @@ impl VocoApp {
                     fail("Second-instance show failed");
                 }
             }
-            15 => {
+            16 => {
+                self.overlay
+                    .verify_idle(cx)
+                    .expect("settled idle before fullscreen");
+                let main = objc2::MainThreadMarker::new().expect("main thread");
+                let dashboard = objc2_app_kit::NSApplication::sharedApplication(main)
+                    .windows()
+                    .iter()
+                    .find(|w| w.title().to_string() == "Voco")
+                    .expect("dashboard window");
+                dashboard.setCollectionBehavior(
+                    (dashboard.collectionBehavior()
+                        & !(objc2_app_kit::NSWindowCollectionBehavior::FullScreenAuxiliary
+                            | objc2_app_kit::NSWindowCollectionBehavior::FullScreenNone))
+                        | objc2_app_kit::NSWindowCollectionBehavior::FullScreenPrimary,
+                );
+                window.toggle_fullscreen();
+            }
+            17 => {
+                let main = objc2::MainThreadMarker::new().expect("main thread");
+                let dashboard = objc2_app_kit::NSApplication::sharedApplication(main)
+                    .windows()
+                    .iter()
+                    .find(|w| w.title().to_string() == "Voco")
+                    .expect("dashboard window");
+                if !dashboard
+                    .styleMask()
+                    .contains(objc2_app_kit::NSWindowStyleMask::FullScreen)
+                {
+                    fail("Dashboard did not enter native fullscreen");
+                }
+                if self.overlay.on_active_space() {
+                    window.toggle_fullscreen();
+                    fail("Voice pill joined the native fullscreen Space");
+                }
+                window.toggle_fullscreen();
+            }
+            18 => {
+                self.overlay
+                    .verify_idle(cx)
+                    .expect("persistent idle after fullscreen");
+                if !self.overlay.on_active_space() {
+                    fail("Voice pill did not return to the ordinary desktop Space");
+                }
+            }
+            19 => {
                 if !platform::dashboard_visible() {
                     fail("Second-instance show did not reveal dashboard");
                 }
-                for index in 0..11 {
+                for index in 0..12 {
                     if !verification
                         .directory
                         .join(format!("{index}.png"))
@@ -1621,7 +1676,7 @@ impl VocoApp {
                         fail("Native page screenshot missing");
                     }
                 }
-                let report = serde_json::json!({"runtime":"rust", "ui":"gpui", "pagesRendered":4,"screenshots":11,"settingsTabsRendered":4,"compactWindow":true,"recoveryRendered":true,"trayCreated":true,"practiceInsertion":verification.practice_verified,"practiceRejectsChangedText":true,"practiceRejectsComposition":true,"overlayScreenshots":2,"overlayPreservesFocus":true,"overlayIgnoresMouse":true,"closeHidesDashboard":verification.close_verified,"secondInstanceShow":true,"microphone":self.controller.permissions.microphone,"accessibility":self.controller.permissions.accessibility,"shortcut":self.controller.shortcut_running,"status":self.controller.status(),"transcriptSearch":true,"transcriptPersistence":false});
+                let report = serde_json::json!({"runtime":"rust", "ui":"gpui", "pagesRendered":4,"screenshots":12,"settingsTabsRendered":4,"compactWindow":true,"recoveryRendered":true,"trayCreated":true,"practiceInsertion":verification.practice_verified,"practiceRejectsChangedText":true,"practiceRejectsComposition":true,"overlayScreenshots":3,"overlayPersistentIdle":true,"overlayIdleSettled":true,"overlayExcludesNativeFullscreen":true,"overlayPreservesFocus":true,"overlayIgnoresMouse":true,"closeHidesDashboard":verification.close_verified,"secondInstanceShow":true,"microphone":self.controller.permissions.microphone,"accessibility":self.controller.permissions.accessibility,"shortcut":self.controller.shortcut_running,"status":self.controller.status(),"transcriptSearch":true,"transcriptPersistence":false});
                 std::fs::write(
                     verification.directory.join("report.json"),
                     serde_json::to_vec_pretty(&report).expect("report JSON"),
