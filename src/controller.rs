@@ -49,9 +49,16 @@ enum Work {
     Transcribe {
         generation: u64,
         samples: Vec<f32>,
+        output_mode: OutputMode,
         cancel: Arc<AtomicBool>,
     },
 }
+struct CompletedTranscript {
+    raw: String,
+    text: String,
+    notice: String,
+}
+
 enum Event {
     Loaded {
         generation: u64,
@@ -59,7 +66,7 @@ enum Event {
     },
     Transcribed {
         generation: u64,
-        result: std::result::Result<String, String>,
+        result: std::result::Result<CompletedTranscript, String>,
     },
     Progress {
         generation: u64,
@@ -152,12 +159,24 @@ impl Controller {
                         Work::Transcribe {
                             generation,
                             samples,
+                            output_mode,
                             cancel,
                         } => {
                             let result = engine
                                 .as_mut()
                                 .context("The speech engine is unavailable.")
                                 .and_then(|engine| engine.transcribe_cancellable(&samples, &cancel))
+                                .map(|raw| {
+                                    if cancel.load(Ordering::Relaxed) {
+                                        return CompletedTranscript {
+                                            raw,
+                                            text: String::new(),
+                                            notice: String::new(),
+                                        };
+                                    }
+                                    let (text, notice) = cleanup::polish(&raw, output_mode);
+                                    CompletedTranscript { raw, text, notice }
+                                })
                                 .map_err(|e| format!("{e:#}"));
                             if sender
                                 .send(Event::Transcribed { generation, result })
@@ -400,7 +419,7 @@ impl Controller {
                     self.finishing_at = None;
                     self.inference_cancel = None;
                     match result {
-                        Ok(raw) => self.complete(raw),
+                        Ok(transcript) => self.complete(transcript),
                         Err(message) => self.recover(message, String::new()),
                     }
                 }
@@ -568,6 +587,7 @@ impl Controller {
                     .send(Work::Transcribe {
                         generation: self.session_generation.0,
                         samples,
+                        output_mode: self.output_mode,
                         cancel,
                     })
                     .is_err()
@@ -582,11 +602,11 @@ impl Controller {
             Err(error) => self.recover(error.to_string(), String::new()),
         }
     }
-    fn complete(&mut self, raw: String) {
+    fn complete(&mut self, transcript: CompletedTranscript) {
+        let CompletedTranscript { raw, text, notice } = transcript;
         if self.settings.keep_last_transcript {
-            self.last_raw = raw.clone();
+            self.last_raw = raw;
         }
-        let (text, notice) = cleanup::polish(&raw, self.output_mode);
         self.notice = notice;
         if text.is_empty() {
             self.cancel();

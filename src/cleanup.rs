@@ -253,19 +253,71 @@ fn sentence_starts(raw: &str, parts: &[Token<'_>]) -> Vec<bool> {
 }
 
 pub fn polish(raw: &str, mode: OutputMode) -> (String, String) {
-    match mode {
-        OutputMode::Fast => (raw.to_owned(), String::new()),
-        OutputMode::Balanced => (clean(raw), String::new()),
-        OutputMode::Accurate => {
-            let text = clean(raw);
-            let notice = if text.is_empty() {
-                String::new()
-            } else {
-                "FoundationModels is unavailable in the Rust app. Kept basic cleanup.".to_owned()
-            };
-            (text, notice)
-        }
+    polish_with(raw, mode, foundation_format)
+}
+
+fn polish_with(
+    raw: &str,
+    mode: OutputMode,
+    generate: impl FnOnce(&str) -> Result<String, String>,
+) -> (String, String) {
+    if mode == OutputMode::Fast {
+        return (raw.to_owned(), String::new());
     }
+    let baseline = clean(raw);
+    if mode == OutputMode::Balanced || baseline.is_empty() {
+        return (baseline, String::new());
+    }
+    let result = if baseline.len() > 2_000 {
+        Err("This transcript is too long for local formatting.".into())
+    } else {
+        generate(&baseline).and_then(|candidate| {
+            if accepts(&candidate, &baseline) {
+                Ok(candidate)
+            } else {
+                Err("Local formatting returned an unsafe or incomplete result.".into())
+            }
+        })
+    };
+    match result {
+        Ok(text) => (text, String::new()),
+        Err(reason) => (baseline, format!("{reason} Kept basic cleanup.")),
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn foundation_format(baseline: &str) -> Result<String, String> {
+    use std::ffi::{CStr, CString, c_char};
+    unsafe extern "C" {
+        fn voco_foundation_format(input: *const c_char) -> *mut c_char;
+    }
+    #[derive(serde::Deserialize)]
+    struct Response {
+        text: Option<String>,
+        error: Option<String>,
+    }
+    let input = CString::new(baseline).map_err(|_| "Transcript contains a null character.")?;
+    // Swift copies the input before starting its task. The result is a strdup allocation.
+    let pointer = unsafe { voco_foundation_format(input.as_ptr()) };
+    if pointer.is_null() {
+        return Err("Apple FoundationModels returned no result.".into());
+    }
+    let response = unsafe {
+        let response = serde_json::from_slice::<Response>(CStr::from_ptr(pointer).to_bytes());
+        libc::free(pointer.cast());
+        response
+    }
+    .map_err(|_| "Apple FoundationModels returned an invalid result.")?;
+    response.text.ok_or_else(|| {
+        response
+            .error
+            .unwrap_or_else(|| "Local formatting failed.".into())
+    })
+}
+
+#[cfg(not(target_os = "macos"))]
+fn foundation_format(_: &str) -> Result<String, String> {
+    Err("Apple FoundationModels requires macOS 26 or newer.".into())
 }
 
 pub fn clean(raw: &str) -> String {
@@ -476,7 +528,6 @@ pub fn clean(raw: &str) -> String {
     }
 }
 
-#[cfg(test)]
 fn accepts(candidate: &str, original: &str) -> bool {
     let baseline = clean(original);
     if candidate.is_empty() || candidate.len() > baseline.len() * 2 + 64 {
@@ -616,7 +667,9 @@ mod tests {
                 "{} balanced",
                 fixture.id
             );
-            let (accurate, notice) = polish(&fixture.input, OutputMode::Accurate);
+            let (accurate, notice) = polish_with(&fixture.input, OutputMode::Accurate, |_| {
+                Err("Apple FoundationModels is unavailable.".into())
+            });
             assert_eq!(
                 accurate, fixture.balanced,
                 "{} accurate fallback",
@@ -693,6 +746,45 @@ mod tests {
     }
 
     #[test]
+    fn accurate_formats_balanced_and_rejects_changed_words() {
+        let raw = "um hello Alice can you send it today";
+        let formatted = "Hello Alice, can you send it today?";
+        let result = polish_with(raw, OutputMode::Accurate, |baseline| {
+            assert_eq!(baseline, "Hello Alice can you send it today");
+            Ok(formatted.into())
+        });
+        assert_eq!(result, (formatted.into(), String::new()));
+        for result in [Ok("Hello Bob!".into()), Err("Timed out.".into())] {
+            let (text, notice) = polish_with(raw, OutputMode::Accurate, |_| result);
+            assert_eq!(text, clean(raw));
+            assert!(notice.contains("Kept basic cleanup"));
+        }
+    }
+
+    #[test]
+    fn fast_balanced_empty_and_long_skip_generation() {
+        for (raw, mode) in [
+            ("um hello", OutputMode::Fast),
+            ("um hello", OutputMode::Balanced),
+            ("um uh", OutputMode::Accurate),
+            (&"a".repeat(2_001), OutputMode::Accurate),
+        ] {
+            polish_with(raw, mode, |_| panic!("Model must not run"));
+        }
+    }
+
+    #[test]
+    #[ignore = "requires available Apple Intelligence; run with --ignored --nocapture"]
+    fn foundation_models_formats_on_device() {
+        let raw = "um hello Alice can you send it today";
+        let (text, notice) = polish(raw, OutputMode::Accurate);
+        assert!(notice.is_empty(), "{notice}");
+        assert!(accepts(&text, &clean(raw)), "{text}");
+        assert_ne!(text, clean(raw), "Model did not format the transcript");
+        println!("{text}");
+    }
+
+    #[test]
     fn empty_and_long_transcripts_need_no_model() {
         for raw in ["", "um uh", "Wrong nevermind."] {
             assert_eq!(
@@ -703,6 +795,6 @@ mod tests {
         let raw = "a".repeat(2_001);
         let (result, notice) = polish(&raw, OutputMode::Accurate);
         assert_eq!(result, raw);
-        assert!(notice.contains("unavailable"));
+        assert!(notice.contains("too long"));
     }
 }
