@@ -49,3 +49,18 @@ The recording indicator now pairs a 38px black voice circle with a separate 122 
 The rebuilt executable completed `--verify-ui` with an isolated profile. The [report](evidence/split-overlay-ui.json) confirms focus preservation, mouse transparency, practice insertion, and close/reopen behavior. The refreshed [Listening capture](evidence/listening.png) and [Transcribing capture](evidence/transcribing.png) show the actual native split layout. The verification uses fixture audio levels. Live acoustic microphone response was not exercised.
 
 `./scripts/install.sh` rebuilt and installed the optimized app at `~/Applications/Voco.app`. Bundle and code-signature checks passed. The installed executable also completed the native UI verifier with an isolated profile; its [report](evidence/split-overlay-installed-ui.json) confirms the same overlay focus and mouse behavior. The normal app was reopened after verification.
+
+
+## Persistent idle indicator, October 17, 2026
+
+The bottom-center overlay remains visible when dictation is idle. A 7px dot and 48 × 3px line use translucent dark fills and faint white outlines. A reversible 220ms transition expands them into the existing recording circle and status capsule. Reduce Motion snaps between states, and settled idle requests no animation frames.
+
+One native window owns both presentations. This keeps positioning, focus safety, and Space policy together. Separate idle and active windows were rejected because they duplicate those responsibilities and would require additional geometry animation to produce the same transition.
+
+`./scripts/verify.sh` passed formatting, the runtime dependency guard, strict Clippy, all 54 tests with one ignored, and the debug build. Three transition tests cover activation and settling, reversal without a geometry jump, repeated updates, and reduced motion.
+
+The native `--verify-ui` run captured the [idle indicator](evidence/idle.png), Listening, and Transcribing states. Its [report](evidence/idle-overlay-ui.json) confirms persistent settled idle, preserved keyboard focus, mouse transparency, close and reopen behavior, and the existing practice-input checks. The verifier enters an actual native fullscreen Space, checks that the overlay is outside that Space, exits fullscreen, and checks that the idle overlay returns. The native policy also disallows fullscreen tiling. Split View and applications that simulate fullscreen with ordinary borderless windows were not exercised.
+
+Microphone levels in these screenshots are fixtures. This change did not exercise live microphone capture or speech inference.
+
+`./scripts/install.sh` rebuilt the optimized app and installed it at `~/Applications/Voco.app`. Bundle and strict code-signature checks passed. The installed executable completed the same native verifier with an isolated profile; its [report](evidence/idle-overlay-installed-ui.json) confirms persistent idle, native fullscreen exclusion and return, focus preservation, and mouse transparency. The normal app was reopened after verification.
