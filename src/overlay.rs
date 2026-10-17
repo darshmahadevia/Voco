@@ -349,18 +349,13 @@ impl Render for VoicePill {
         if morphing || (listening && settling) {
             window.request_animation_frame();
         }
-        let surface_color = Rgba {
-            r: 0.,
-            g: 0.,
-            b: 0.,
-            a: interpolate(0.13, 1., amount),
-        };
-        let border_channel = interpolate(1., 48. / 255., amount);
+        let surface_color = rgb(0x000000);
+        let border_channel = interpolate(0.28, 48. / 255., amount);
         let border_color = Rgba {
             r: border_channel,
             g: border_channel,
             b: border_channel,
-            a: interpolate(0.28, 1., amount),
+            a: 1.,
         };
         let waveform = div()
             .flex()
