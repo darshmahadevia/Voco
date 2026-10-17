@@ -22,4 +22,4 @@ if [[ -f "$build_binary" ]]; then
     app_uuid="$(xcrun dwarfdump --uuid "$binary" | awk '{print $2}')"
     [[ -n "$app_uuid" && "$app_uuid" == "$built_uuid" ]] || { echo 'The app differs from the current release executable.' >&2; exit 1; }
 fi
-printf 'Verified Rust-only app bundle: %s\n' "$app"
+printf 'Verified native app bundle: %s\n' "$app"

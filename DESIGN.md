@@ -145,7 +145,7 @@ The floating pill is a native nonactivating, mouse-transparent window that prese
 
 Output, Models, Access, and Dictation are labeled tabs with one visible panel. The selected tab persists while navigating within the current window session. Arrow keys cycle tabs; Home and End select the first and last. Selection changes the orange underline immediately.
 
-Output uses three separate pill buttons for Fast, Balanced, and Accurate, with a soft-white selected action and a description below. Output choices are disabled during dictation with a visible explanation. Accurate explains that it uses Balanced cleanup because FoundationModels formatting is unavailable in Rust. Keep recent words uses an On or Off button. Turning retention off clears recent text immediately.
+Output uses three separate pill buttons for Fast, Balanced, and Accurate, with a soft-white selected action and a description below. Output choices are disabled during dictation with a visible explanation. Accurate explains that it adds punctuation and capitalization with Apple's on-device FoundationModels and keeps Balanced cleanup if unavailable. Keep recent words uses an On or Off button. Turning retention off clears recent text immediately.
 
 Models shows a name, version, language, size, and one action per row. Download progress uses a thin orange bar. Preserve loading, cancellation, retry, fresh-download, and idle-only model changes. Access shows microphone and keyboard permission actions, Fn and Globe troubleshooting, Reveal Voco, and Check again. Dictation explains the shortcuts, safe insertion, and local processing.
 

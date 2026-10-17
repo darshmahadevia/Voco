@@ -26,10 +26,10 @@ Voco is one Rust executable. GPUI renders the dashboard and floating recording p
 
 Fn press captures the focused process, field, selection, and readable value. A 140 millisecond hold starts capture. Quick release cancels the pending hold. Fn + Space promotes a hold to continuous capture or toggles continuous capture. Fn release does not stop continuous capture. Escape invalidates the session and signals inference cancellation.
 
-After capture stops, the worker returns a final transcript tagged with the session generation. The controller discards stale results, applies cleanup, waits briefly for shortcut modifiers to settle, and revalidates the destination before insertion. An uncertain or partial insertion is never retried automatically. Recovery keeps the complete text available for copying.
+After capture stops, the worker transcribes and applies the frozen output mode, then returns the raw transcript, cleaned text, and notice tagged with the session generation. The controller discards stale results, waits briefly for shortcut modifiers to settle, and revalidates the destination before insertion. An uncertain or partial insertion is never retried automatically. Recovery keeps the complete text available for copying.
 
 ## Cleanup
 
-Fast returns the raw transcript. Balanced uses Rust token and source-range rules. It preserves protected literals and line endings. Accurate currently uses Balanced and reports that FoundationModels formatting is unavailable. No cloud fallback exists.
+Fast returns the raw transcript. Balanced uses Rust token and source-range rules. It preserves protected literals and line endings. Accurate formats Balanced output through `native/FoundationFormatting.swift`, a small C ABI bridge statically linked into the Rust executable. The bridge uses Apple's on-device FoundationModels with the original structured response and prompt. Rust validates word order, case-sensitive names, quantities, protected literals, symbols, and line breaks before accepting output. Formatting runs on the inference worker with an eight-second deadline and a 2,000-byte input limit. Generation IDs discard results after cancellation. Failures keep Balanced output with a notice. No cloud fallback exists.
 
 The previous architecture is preserved as historical material under `docs/migration`. Current development commands are in [development.md](development.md).

@@ -39,7 +39,7 @@ The speech model and output mode are separate choices.
 
 - Fast returns the speech model's original transcript.
 - Balanced removes fillers and spoken restarts with local rules and repairs punctuation. The rules protect quotes, code, links, quantities, and line boundaries.
-- Accurate currently returns Balanced output with a notice that FoundationModels formatting is unavailable in the Rust build.
+- Accurate formats Balanced output with Apple's on-device FoundationModels, preserving words and protected literals. Unavailable models, failed or unsafe results, and an eight-second deadline fall back to Balanced output with a notice.
 
 The app keeps the latest original transcript in memory only while transcript retention is enabled. Recognition and cleanup can make mistakes. Review the result before sending it.
 

@@ -1,6 +1,6 @@
 # Develop Voco
 
-Install Rust 1.92 or newer, Apple's Command Line Tools, and CMake on an Apple Silicon Mac running macOS 26 or newer.
+Install Rust 1.92 or newer, Apple's Command Line Tools with Swift 6.2 and the macOS 26 SDK or newer, and CMake on an Apple Silicon Mac running macOS 26 or newer.
 
 ## Run
 
@@ -57,7 +57,7 @@ The installer preserves settings and models. It replaces the application at `~/A
 ./scripts/install.sh --built
 ```
 
-Packaging creates `release/Voco.app`, backed by `~/Library/Caches/Voco/Rust`. Add `dmg` to create a disk image. The bundle contains one Rust application executable, its icon, a font, and license notices. Inference libraries are static, and the Metal library is embedded.
+Packaging creates `release/Voco.app`, backed by `~/Library/Caches/Voco/Rust`. Add `dmg` to create a disk image. The bundle contains one Rust application executable with a statically linked Swift FoundationModels bridge, its icon, fonts, and license notices. Inference libraries are static, and the Metal library is embedded.
 
 `VOCO_CODESIGN_IDENTITY` selects the signing identity. Otherwise packaging reads `~/Library/Application Support/Voco/signing-identity`, then falls back to ad hoc signing. The existing `scripts/setup-local-signing.sh` configures a local identity. Local builds are not notarized.
 

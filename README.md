@@ -10,7 +10,7 @@ Voco is a Rust application. GPUI renders its dashboard and floating recording pi
 
 ## Build and run
 
-Voco requires an Apple Silicon Mac with macOS 26 or newer, Rust 1.92 or newer, Apple's Command Line Tools, and CMake. Speech inference dependencies include native C and C++ libraries compiled or fetched by Cargo. A first build needs internet access.
+Voco requires an Apple Silicon Mac with macOS 26 or newer, Rust 1.92 or newer, Apple's Command Line Tools with Swift 6.2 and the macOS 26 SDK or newer, and CMake. Speech inference dependencies include native C and C++ libraries compiled or fetched by Cargo. A first build needs internet access.
 
 ```sh
 git clone https://github.com/darshmahadevia/Voco.git
@@ -47,7 +47,7 @@ Voco inserts the final transcript once. It refuses insertion if the destination 
 
 ## Output and privacy
 
-**Fast** keeps the speech model's transcript. **Balanced** removes fillers and spoken restarts with local rules while protecting literal text. **Accurate** currently uses Balanced cleanup and displays a notice. Apple's Swift-only FoundationModels formatting is unavailable in the Rust build.
+**Fast** keeps the speech model's transcript. **Balanced** removes fillers and spoken restarts with local rules while protecting literal text. **Accurate** adds punctuation and capitalization to Balanced output with Apple's on-device FoundationModels. It requires available Apple Intelligence and keeps Balanced output with a notice if formatting is unavailable, times out, or changes protected content.
 
 Audio and transcript history stay in memory. Voco never saves recordings or transcripts to disk. Turning off **Keep recent transcripts** clears retained history immediately. Failed insertion text remains available for recovery. Continuous recording stops at ten minutes and transcribes the captured audio.
 
