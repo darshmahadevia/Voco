@@ -6,7 +6,7 @@ use objc2::{
     runtime::{AnyClass, AnyObject, Bool, ClassBuilder, Sel},
     sel,
 };
-use objc2_app_kit::{NSScreen, NSView, NSWindow, NSWindowCollectionBehavior};
+use objc2_app_kit::{NSEvent, NSScreen, NSView, NSWindow, NSWindowCollectionBehavior};
 use objc2_foundation::{NSPoint, NSString};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use std::time::{Duration, Instant};
@@ -84,9 +84,45 @@ fn interpolate(idle: f32, active: f32, amount: f32) -> f32 {
     idle + (active - idle) * amount
 }
 
+fn control_contains(offset: NSPoint, expanded: bool) -> bool {
+    let width = if expanded {
+        VOICE_DIAMETER + SURFACE_GAP + LABEL_WIDTH
+    } else {
+        82.
+    };
+    offset.x.abs() <= f64::from(width / 2.) && offset.y.abs() <= 22.
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RecordingIntent {
+    Start,
+    Finish,
+}
+
+impl RecordingIntent {
+    pub fn for_session(session: &crate::domain::Session) -> Option<Self> {
+        use crate::domain::{CaptureMode, Session};
+        match session {
+            Session::Idle => Some(Self::Start),
+            Session::Listening {
+                mode: CaptureMode::Continuous,
+            } => Some(Self::Finish),
+            _ => None,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Start => "Start recording",
+            Self::Finish => "Finish recording",
+        }
+    }
+}
+
 pub struct Overlay {
     window: WindowHandle<VoicePill>,
     native: Retained<NSWindow>,
+    intents: crossbeam_channel::Receiver<RecordingIntent>,
 }
 
 struct VoicePill {
@@ -94,6 +130,9 @@ struct VoicePill {
     meter: VoiceMeter,
     started: Instant,
     morph: Morph,
+    hovered: bool,
+    intent: Option<RecordingIntent>,
+    intents: crossbeam_channel::Sender<RecordingIntent>,
 }
 
 struct VoiceMeter {
@@ -146,6 +185,7 @@ impl VoiceMeter {
 
 impl Overlay {
     pub fn new(cx: &mut App) -> Result<Self> {
+        let (sender, intents) = crossbeam_channel::bounded(1);
         let window = cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
@@ -169,6 +209,9 @@ impl Overlay {
                     meter: VoiceMeter::new(Instant::now()),
                     started: Instant::now(),
                     morph: Morph::idle(Instant::now()),
+                    hovered: false,
+                    intent: Some(RecordingIntent::Start),
+                    intents: sender,
                 })
             },
         )?;
@@ -219,11 +262,29 @@ impl Overlay {
             );
             Ok(native)
         })??;
-        let mut this = Self { window, native };
+        let mut this = Self {
+            window,
+            native,
+            intents,
+        };
         this.update("Ready", 0., false, cx);
         this.native.orderFront(None);
         this.verify()?;
         Ok(this)
+    }
+
+    pub fn take_intent(&self) -> Option<RecordingIntent> {
+        self.intents.try_recv().ok()
+    }
+
+    pub fn set_session(&self, session: &crate::domain::Session, cx: &mut App) {
+        let _ = self.window.update(cx, |pill, _, cx| {
+            let intent = RecordingIntent::for_session(session);
+            if pill.intent != intent {
+                pill.intent = intent;
+                cx.notify();
+            }
+        });
     }
 
     pub fn update(&mut self, label: &str, level: f32, active: bool, cx: &mut App) {
@@ -231,13 +292,30 @@ impl Overlay {
             "Words saved for copying" => "Copy your words",
             label => label,
         };
-        let presentation = if active {
+        let mouse = NSEvent::mouseLocation();
+        let frame = self.native.frame();
+        let hovered = self
+            .window
+            .update(cx, |pill, _, _| {
+                control_contains(
+                    NSPoint::new(
+                        mouse.x - (frame.origin.x + frame.size.width / 2.),
+                        mouse.y - (frame.origin.y + frame.size.height / 2.),
+                    ),
+                    active || pill.hovered,
+                ) && self.native.isOnActiveSpace()
+            })
+            .unwrap_or(false);
+        self.native.setIgnoresMouseEvents(!hovered);
+        let presentation = if active || hovered {
             Presentation::Active
         } else {
             Presentation::Idle
         };
         let _ = self.window.update(cx, |pill, _, cx| {
             let now = Instant::now();
+            let hover_changed = pill.hovered != hovered;
+            pill.hovered = hovered;
             let changed = pill.label.as_ref() != label;
             let transitioned =
                 pill.morph
@@ -252,7 +330,7 @@ impl Overlay {
             if changed {
                 pill.label = label.to_owned().into();
             }
-            if transitioned || active {
+            if transitioned || active || hover_changed {
                 cx.notify();
             }
         });
@@ -280,10 +358,6 @@ impl Overlay {
             !self.native.isKeyWindow() && !self.native.isMainWindow(),
             "The GPUI voice pill took editor focus."
         );
-        ensure!(
-            self.native.ignoresMouseEvents(),
-            "The GPUI voice pill intercepts mouse input."
-        );
         let behavior = self.native.collectionBehavior();
         ensure!(
             behavior.contains(NSWindowCollectionBehavior::FullScreenNone)
@@ -306,6 +380,10 @@ impl Overlay {
 
     pub fn verify_idle(&self, cx: &mut App) -> Result<()> {
         self.verify()?;
+        ensure!(
+            self.native.ignoresMouseEvents(),
+            "The settled idle voice control intercepts mouse input outside its hit area."
+        );
         self.window.update(cx, |pill, _, _| {
             ensure!(
                 pill.morph.target == Presentation::Idle,
@@ -412,8 +490,22 @@ impl Render for VoicePill {
             .font_family("Manrope")
             .child(
                 div()
+                    .id("recording-control")
+                    .min_w(px(82.))
+                    .h(px(44.))
+                    .when(self.intent.is_some(), |control| control.cursor_pointer())
+                    .on_click({
+                        let intent = self.intent;
+                        let sender = self.intents.clone();
+                        move |_, _, _| {
+                            if let Some(intent) = intent {
+                                let _ = sender.try_send(intent);
+                            }
+                        }
+                    })
                     .flex()
                     .items_center()
+                    .justify_center()
                     .gap(px(SURFACE_GAP))
                     .text_size(px(12.))
                     .text_color(rgb(0xf2f0ec))
@@ -448,7 +540,13 @@ impl Render for VoicePill {
                                 div()
                                     .flex_shrink_0()
                                     .opacity(amount)
-                                    .child(self.label.clone()),
+                                    .child(if self.hovered {
+                                        self.intent
+                                            .map(|intent| SharedString::from(intent.label()))
+                                            .unwrap_or_else(|| self.label.clone())
+                                    } else {
+                                        self.label.clone()
+                                    }),
                             ),
                     ),
             )
@@ -463,8 +561,46 @@ impl Drop for Overlay {
 
 #[cfg(test)]
 mod tests {
-    use super::{Morph, Presentation, VoiceMeter, interpolate};
+    use super::{Morph, Presentation, RecordingIntent, VoiceMeter, control_contains, interpolate};
+    use crate::domain::{CaptureMode, Session};
+    use objc2_foundation::NSPoint;
     use std::time::{Duration, Instant};
+
+    #[test]
+    fn control_hit_area_excludes_native_window_margins() {
+        assert!(control_contains(NSPoint::new(41., 22.), false));
+        assert!(!control_contains(NSPoint::new(42., 0.), false));
+        assert!(control_contains(NSPoint::new(83.5, 22.), true));
+        assert!(!control_contains(NSPoint::new(84., 0.), true));
+        assert!(!control_contains(NSPoint::new(0., 23.), true));
+    }
+
+    #[test]
+    fn recording_clicks_follow_the_current_session() {
+        assert_eq!(
+            RecordingIntent::for_session(&Session::Idle),
+            Some(RecordingIntent::Start)
+        );
+        assert_eq!(
+            RecordingIntent::for_session(&Session::Listening {
+                mode: CaptureMode::Continuous
+            }),
+            Some(RecordingIntent::Finish)
+        );
+        for session in [
+            Session::Armed,
+            Session::Listening {
+                mode: CaptureMode::Hold,
+            },
+            Session::Finishing,
+            Session::Recovery {
+                message: String::new(),
+                text: String::new(),
+            },
+        ] {
+            assert_eq!(RecordingIntent::for_session(&session), None);
+        }
+    }
 
     fn assert_heights(actual: [f32; 5], expected: [f32; 5]) {
         for (actual, expected) in actual.into_iter().zip(expected) {

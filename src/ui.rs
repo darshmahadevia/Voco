@@ -1,4 +1,4 @@
-use crate::overlay::Overlay;
+use crate::overlay::{Overlay, RecordingIntent};
 use crate::{
     controller::{Controller, EngineStatus},
     domain::{ModelId, OutputMode, Session},
@@ -411,7 +411,14 @@ impl VocoApp {
     }
     fn tick(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.controller.practice_snapshot = self.practice_target(window, cx);
+        if let Some(intent) = self.overlay.take_intent()
+            && RecordingIntent::for_session(&self.controller.session) == Some(intent)
+        {
+            self.controller
+                .action(crate::gesture::Action::ToggleContinuous);
+        }
         self.controller.tick();
+        self.overlay.set_session(&self.controller.session, cx);
         if let Some((value, caret)) = self.controller.practice_update.take() {
             self.apply_practice_update(value, caret, window, cx);
         }
@@ -1676,7 +1683,7 @@ impl VocoApp {
                         fail("Native page screenshot missing");
                     }
                 }
-                let report = serde_json::json!({"runtime":"rust", "ui":"gpui", "pagesRendered":4,"screenshots":12,"settingsTabsRendered":4,"compactWindow":true,"recoveryRendered":true,"trayCreated":true,"practiceInsertion":verification.practice_verified,"practiceRejectsChangedText":true,"practiceRejectsComposition":true,"overlayScreenshots":3,"overlayPersistentIdle":true,"overlayIdleSettled":true,"overlayExcludesNativeFullscreen":true,"overlayPreservesFocus":true,"overlayIgnoresMouse":true,"closeHidesDashboard":verification.close_verified,"secondInstanceShow":true,"microphone":self.controller.permissions.microphone,"accessibility":self.controller.permissions.accessibility,"shortcut":self.controller.shortcut_running,"status":self.controller.status(),"transcriptSearch":true,"transcriptPersistence":false});
+                let report = serde_json::json!({"runtime":"rust", "ui":"gpui", "pagesRendered":4,"screenshots":12,"settingsTabsRendered":4,"compactWindow":true,"recoveryRendered":true,"trayCreated":true,"practiceInsertion":verification.practice_verified,"practiceRejectsChangedText":true,"practiceRejectsComposition":true,"overlayScreenshots":3,"overlayPersistentIdle":true,"overlayIdleSettled":true,"overlayExcludesNativeFullscreen":true,"overlayPreservesFocus":true,"overlayMousePassThroughOutsideControl":true,"closeHidesDashboard":verification.close_verified,"secondInstanceShow":true,"microphone":self.controller.permissions.microphone,"accessibility":self.controller.permissions.accessibility,"shortcut":self.controller.shortcut_running,"status":self.controller.status(),"transcriptSearch":true,"transcriptPersistence":false});
                 std::fs::write(
                     verification.directory.join("report.json"),
                     serde_json::to_vec_pretty(&report).expect("report JSON"),
