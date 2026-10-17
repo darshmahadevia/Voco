@@ -139,7 +139,7 @@ Home's 234 × 150px ASCII sculpture is static decoration, independent of microph
 
 Recovery adds a warm panel above status on every page. It shows the saved words in a bounded scrolling area, the error explanation, Copy your words when text exists, and Dismiss. Recovery stays reachable while the page scrolls. Failed insertion words remain available even when recent transcript retention is off.
 
-The floating pill is a native nonactivating, mouse-transparent window that preserves the editor's focus. Its visible capsule is 38px high with 14px horizontal padding, a 42px feedback slot, an 8px gap, and a 116px label slot. Seven orange waveform bars respond to measured microphone energy while Listening. Starting and Transcribing use a rotating orange arc. Other states use still baseline bars. Status changes retain the same capsule footprint. No partial transcript appears during capture.
+The floating indicator is a native nonactivating, mouse-transparent window that preserves the editor's focus. It pairs a 38px black voice circle with a separate 122 × 36px black status capsule, spaced 7px apart. Both use a faint outline. The 12px Manrope label is centered within the status capsule. Five narrow orange waveform bars show recent measured microphone energy while Listening, with stronger response to quiet speech and smooth attack and release. Silence returns the bars to their baseline. Starting and Transcribing use a rotating orange arc inside the circle. Other states use still baseline bars. Status changes retain the same footprint. No partial transcript appears during capture.
 
 ### Settings
 

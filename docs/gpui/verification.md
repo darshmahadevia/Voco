@@ -39,3 +39,11 @@ The overlay focus check uses the dashboard as the focused editor. It does not pr
 `./scripts/install.sh` rebuilt the optimized executable from the GPUI source and installed it at `~/Applications/Voco.app`. Bundle checks passed the strict code-signature check, system-only dynamic dependencies, and executable UUID comparison against `target/release/voco`.
 
 The installed executable then completed `--verify-ui` with a temporary profile. The [installed UI report](evidence/installed-ui.json) identified `"ui": "gpui"` and passed the page, settings, practice input, search, overlay focus, and close/reopen checks described above. The app opened from its installed path with `--show`. This check did not exercise microphone capture or speech inference.
+
+## Split recording indicator, October 17, 2026
+
+The recording indicator now pairs a 38px black voice circle with a separate 122 × 36px black status capsule and a 7px gap. The label is centered within the status capsule. Five bars show recent measured audio with nonlinear visual gain, a 35ms attack, and a 110ms release. The overlay owns this display state; microphone capture and the controller's 60ms update cadence are unchanged.
+
+`./scripts/verify.sh` passed formatting, the dependency guard, Clippy, tests, and the debug build. The suite passed 51 tests with one ignored. Eight new waveform tests cover quiet and loud response, sample history, elapsed-time smoothing, silence settling, reduced motion, fresh state, invalid levels, and long pauses. The [build log](evidence/split-overlay-build.txt) records the results.
+
+The rebuilt executable completed `--verify-ui` with an isolated profile. The [report](evidence/split-overlay-ui.json) confirms focus preservation, mouse transparency, practice insertion, and close/reopen behavior. The refreshed [Listening capture](evidence/listening.png) and [Transcribing capture](evidence/transcribing.png) show the actual native split layout. The verification uses fixture audio levels. Live acoustic microphone response was not exercised.
