@@ -64,3 +64,5 @@ The native `--verify-ui` run captured the [idle indicator](evidence/idle.png), L
 Microphone levels in these screenshots are fixtures. This change did not exercise live microphone capture or speech inference.
 
 `./scripts/install.sh` rebuilt the optimized app and installed it at `~/Applications/Voco.app`. Bundle and strict code-signature checks passed. The installed executable completed the same native verifier with an isolated profile; its [report](evidence/idle-overlay-installed-ui.json) confirms persistent idle, native fullscreen exclusion and return, focus preservation, and mouse transparency. The normal app was reopened after verification.
+
+The idle line was subsequently increased to 7px to match the circle. Both heights now use the same constant. The optimized app was rebuilt and installed, and its native verifier passed again. The refreshed [idle capture](evidence/idle.png) shows the matching heights.

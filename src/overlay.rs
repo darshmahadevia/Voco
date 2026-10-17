@@ -21,7 +21,7 @@ const WINDOW_HEIGHT: f32 = 60.;
 const BAR_BASELINE: f32 = 3.;
 const IDLE_DIAMETER: f32 = 7.;
 const IDLE_WIDTH: f32 = 48.;
-const IDLE_HEIGHT: f32 = 3.;
+const IDLE_HEIGHT: f32 = IDLE_DIAMETER;
 const MORPH_DURATION: Duration = Duration::from_millis(220);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
