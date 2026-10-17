@@ -455,8 +455,8 @@ trait FocusCapture {
     fn frontmost(&self) -> Result<i32>;
     fn enable(&mut self, pid: i32) -> Result<()>;
     fn read(&mut self, pid: i32) -> Result<Option<Self::Target>>;
-    #[allow(dead_code)]
     fn wait(&mut self);
+    fn elapsed(&self) -> Duration;
 }
 
 fn capture_focus<B: FocusCapture>(boundary: &mut B) -> Result<B::Target> {
@@ -465,13 +465,43 @@ fn capture_focus<B: FocusCapture>(boundary: &mut B) -> Result<B::Target> {
         "Allow Accessibility access to insert text."
     );
     let pid = boundary.frontmost()?;
+    let deadline = boundary.elapsed() + Duration::from_millis(300);
     boundary.enable(pid)?;
-    boundary
-        .read(pid)?
-        .context("No text field has keyboard focus.")
+    for attempt in 0..=12 {
+        check_capture(boundary, pid)?;
+        if boundary.elapsed() >= deadline {
+            break;
+        }
+        let target = boundary.read(pid)?;
+        check_capture(boundary, pid)?;
+        if let Some(target) = target {
+            return Ok(target);
+        }
+        if boundary.elapsed() >= deadline {
+            break;
+        }
+        if attempt < 12 {
+            boundary.wait();
+        }
+    }
+    Err(anyhow!(
+        "Voco could not read the focused text field. Click inside it and try again."
+    ))
 }
 
-struct MacFocusCapture;
+fn check_capture(boundary: &impl FocusCapture, pid: i32) -> Result<()> {
+    ensure!(
+        boundary.trusted(),
+        "Allow Accessibility access to insert text."
+    );
+    ensure!(
+        boundary.frontmost()? == pid,
+        "The focused application changed. Try dictating again."
+    );
+    Ok(())
+}
+
+struct MacFocusCapture(Instant);
 
 impl FocusCapture for MacFocusCapture {
     type Target = FocusTarget;
@@ -513,11 +543,14 @@ impl FocusCapture for MacFocusCapture {
     fn wait(&mut self) {
         thread::sleep(Duration::from_millis(25));
     }
+    fn elapsed(&self) -> Duration {
+        self.0.elapsed()
+    }
 }
 
 impl FocusTarget {
     pub fn capture() -> Result<Self> {
-        capture_focus(&mut MacFocusCapture)
+        capture_focus(&mut MacFocusCapture(Instant::now()))
     }
 
     fn validate(&self) -> Result<()> {
@@ -1117,14 +1150,22 @@ mod tests {
         requests: usize,
         waits: usize,
         ready_after: usize,
+        revoke_after: Option<usize>,
+        switch_after: Option<usize>,
+        rejected: Option<&'static str>,
+        read_millis: u64,
     }
     impl FocusCapture for FocusFixture {
         type Target = (i32, Selection, String);
         fn trusted(&self) -> bool {
-            true
+            self.revoke_after.is_none_or(|at| self.reads < at)
         }
         fn frontmost(&self) -> Result<i32> {
-            Ok(42)
+            Ok(if self.switch_after.is_some_and(|at| self.reads >= at) {
+                99
+            } else {
+                42
+            })
         }
         fn enable(&mut self, pid: i32) -> Result<()> {
             assert_eq!(pid, 42);
@@ -1134,6 +1175,9 @@ mod tests {
         fn read(&mut self, pid: i32) -> Result<Option<Self::Target>> {
             assert_eq!(pid, 42);
             self.reads += 1;
+            if let Some(message) = self.rejected {
+                return Err(anyhow!(message));
+            }
             Ok((self.reads >= self.ready_after).then(|| {
                 (
                     pid,
@@ -1147,6 +1191,9 @@ mod tests {
         }
         fn wait(&mut self) {
             self.waits += 1;
+        }
+        fn elapsed(&self) -> Duration {
+            Duration::from_millis(self.waits as u64 * 25 + self.reads as u64 * self.read_millis)
         }
     }
 
@@ -1168,6 +1215,111 @@ mod tests {
             )
         );
         assert_eq!((fixture.requests, fixture.reads, fixture.waits), (1, 3, 2));
+    }
+
+    #[test]
+    fn unavailable_cursor_stops_at_retry_bound() {
+        let mut fixture = FocusFixture {
+            ready_after: usize::MAX,
+            ..Default::default()
+        };
+        assert_eq!(
+            capture_focus(&mut fixture).unwrap_err().to_string(),
+            "Voco could not read the focused text field. Click inside it and try again."
+        );
+        assert_eq!(
+            (fixture.requests, fixture.reads, fixture.waits),
+            (1, 12, 12)
+        );
+    }
+
+    #[test]
+    fn slow_accessibility_reads_do_not_restart_the_warmup_deadline() {
+        let mut fixture = FocusFixture {
+            ready_after: usize::MAX,
+            read_millis: 250,
+            ..Default::default()
+        };
+        assert_eq!(
+            capture_focus(&mut fixture).unwrap_err().to_string(),
+            "Voco could not read the focused text field. Click inside it and try again."
+        );
+        assert_eq!((fixture.requests, fixture.reads, fixture.waits), (1, 2, 1));
+    }
+
+    #[test]
+    fn immediate_cursor_does_not_wait() {
+        let mut fixture = FocusFixture::default();
+        assert_eq!(
+            capture_focus(&mut fixture).unwrap(),
+            (
+                42,
+                Selection {
+                    location: 2,
+                    length: 0
+                },
+                "😀".into()
+            )
+        );
+        assert_eq!((fixture.requests, fixture.reads, fixture.waits), (1, 1, 0));
+    }
+
+    #[test]
+    fn cursor_capture_refuses_app_switch_and_permission_loss_during_lookup() {
+        for ready_after in [1, 3] {
+            let mut fixture = FocusFixture {
+                ready_after,
+                switch_after: Some(1),
+                ..Default::default()
+            };
+            assert_eq!(
+                capture_focus(&mut fixture).unwrap_err().to_string(),
+                "The focused application changed. Try dictating again."
+            );
+            assert_eq!((fixture.reads, fixture.waits), (1, 0));
+            let mut fixture = FocusFixture {
+                ready_after,
+                revoke_after: Some(1),
+                ..Default::default()
+            };
+            assert_eq!(
+                capture_focus(&mut fixture).unwrap_err().to_string(),
+                "Allow Accessibility access to insert text."
+            );
+            assert_eq!((fixture.reads, fixture.waits), (1, 0));
+        }
+    }
+
+    #[test]
+    fn cursor_capture_requires_permission_before_requesting_accessibility() {
+        let mut fixture = FocusFixture {
+            revoke_after: Some(0),
+            ..Default::default()
+        };
+        assert_eq!(
+            capture_focus(&mut fixture).unwrap_err().to_string(),
+            "Allow Accessibility access to insert text."
+        );
+        assert_eq!((fixture.requests, fixture.reads, fixture.waits), (0, 0, 0));
+    }
+
+    #[test]
+    fn cursor_capture_does_not_retry_rejected_targets() {
+        for message in [
+            "Voco cannot insert into a password field.",
+            "Click inside a text field before dictating.",
+            "The text selection is invalid.",
+        ] {
+            let mut fixture = FocusFixture {
+                rejected: Some(message),
+                ..Default::default()
+            };
+            assert_eq!(
+                capture_focus(&mut fixture).unwrap_err().to_string(),
+                message
+            );
+            assert_eq!((fixture.requests, fixture.reads, fixture.waits), (1, 1, 0));
+        }
     }
 
     #[test]
