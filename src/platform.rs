@@ -428,36 +428,96 @@ fn focused_element(pid: i32) -> Result<Element> {
             "The practice field's Accessibility tree is not ready. Click it and try again.",
         );
     }
-    let application = Element::application(pid)?;
-    let _ = application.set(
-        "AXManualAccessibility",
-        &CFBoolean::true_value().as_CFType(),
-    );
-    let value = application.attribute("AXFocusedUIElement")?;
-    ensure!(
-        value.type_of() == unsafe { AXUIElementGetTypeID() },
-        "No text field has keyboard focus."
-    );
-    Ok(Element::Remote(value))
+    read_remote_focus(pid)?.context("No text field has keyboard focus.")
 }
 
-impl FocusTarget {
-    pub fn capture() -> Result<Self> {
-        ensure!(
-            permissions().accessibility,
-            "Allow Accessibility access to insert text."
-        );
-        let pid = frontmost_pid()?;
-        let element = focused_element(pid)?;
+fn read_remote_focus(pid: i32) -> Result<Option<Element>> {
+    let application = Element::application(pid)?;
+    let name = CFString::new("AXFocusedUIElement");
+    let mut raw = std::ptr::null();
+    let error = unsafe {
+        AXUIElementCopyAttributeValue(application.raw()?, name.as_concrete_TypeRef(), &mut raw)
+    };
+    if matches!(error, -25204 | -25212) || (error == 0 && raw.is_null()) {
+        return Ok(None);
+    }
+    ensure!(
+        error == 0,
+        "Could not read the text field. Accessibility returned {error}."
+    );
+    let value = unsafe { CFType::wrap_under_create_rule(raw) };
+    Ok((value.type_of() == unsafe { AXUIElementGetTypeID() }).then_some(Element::Remote(value)))
+}
+
+trait FocusCapture {
+    type Target;
+    fn trusted(&self) -> bool;
+    fn frontmost(&self) -> Result<i32>;
+    fn enable(&mut self, pid: i32) -> Result<()>;
+    fn read(&mut self, pid: i32) -> Result<Option<Self::Target>>;
+    #[allow(dead_code)]
+    fn wait(&mut self);
+}
+
+fn capture_focus<B: FocusCapture>(boundary: &mut B) -> Result<B::Target> {
+    ensure!(
+        boundary.trusted(),
+        "Allow Accessibility access to insert text."
+    );
+    let pid = boundary.frontmost()?;
+    boundary.enable(pid)?;
+    boundary
+        .read(pid)?
+        .context("No text field has keyboard focus.")
+}
+
+struct MacFocusCapture;
+
+impl FocusCapture for MacFocusCapture {
+    type Target = FocusTarget;
+    fn trusted(&self) -> bool {
+        permissions().accessibility
+    }
+    fn frontmost(&self) -> Result<i32> {
+        frontmost_pid()
+    }
+    fn enable(&mut self, pid: i32) -> Result<()> {
+        if pid != std::process::id() as i32 {
+            let application = Element::application(pid)?;
+            let _ = application.set(
+                "AXManualAccessibility",
+                &CFBoolean::true_value().as_CFType(),
+            );
+        }
+        Ok(())
+    }
+    fn read(&mut self, pid: i32) -> Result<Option<FocusTarget>> {
+        let element = if pid == std::process::id() as i32 {
+            Some(focused_element(pid)?)
+        } else {
+            read_remote_focus(pid)?
+        };
+        let Some(element) = element else {
+            return Ok(None);
+        };
         validate_text_field(&element)?;
         let selection = element.selection()?;
         let value = element.string("AXValue").ok();
-        Ok(Self {
+        Ok(Some(FocusTarget {
             pid,
             element,
             selection,
             value,
-        })
+        }))
+    }
+    fn wait(&mut self) {
+        thread::sleep(Duration::from_millis(25));
+    }
+}
+
+impl FocusTarget {
+    pub fn capture() -> Result<Self> {
+        capture_focus(&mut MacFocusCapture)
     }
 
     fn validate(&self) -> Result<()> {
@@ -1050,6 +1110,65 @@ pub fn verify_insertion() -> Result<serde_json::Value> {
 mod tests {
     use super::*;
     use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
+
+    #[derive(Default)]
+    struct FocusFixture {
+        reads: usize,
+        requests: usize,
+        waits: usize,
+        ready_after: usize,
+    }
+    impl FocusCapture for FocusFixture {
+        type Target = (i32, Selection, String);
+        fn trusted(&self) -> bool {
+            true
+        }
+        fn frontmost(&self) -> Result<i32> {
+            Ok(42)
+        }
+        fn enable(&mut self, pid: i32) -> Result<()> {
+            assert_eq!(pid, 42);
+            self.requests += 1;
+            Ok(())
+        }
+        fn read(&mut self, pid: i32) -> Result<Option<Self::Target>> {
+            assert_eq!(pid, 42);
+            self.reads += 1;
+            Ok((self.reads >= self.ready_after).then(|| {
+                (
+                    pid,
+                    Selection {
+                        location: 2,
+                        length: 0,
+                    },
+                    "😀".into(),
+                )
+            }))
+        }
+        fn wait(&mut self) {
+            self.waits += 1;
+        }
+    }
+
+    #[test]
+    fn captures_cursor_after_accessibility_tree_warms_up() {
+        let mut fixture = FocusFixture {
+            ready_after: 3,
+            ..Default::default()
+        };
+        assert_eq!(
+            capture_focus(&mut fixture).unwrap(),
+            (
+                42,
+                Selection {
+                    location: 2,
+                    length: 0
+                },
+                "😀".into()
+            )
+        );
+        assert_eq!((fixture.requests, fixture.reads, fixture.waits), (1, 3, 2));
+    }
 
     #[test]
     fn clipboard_lease_restores_every_representation() {
