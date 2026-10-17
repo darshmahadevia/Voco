@@ -1,0 +1,1 @@
+Native hover captured. Transparent side margin passed a real click to the underlying window. Overlay mouse down preserved external app and key window. Mouse up reached the controller readiness action and revealed Voco. Microphone capture was not tested.

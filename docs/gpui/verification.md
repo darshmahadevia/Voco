@@ -2,6 +2,16 @@
 
 The current application renders its dashboard and voice pill with GPUI. The speech controller, recognition engines, model installer, and insertion safeguards remain in Rust.
 
+## Clickable idle indicator, October 17, 2026
+
+Hovering the idle dot and line expands the existing indicator and reveals Start recording. Clicking requests continuous capture through the existing controller. Hovering continuous capture reveals Finish recording. Held-key capture, transcription, and recovery ignore clicks. Typed Start and Finish intents are checked against the current session before execution.
+
+`./scripts/verify.sh` passed formatting, the dependency guard, strict Clippy, 56 tests with one ignored, and the debug build. The native UI verifier passed with an isolated profile. Its [report](evidence/clickable-overlay-ui.json) records focus preservation, settled idle, native fullscreen exclusion, and the existing dashboard and insertion checks.
+
+A separate disposable AppKit window exercised real system mouse events against the running debug app. The [hover capture](evidence/clickable-overlay-hover.png) shows the actual control. The transparent side margin delivered a click to the underlying window. Mouse down on the control preserved that window's key status and frontmost application. Mouse up reached the controller's readiness handling and revealed Voco's dashboard. The [native click record](evidence/clickable-overlay-native-click.txt) records these checks. The temporary check script is retained locally at `.audit/clickable-overlay/native-click-check.swift`.
+
+The test profile had no speech model selected, and microphone permission was unavailable. These checks prove native click delivery and focus behavior, not acoustic recording or transcription. Start and Finish availability and hit-area boundaries have unit coverage. The release bundle was rebuilt and installed at `~/Applications/Voco.app`; bundle and strict code-signature checks passed. The installed executable also passed the native UI verifier with an isolated profile, recorded in the [installed report](evidence/clickable-overlay-installed-ui.json). Voco was then reopened normally.
+
 ## Build and core checks
 
 `./scripts/verify.sh` passed formatting, the runtime dependency guard, Clippy with warnings denied, all 34 tests, and the executable build. The dependency guard requires GPUI and rejects egui, eframe, and webview renderers in the normal dependency graph. Captured output is in [build.txt](evidence/build.txt).
