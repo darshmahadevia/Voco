@@ -1,14 +1,24 @@
 # Voco
 
-Speak into the app you're using. Voco turns your voice into text on your Mac.
+Voco is an on-device dictation app for Apple Silicon Macs that turns speech into text at the cursor in your current app.
 
 Hold **Fn** or **Globe**, speak, and release. Voco transcribes locally and inserts your words at the cursor. **Fn + Space** starts and stops continuous dictation. **Escape** cancels recording or pending transcription.
 
-Voco is a Rust application. GPUI renders its dashboard and floating recording pill with Metal. Rust bindings call macOS frameworks for the menu bar, permissions, shortcuts, nonactivating windows, and text insertion. The app runs as one executable, with no browser renderer or separate helper.
-
 ![Voco GPUI dashboard](docs/images/voco-dashboard.png)
 
+## Build and run
+
+Voco requires an Apple Silicon Mac with macOS 26 or newer, Rust 1.92 or newer, Apple's Command Line Tools with Swift 6.2 and the macOS 26 SDK or newer, and CMake. Speech inference dependencies include native C and C++ libraries compiled or fetched by Cargo. A first build needs internet access.
+
+```sh
+git clone https://github.com/darshmahadevia/Voco.git
+cd Voco
+cargo run -- --show
+```
+
 ## Why I moved Voco to Rust
+
+Voco is a Rust application. GPUI renders its dashboard and floating recording pill with Metal. Rust bindings call macOS frameworks for the menu bar, permissions, shortcuts, nonactivating windows, and text insertion. The app runs as one executable, with no browser renderer or separate helper.
 
 I planned the Rust port to reduce the overhead and maintenance of a dictation app that stays running in the menu bar. The earlier version used TypeScript and Electron for the interface, plus a Swift helper for macOS integration.
 
@@ -21,15 +31,7 @@ The goals were to:
 
 Lower memory use and faster startup were goals of the port, but I have not measured those gains yet. The speech engines already ran native code, so the language change alone does not establish faster or more accurate transcription. The tradeoff is more platform-specific UI work if Voco expands beyond macOS.
 
-## Build and run
-
-Voco requires an Apple Silicon Mac with macOS 26 or newer, Rust 1.92 or newer, Apple's Command Line Tools with Swift 6.2 and the macOS 26 SDK or newer, and CMake. Speech inference dependencies include native C and C++ libraries compiled or fetched by Cargo. A first build needs internet access.
-
-```sh
-git clone https://github.com/darshmahadevia/Voco.git
-cd Voco
-cargo run -- --show
-```
+## Install the macOS app
 
 To install or update the macOS app from this checkout:
 
