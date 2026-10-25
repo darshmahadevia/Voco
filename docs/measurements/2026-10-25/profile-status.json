@@ -1,0 +1,6 @@
+{
+  "excluded_from_timing_summary": true,
+  "engine_exit_code": 0,
+  "sampler_exit_code": 0,
+  "sampler_stderr": "Sampling process 48839 for 1 second with 1 millisecond of run time between samples\nSampling completed, processing symbols...\nSample analysis of process 48839 written to file docs/measurements/2026-10-25/whisper-profile.txt\n"
+}

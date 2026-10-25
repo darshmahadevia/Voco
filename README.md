@@ -11,9 +11,9 @@ Hold **Fn** or **Globe**, speak, and release. Voco transcribes locally and inser
 - Replaced an Electron interface and Swift helper with one Rust executable. GPUI and Metal render the dashboard and recording indicator without Chromium, Node.js, or a separate helper process.
 - Integrated three local speech engines, Moonshine, Parakeet, and Whisper, behind one inference worker. Recognition runs offline after model download.
 - Protected text insertion with session generation IDs and destination revalidation. Cancelled results cannot commit text, and changed fields, selections, or password fields block insertion.
-- Verified insertion of 2,200 UTF-16 units containing emoji, accented text, Japanese text, and line breaks in disposable native editors. Recorded checks also cover selection replacement and unsafe-destination refusal.
+- Transcribed a 17.369-second synthetic clip in a median 2.818 seconds with Whisper and 1.384 seconds with Parakeet across five trials per engine, including model verification and loading. See the [file transcription method and limits](docs/measurements/2026-10-25.md).
 
-These are implementation and recorded verification results. The Rust port has no measured memory, startup, transcription-speed, or accuracy improvement claim. The native insertion check does not establish live microphone dictation or compatibility with every app. See the [architecture](docs/architecture.md), [current verification record](docs/gpui/verification.md), and [insertion report](docs/gpui/evidence/insertion.json).
+These are implementation and recorded verification results. The file transcription result is an absolute observation, not a measured improvement from the Rust port or a live dictation latency claim. The native insertion check does not establish live microphone dictation or compatibility with every app. See the [architecture](docs/architecture.md), [current verification record](docs/gpui/verification.md), and [insertion report](docs/gpui/evidence/insertion.json).
 
 ## Build and run
 

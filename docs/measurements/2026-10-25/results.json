@@ -1,0 +1,232 @@
+{
+  "method": "Fresh release CLI per trial. Wall time includes process startup, WAV decoding, model checksum verification, model loading, inference, and transcript output. File caches may be warm. No microphone, UI, cleanup mode, or insertion timing.",
+  "audio_kind": "Synthetic speech generated with macOS say, Samantha voice, 165 words per minute.",
+  "host": "macOS-27.0.1-arm64-arm-64bit",
+  "hardware": "Apple M4",
+  "memory_bytes": 17179869184,
+  "source_commit": "502e1d6a4461d718e27057f41ebc76457222b874",
+  "binary_sha256": "3fdd6ea7e2480ce5e2a1c6a0766fda63ff3a02c998424428b61c7f5faa50d570",
+  "audio_sha256": "b9c5b58c265ed6a88f5823963bcad0f5d430188bba3ee79948bec4d3528f61b4",
+  "audio_seconds": 17.369,
+  "expected_text": "Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the write. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.",
+  "diagnostics": {
+    "version": "0.3.0",
+    "runtime": "rust",
+    "profile": "/Users/darshm/Library/Application Support/Voco",
+    "microphone": false,
+    "accessibility": true,
+    "models": [
+      {
+        "model": "moonshine",
+        "installed": false,
+        "directory": "/Users/darshm/Library/Application Support/Voco/models/moonshine-medium-streaming-en"
+      },
+      {
+        "model": "parakeet",
+        "installed": true,
+        "directory": "/Users/darshm/Library/Application Support/Voco/models/parakeet-tdt-0.6b-v2-onnx"
+      },
+      {
+        "model": "whisper",
+        "installed": true,
+        "directory": "/Users/darshm/Library/Application Support/Voco/models/whisper-large-v3-turbo"
+      }
+    ]
+  },
+  "trials": [
+    {
+      "trial": 1,
+      "model": "parakeet",
+      "returncode": 0,
+      "wall_seconds": 1.4202383749943692,
+      "audio_to_wall_ratio": 12.229637155149298,
+      "transcript": "Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the right. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.",
+      "word_edits": 1,
+      "reference_words": 50,
+      "fixture_word_error_rate": 0.02,
+      "max_rss_bytes": 1258979328,
+      "load": "13:19  up 3 days,  1:13, 1 user, load averages: 4.62 8.30 8.23"
+    },
+    {
+      "trial": 1,
+      "model": "whisper",
+      "returncode": 0,
+      "wall_seconds": 9.201620917010587,
+      "audio_to_wall_ratio": 1.8876022123331313,
+      "transcript": "Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the write. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.",
+      "word_edits": 0,
+      "reference_words": 50,
+      "fixture_word_error_rate": 0.0,
+      "max_rss_bytes": 1882308608,
+      "load": "13:19  up 3 days,  1:13, 1 user, load averages: 4.62 8.30 8.23"
+    },
+    {
+      "trial": 2,
+      "model": "whisper",
+      "returncode": 0,
+      "wall_seconds": 2.76575612500892,
+      "audio_to_wall_ratio": 6.280018633220592,
+      "transcript": "Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the write. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.",
+      "word_edits": 0,
+      "reference_words": 50,
+      "fixture_word_error_rate": 0.0,
+      "max_rss_bytes": 1894662144,
+      "load": "13:19  up 3 days,  1:13, 1 user, load averages: 4.21 8.09 8.16"
+    },
+    {
+      "trial": 2,
+      "model": "parakeet",
+      "returncode": 0,
+      "wall_seconds": 1.3841116669937037,
+      "audio_to_wall_ratio": 12.548842997419088,
+      "transcript": "Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the right. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.",
+      "word_edits": 1,
+      "reference_words": 50,
+      "fixture_word_error_rate": 0.02,
+      "max_rss_bytes": 1259978752,
+      "load": "13:19  up 3 days,  1:13, 1 user, load averages: 4.21 8.09 8.16"
+    },
+    {
+      "trial": 3,
+      "model": "parakeet",
+      "returncode": 0,
+      "wall_seconds": 1.3347050420125015,
+      "audio_to_wall_ratio": 13.013362093703181,
+      "transcript": "Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the right. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.",
+      "word_edits": 1,
+      "reference_words": 50,
+      "fixture_word_error_rate": 0.02,
+      "max_rss_bytes": 1259307008,
+      "load": "13:19  up 3 days,  1:13, 1 user, load averages: 4.60 8.11 8.17"
+    },
+    {
+      "trial": 3,
+      "model": "whisper",
+      "returncode": 0,
+      "wall_seconds": 2.7906012919847853,
+      "audio_to_wall_ratio": 6.224106628878712,
+      "transcript": "Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the write. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.",
+      "word_edits": 0,
+      "reference_words": 50,
+      "fixture_word_error_rate": 0.0,
+      "max_rss_bytes": 1866547200,
+      "load": "13:19  up 3 days,  1:14, 1 user, load averages: 4.60 8.11 8.17"
+    },
+    {
+      "trial": 4,
+      "model": "whisper",
+      "returncode": 0,
+      "wall_seconds": 2.8182061669940595,
+      "audio_to_wall_ratio": 6.163140299464334,
+      "transcript": "Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the write. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.",
+      "word_edits": 0,
+      "reference_words": 50,
+      "fixture_word_error_rate": 0.0,
+      "max_rss_bytes": 1890680832,
+      "load": "13:19  up 3 days,  1:14, 1 user, load averages: 4.60 8.11 8.17"
+    },
+    {
+      "trial": 4,
+      "model": "parakeet",
+      "returncode": 0,
+      "wall_seconds": 1.3365660829877015,
+      "audio_to_wall_ratio": 12.995242226388159,
+      "transcript": "Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the right. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.",
+      "word_edits": 1,
+      "reference_words": 50,
+      "fixture_word_error_rate": 0.02,
+      "max_rss_bytes": 1260257280,
+      "load": "13:19  up 3 days,  1:14, 1 user, load averages: 4.47 8.02 8.14"
+    },
+    {
+      "trial": 5,
+      "model": "parakeet",
+      "returncode": 0,
+      "wall_seconds": 1.3851192919828463,
+      "audio_to_wall_ratio": 12.539714160746165,
+      "transcript": "Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the right. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.",
+      "word_edits": 1,
+      "reference_words": 50,
+      "fixture_word_error_rate": 0.02,
+      "max_rss_bytes": 1259896832,
+      "load": "13:19  up 3 days,  1:14, 1 user, load averages: 4.47 8.02 8.14"
+    },
+    {
+      "trial": 5,
+      "model": "whisper",
+      "returncode": 0,
+      "wall_seconds": 2.8230535420007072,
+      "audio_to_wall_ratio": 6.152557768242161,
+      "transcript": "Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the write. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.",
+      "word_edits": 0,
+      "reference_words": 50,
+      "fixture_word_error_rate": 0.0,
+      "max_rss_bytes": 1865580544,
+      "load": "13:19  up 3 days,  1:14, 1 user, load averages: 4.67 8.01 8.13"
+    }
+  ],
+  "summary": {
+    "parakeet": {
+      "wall_seconds": {
+        "median": 1.3841116669937037,
+        "range": [
+          1.3347050420125015,
+          1.4202383749943692
+        ]
+      },
+      "audio_to_wall_ratio": {
+        "median": 12.548842997419088,
+        "range": [
+          12.229637155149298,
+          13.013362093703181
+        ]
+      },
+      "max_rss_bytes": {
+        "median": 1259896832,
+        "range": [
+          1258979328,
+          1260257280
+        ]
+      },
+      "fixture_word_error_rate": {
+        "median": 0.02,
+        "range": [
+          0.02,
+          0.02
+        ]
+      }
+    },
+    "whisper": {
+      "wall_seconds": {
+        "median": 2.8182061669940595,
+        "range": [
+          2.76575612500892,
+          9.201620917010587
+        ]
+      },
+      "audio_to_wall_ratio": {
+        "median": 6.163140299464334,
+        "range": [
+          1.8876022123331313,
+          6.280018633220592
+        ]
+      },
+      "max_rss_bytes": {
+        "median": 1882308608,
+        "range": [
+          1865580544,
+          1894662144
+        ]
+      },
+      "fixture_word_error_rate": {
+        "median": 0.0,
+        "range": [
+          0.0,
+          0.0
+        ]
+      }
+    }
+  },
+  "successful_trials": 10,
+  "failed_trials": 0
+}

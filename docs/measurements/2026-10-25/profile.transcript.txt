@@ -1,0 +1,1 @@
+Please review the project notes before the meeting tomorrow. The database stores each update on two machines before confirming the write. If the network disconnects, keep the pending changes and retry after the connection returns. We will review the test results together and decide which changes are ready to release.

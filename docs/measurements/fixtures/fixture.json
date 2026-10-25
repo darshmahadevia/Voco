@@ -1,0 +1,7 @@
+{
+  "speech_command": "say -v Samantha -r 165 -f speech.txt -o speech.aiff",
+  "conversion_command": "afconvert -f WAVE -d LEI16@16000 -c 1 speech.aiff speech.wav",
+  "wav_sha256": "b9c5b58c265ed6a88f5823963bcad0f5d430188bba3ee79948bec4d3528f61b4",
+  "system": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434\n",
+  "hardware": "Hardware:\n\n    Hardware Overview:\n\n      Model Name: MacBook Air\n      Model Identifier: Mac16,13\n      Model Number: MW1L3LL/A\n      Chip: Apple M4\n      Total Number of Cores: 10 (4 Performance and 6 Efficiency)\n      Memory: 16 GB\n      System Firmware Version: 20457.1.29\n      OS Loader Version: 20457.1.29\n      "
+}
