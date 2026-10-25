@@ -6,6 +6,15 @@ Hold **Fn** or **Globe**, speak, and release. Voco transcribes locally and inser
 
 ![Voco GPUI dashboard](docs/images/voco-dashboard.png)
 
+## Engineering highlights
+
+- Replaced an Electron interface and Swift helper with one Rust executable. GPUI and Metal render the dashboard and recording indicator without Chromium, Node.js, or a separate helper process.
+- Integrated three local speech engines, Moonshine, Parakeet, and Whisper, behind one inference worker. Recognition runs offline after model download.
+- Protected text insertion with session generation IDs and destination revalidation. Cancelled results cannot commit text, and changed fields, selections, or password fields block insertion.
+- Verified insertion of 2,200 UTF-16 units containing emoji, accented text, Japanese text, and line breaks in disposable native editors. Recorded checks also cover selection replacement and unsafe-destination refusal.
+
+These are implementation and recorded verification results. The Rust port has no measured memory, startup, transcription-speed, or accuracy improvement claim. The native insertion check does not establish live microphone dictation or compatibility with every app. See the [architecture](docs/architecture.md), [current verification record](docs/gpui/verification.md), and [insertion report](docs/gpui/evidence/insertion.json).
+
 ## Build and run
 
 Voco requires an Apple Silicon Mac with macOS 26 or newer, Rust 1.92 or newer, Apple's Command Line Tools with Swift 6.2 and the macOS 26 SDK or newer, and CMake. Speech inference dependencies include native C and C++ libraries compiled or fetched by Cargo. A first build needs internet access.
