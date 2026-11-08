@@ -508,6 +508,7 @@ impl Render for VoicePill {
                     .justify_center()
                     .gap(px(SURFACE_GAP))
                     .text_size(px(12.))
+                    .font_weight(FontWeight::MEDIUM)
                     .text_color(rgb(0xf2f0ec))
                     .child(
                         div()
