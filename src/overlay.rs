@@ -11,18 +11,21 @@ use objc2_foundation::{NSPoint, NSString};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use std::time::{Duration, Instant};
 
-const VOICE_DIAMETER: f32 = 38.;
-const LABEL_WIDTH: f32 = 122.;
-const LABEL_HEIGHT: f32 = 36.;
-const SURFACE_GAP: f32 = 7.;
+/// The active pill: one capsule holding a voice well, a label, and a timer.
+const PILL_WIDTH: f32 = 167.;
+const PILL_HEIGHT: f32 = 36.;
+/// The round well at the pill's leading edge for the meter or state icon.
+const WELL_DIAMETER: f32 = 28.;
+const WELL_INSET: f32 = (PILL_HEIGHT - WELL_DIAMETER) / 2.;
 const WINDOW_MARGIN: f32 = 10.;
-const WINDOW_WIDTH: f32 = VOICE_DIAMETER + SURFACE_GAP + LABEL_WIDTH + WINDOW_MARGIN * 2.;
+const WINDOW_WIDTH: f32 = PILL_WIDTH + WINDOW_MARGIN * 2.;
 const WINDOW_HEIGHT: f32 = 60.;
 const BAR_BASELINE: f32 = 3.;
-const IDLE_DIAMETER: f32 = 7.;
-const IDLE_WIDTH: f32 = 48.;
-const IDLE_HEIGHT: f32 = IDLE_DIAMETER;
+/// The settled idle pill: a slim bar that hints where to click.
+const IDLE_WIDTH: f32 = 44.;
+const IDLE_HEIGHT: f32 = 8.;
 const MORPH_DURATION: Duration = Duration::from_millis(220);
+const ORANGE: u32 = 0xff742f;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Presentation {
@@ -85,11 +88,7 @@ fn interpolate(idle: f32, active: f32, amount: f32) -> f32 {
 }
 
 fn control_contains(offset: NSPoint, expanded: bool) -> bool {
-    let width = if expanded {
-        VOICE_DIAMETER + SURFACE_GAP + LABEL_WIDTH
-    } else {
-        82.
-    };
+    let width = if expanded { PILL_WIDTH } else { 82. };
     offset.x.abs() <= f64::from(width / 2.) && offset.y.abs() <= 22.
 }
 
@@ -412,13 +411,58 @@ extern "C-unwind" fn cannot_activate(_: &AnyObject, _: Sel) -> Bool {
     Bool::NO
 }
 
+/// What the leading well shows for the current state.
+enum Well {
+    Meter([f32; 5]),
+    Spinner(f32),
+    Icon(&'static str, u32),
+    Stop,
+}
+
+fn gray(channel: f32, alpha: f32) -> Hsla {
+    Rgba {
+        r: channel,
+        g: channel,
+        b: channel,
+        a: alpha,
+    }
+    .into()
+}
+
+fn spinner(phase: f32) -> impl IntoElement {
+    canvas(
+        |_, _, _| (),
+        move |bounds, _, window, _| {
+            let center = bounds.center();
+            let mut path = PathBuilder::stroke(px(1.8));
+            for index in 0..=24 {
+                let angle = phase + index as f32 / 24. * std::f32::consts::TAU * 0.7;
+                let position = point(
+                    center.x + px(angle.cos() * 6.5),
+                    center.y + px(angle.sin() * 6.5),
+                );
+                if index == 0 {
+                    path.move_to(position);
+                } else {
+                    path.line_to(position);
+                }
+            }
+            if let Ok(path) = path.build() {
+                window.paint_path(path, rgb(ORANGE));
+            }
+        },
+    )
+    .size(px(20.))
+}
+
 impl Render for VoicePill {
     fn render(&mut self, window: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
         let reduced_motion = crate::platform::reduced_motion();
         let now = Instant::now();
         let (amount, morphing) = self.morph.sample(now, reduced_motion);
-        let listening = amount > 0. && self.label.as_ref() == "Listening";
-        let busy = amount > 0. && matches!(self.label.as_ref(), "Starting" | "Transcribing");
+        let label = self.label.as_ref();
+        let listening = amount > 0. && label == "Listening";
+        let busy = amount > 0. && matches!(label, "Starting" | "Transcribing");
         let (heights, settling) = if listening {
             self.meter.sample(now, reduced_motion)
         } else {
@@ -427,61 +471,100 @@ impl Render for VoicePill {
         if morphing || (listening && settling) {
             window.request_animation_frame();
         }
-        let surface_color = rgb(0x000000);
-        let border_channel = interpolate(0.28, 48. / 255., amount);
-        let border_color = Rgba {
-            r: border_channel,
-            g: border_channel,
-            b: border_channel,
-            a: 1.,
-        };
-        let waveform = div()
-            .flex()
-            .items_center()
-            .justify_center()
-            .gap(px(2.))
-            .children(heights.map(|height| {
-                div()
-                    .w(px(2.))
-                    .h(px(if listening { height } else { BAR_BASELINE }))
-                    .rounded_full()
-                    .bg(rgb(0xff742f))
-            }));
-        let feedback = if busy {
-            let phase = if reduced_motion {
+        // Hovering a clickable pill previews what a click will do.
+        let offer = self.intent.filter(|_| self.hovered);
+        let well = match offer {
+            Some(RecordingIntent::Start) => Well::Icon("mic", 0xf2f0ec),
+            Some(RecordingIntent::Finish) => Well::Stop,
+            None if busy => Well::Spinner(if reduced_motion {
                 0.
             } else {
                 window.request_animation_frame();
                 self.started.elapsed().as_secs_f32() * 5.
-            };
-            canvas(
-                |_, _, _| (),
-                move |bounds, _, window, _| {
-                    let center = bounds.center();
-                    let mut path = PathBuilder::stroke(px(1.7));
-                    for index in 0..=24 {
-                        let angle = phase + index as f32 / 24. * std::f32::consts::TAU * 0.7;
-                        let position = point(
-                            center.x + px(angle.cos() * 7.),
-                            center.y + px(angle.sin() * 7.),
-                        );
-                        if index == 0 {
-                            path.move_to(position);
-                        } else {
-                            path.line_to(position);
-                        }
-                    }
-                    if let Ok(path) = path.build() {
-                        window.paint_path(path, rgb(0xff742f));
-                    }
-                },
-            )
-            .w(px(24.))
-            .h(px(24.))
-            .into_any_element()
-        } else {
-            waveform.into_any_element()
+            }),
+            None if label == "Copy your words" => Well::Icon("alert", ORANGE),
+            None => Well::Meter(heights),
         };
+        let text: SharedString = offer
+            .map(|intent| SharedString::from(intent.label()))
+            .unwrap_or_else(|| self.label.clone());
+        // Hands-free sessions run up to ten minutes, so show how long this one has run.
+        let elapsed = (listening && offer.is_none()).then(|| {
+            let seconds = self.started.elapsed().as_secs();
+            format!("{}:{:02}", seconds / 60, seconds % 60)
+        });
+
+        let well = div()
+            .size(px(WELL_DIAMETER))
+            .flex_shrink_0()
+            .flex()
+            .items_center()
+            .justify_center()
+            .rounded_full()
+            .bg(if offer == Some(RecordingIntent::Start) {
+                // Neutral until recording actually begins.
+                gray(1., 0.1)
+            } else {
+                rgba(0xff742f29).into()
+            })
+            .child(match well {
+                Well::Meter(heights) => div()
+                    .flex()
+                    .items_center()
+                    .gap(px(2.))
+                    .children(heights.map(|height| {
+                        // Scale the measured 3–22px range to fit inside the well.
+                        div()
+                            .w(px(2.))
+                            .h(px(BAR_BASELINE + (height - BAR_BASELINE) * 0.6))
+                            .rounded_full()
+                            .bg(rgb(ORANGE))
+                    }))
+                    .into_any_element(),
+                Well::Spinner(phase) => spinner(phase).into_any_element(),
+                Well::Icon(name, color) => svg()
+                    .path(name)
+                    .size(px(14.))
+                    .text_color(rgb(color))
+                    .into_any_element(),
+                Well::Stop => div()
+                    .size(px(10.))
+                    .rounded(px(2.5))
+                    .bg(rgb(ORANGE))
+                    .into_any_element(),
+            });
+        let content = div()
+            .w(px(PILL_WIDTH))
+            .h(px(PILL_HEIGHT))
+            .flex_shrink_0()
+            .flex()
+            .items_center()
+            .gap(px(10.))
+            .pl(px(WELL_INSET))
+            .pr(px(14.))
+            .opacity(amount * amount)
+            .child(well)
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .truncate()
+                    .text_size(px(12.5))
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(rgb(0xf2f0ec))
+                    .child(text),
+            )
+            .when_some(elapsed, |content, elapsed| {
+                content.child(
+                    div()
+                        .flex_shrink_0()
+                        .text_size(px(11.5))
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(rgb(0x929497))
+                        .child(elapsed),
+                )
+            });
+
         div()
             .size_full()
             .flex()
@@ -493,6 +576,9 @@ impl Render for VoicePill {
                     .id("recording-control")
                     .min_w(px(82.))
                     .h(px(44.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
                     .when(self.intent.is_some(), |control| control.cursor_pointer())
                     .on_click({
                         let intent = self.intent;
@@ -503,52 +589,33 @@ impl Render for VoicePill {
                             }
                         }
                     })
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .gap(px(SURFACE_GAP))
-                    .text_size(px(12.))
-                    .font_weight(FontWeight::MEDIUM)
-                    .text_color(rgb(0xf2f0ec))
                     .child(
+                        // One capsule morphs between the idle bar and the active pill.
                         div()
+                            .w(px(interpolate(IDLE_WIDTH, PILL_WIDTH, amount)))
+                            .h(px(interpolate(IDLE_HEIGHT, PILL_HEIGHT, amount)))
                             .flex()
                             .items_center()
                             .justify_center()
-                            .size(px(interpolate(IDLE_DIAMETER, VOICE_DIAMETER, amount)))
-                            .flex_shrink_0()
                             .overflow_hidden()
                             .rounded_full()
-                            .bg(surface_color)
+                            .bg(linear_gradient(
+                                180.,
+                                linear_color_stop(gray(interpolate(0., 0.11, amount), 1.), 0.),
+                                linear_color_stop(gray(interpolate(0., 0.06, amount), 1.), 1.),
+                            ))
                             .border_1()
-                            .border_color(border_color)
-                            .child(div().opacity(amount).child(feedback)),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .w(px(interpolate(IDLE_WIDTH, LABEL_WIDTH, amount)))
-                            .h(px(interpolate(IDLE_HEIGHT, LABEL_HEIGHT, amount)))
-                            .rounded_full()
-                            .bg(surface_color)
-                            .border_1()
-                            .border_color(border_color)
-                            .overflow_hidden()
-                            .text_center()
-                            .child(
-                                div()
-                                    .flex_shrink_0()
-                                    .opacity(amount)
-                                    .child(if self.hovered {
-                                        self.intent
-                                            .map(|intent| SharedString::from(intent.label()))
-                                            .unwrap_or_else(|| self.label.clone())
-                                    } else {
-                                        self.label.clone()
-                                    }),
-                            ),
+                            .border_color(gray(1., interpolate(0.3, 0.12, amount)))
+                            .when(amount > 0., |pill| {
+                                // Lifts the pill off light windows; the window margins hold the blur.
+                                pill.shadow(vec![BoxShadow {
+                                    color: gray(0., 0.45 * amount),
+                                    offset: point(px(0.), px(3.)),
+                                    blur_radius: px(9.),
+                                    spread_radius: px(-1.),
+                                }])
+                            })
+                            .child(content),
                     ),
             )
     }

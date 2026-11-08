@@ -135,7 +135,7 @@ Inside the panel, the page scrolls independently. Content is capped at 880px and
 
 ## Elevation & Depth
 
-The dashboard uses tonal layering, not shadows: canvas, panel, raised card, control. Hairlines define edges. Home's shortcut card adds a subtle horizontal gradient from `raised` to a warm graphite behind the sculpture. Recovery uses an opaque warm panel with an orange hairline. The floating pill uses black fills and a faint outline, without a native window shadow.
+The dashboard uses tonal layering, not shadows: canvas, panel, raised card, control. Hairlines define edges. Home's shortcut card adds a subtle horizontal gradient from `raised` to a warm graphite behind the sculpture. Recovery uses an opaque warm panel with an orange hairline. The floating pill is the one surface with a drop shadow, drawn in GPUI inside its window margins rather than by the native window, because it floats over arbitrary apps.
 
 ## Shapes
 
@@ -189,9 +189,18 @@ Recovery adds a warm panel above the bar on every page. It shows the explanation
 
 ### Floating indicator
 
-The floating indicator is a persistent native nonactivating window at the bottom center of the current screen. It preserves the editor's focus and floats above ordinary windows while staying out of native fullscreen Spaces and Split View tiles. When idle, it shows a 7px dot and a 48 × 7px line with opaque black fills and muted gray outlines. The same shapes expand over 220ms into the active indicator and collapse when dictation ends. Reversing activity mid-transition preserves the current geometry. Hovering its 82 × 44px idle hit area expands the shapes and shows Start recording with a pointer cursor. Clicking starts hands-free recording; hovering while recording offers Finish recording. Starting, Transcribing, recovery, and held-key recording ignore clicks. Transparent margins pass mouse input through to other apps. The window never takes keyboard focus. Settled idle requests no animation frames. Reduce Motion snaps directly between states.
+The floating indicator is a persistent native nonactivating window at the bottom center of the current screen. It preserves the editor's focus and floats above ordinary windows while staying out of native fullscreen Spaces and Split View tiles. Transparent margins pass mouse input through to other apps. The window never takes keyboard focus. Settled idle requests no animation frames.
 
-The active indicator pairs a 38px black voice circle with a separate 122 × 36px black status capsule, spaced 7px apart. Both use a faint outline. The 12px Manrope Medium label is centered within the status capsule. Five narrow orange waveform bars show recent measured microphone energy while Listening, with stronger response to quiet speech and smooth attack and release. Silence returns the bars to their baseline. Starting and Transcribing use a rotating orange arc inside the circle. Other states use still baseline bars. Status changes retain the same footprint. No partial transcript appears during capture.
+The indicator is a single capsule. When idle, it is a 44 × 8px black bar with a faint gray outline, visible on dark and light windows alike. The same capsule expands over 220ms into the 167 × 36px active pill and collapses when dictation ends. Reversing activity mid-transition preserves the current geometry, and the content fades in with the square of the morph so text never appears cramped. Reduce Motion snaps directly between states.
+
+The active pill has a graphite vertical gradient, a hairline white outline at 12% opacity, and a soft drop shadow drawn inside the window margins so it lifts off light backgrounds. A 28px round well sits at its leading edge, inset 4px. The 12.5px Manrope Medium label follows, left-aligned.
+
+- **Listening:** five 2px orange bars in an orange-tinted well show recent measured microphone energy, with stronger response to quiet speech and smooth attack and release. Silence returns the bars to their baseline. A trailing tertiary timer shows elapsed time, since hands-free capture stops at ten minutes.
+- **Starting and Transcribing:** a rotating orange arc in the well.
+- **Recovery:** an orange alert icon with Copy your words.
+- **Hover:** hovering the 82 × 44px idle hit area expands the pill with a neutral well, a microphone icon, and Start recording, with a pointer cursor. Clicking starts hands-free recording. While hands-free recording, hovering shows an orange stop square and Finish recording. Starting, Transcribing, recovery, and held-key recording ignore clicks.
+
+No partial transcript appears during capture.
 
 ### Motion and accessibility
 
@@ -208,6 +217,6 @@ Preserve keyboard access, visible focus, native text selection and composition, 
 - Do use native literal inputs for practice, search, transcripts, and recovery words.
 - Do preserve optional recent transcripts in memory until quit. Disabling retention clears them.
 - Don't add pixel or serif accent fonts, orange primary buttons, neon grids, or large glows.
-- Don't use drop shadows for depth; use the surface steps and hairlines.
+- Don't use drop shadows for depth in the dashboard; use the surface steps and hairlines.
 - Don't animate synthetic microphone activity or reveal partial transcript text during capture.
 - Don't add persistent audio or transcript storage.
