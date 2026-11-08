@@ -160,6 +160,19 @@ pub fn open_privacy(microphone: bool) -> Result<()> {
     Ok(())
 }
 
+/// Opens Keyboard settings, where the Globe key's own action is chosen.
+pub fn open_keyboard_settings() -> Result<()> {
+    let string =
+        NSString::from_str("x-apple.systempreferences:com.apple.Keyboard-Settings.extension");
+    let url =
+        NSURL::URLWithString(&string).context("Could not construct the System Settings URL.")?;
+    ensure!(
+        NSWorkspace::sharedWorkspace().openURL(&url),
+        "Could not open Keyboard settings."
+    );
+    Ok(())
+}
+
 pub fn copy_text(text: &str) -> Result<()> {
     let pasteboard = NSPasteboard::generalPasteboard();
     pasteboard.clearContents();
